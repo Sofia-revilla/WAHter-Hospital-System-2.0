@@ -46,22 +46,27 @@ body {
     color 0.3s ease;
 }
 
-.glass {
-  background: var(--color-glass-bg);
-  border: 1px solid var(--color-glass-border);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
+/* Inside @layer components so Tailwind utilities can still override them.
+   Unlayered, .glass's border shorthand beat classes like border-l-4 and
+   border-wah-lavender/20 no matter where they appeared in the markup. */
+@layer components {
+  .glass {
+    background: var(--color-glass-bg);
+    border: 1px solid var(--color-glass-border);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
 
-.purple-shadow {
-  box-shadow: 0 0 20px rgba(109, 40, 217, 0.15);
-}
+  .purple-shadow {
+    box-shadow: 0 0 20px rgba(109, 40, 217, 0.15);
+  }
 
-.hide-scrollbar {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
+  .hide-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
 
-.hide-scrollbar::-webkit-scrollbar {
-  display: none;
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }

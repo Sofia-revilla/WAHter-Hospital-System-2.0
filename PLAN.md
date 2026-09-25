@@ -37,6 +37,9 @@ a build, tests, a commit, and an update to this file.
 - [x] **Prompt 10: Rooms Tab** (2026-09-25)
   BedManagementView: stat cards, ward cards with bed grids and occupancy bars, near-empty wards,
   Smart Referral card. See DECISIONS.md D-024.
+- [x] **Prompt 11: Billing Tab** (2026-09-25)
+  BillingView: stat cards, patient billing queue, PhilHealth 3.0 card, End-of-Day Report.
+  Also fixed .glass overriding Tailwind borders. See DECISIONS.md D-025, D-026.
 
 ## Master prompt phases
 

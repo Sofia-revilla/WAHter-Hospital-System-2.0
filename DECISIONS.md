@@ -171,3 +171,17 @@ Prompt 10 hardcodes Total Beds 70, Available 23, Waitlist 08. The Prompt 2 wards
 (more than 5 vacant beds) is computed from the ward data and shows the ward type next to the name, because
 two wards are both called "General Ward". MANAGE, the admit (+) buttons, and ROUTING ENGINE aren't wired
 yet. The referral engine is Phase 7b and must stay rule-based with doctor approval.
+
+### D-025: Billing queue balances are random once per visit
+
+Prompt 11 asks for random balances (`Math.random() * 15000 + 5000`). Computed inline, they reshuffled on
+every re-render, including hover. They're generated once in a lazy `useState` when the tab mounts.
+TODO(Phase 6) marks the swap to real invoice balances. Generate SOA and Reconcile All aren't wired yet.
+The eSOA must be XML only (eClaims 3.0) when it is built.
+
+### D-026: Custom CSS classes moved into @layer components
+
+`.glass`, `.purple-shadow` and `.hide-scrollbar` were unlayered CSS, and unlayered rules always beat
+Tailwind's layered utilities. That meant `.glass`'s `border` shorthand silently overrode `border-l-4
+border-l-wah-neon` on the PhilHealth card, and the login card's `border-2 border-wah-lavender/20`. They
+now live in `@layer components`, so utilities override them as expected.
