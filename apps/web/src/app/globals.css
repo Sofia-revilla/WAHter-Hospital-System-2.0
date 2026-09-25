@@ -4,6 +4,9 @@
 /* lets us write light:bg-... for the few places light mode needs its own style */
 @custom-variant light (&:where(.light, .light *));
 
+/* short laptop screens (768px panels, browser chrome eats the rest) */
+@custom-variant short (@media (max-height: 760px));
+
 /* Dark is the default feel, so :root holds the dark values and .light overrides.
    None of these are pure black or pure white — everything leans indigo/lavender. */
 :root {

@@ -77,3 +77,28 @@ master prompt §7.5 (sets `userRole` to null). The plain login form only asks fo
 `handleLogin` fills in a default department per role and "Not on file" for the license; signup passes
 the real values. Demo logins show a "Demo Mode" chip in the topbar until the guided tour prompt replaces it.
 The verify (OTP) mode is fully built but, per Prompt 3, nothing in the UI routes to it yet.
+
+### D-012: IT role stored as "IT", shown as "IT Admin"
+
+Prompt 4 defines `userRole: 'Doctor' | 'Nurse' | 'IT' | null`, while the nav table and login cards say
+"IT Admin". `StaffRole` now uses `"IT"` and `ROLE_LABELS` maps it to "IT Admin" wherever it's displayed.
+
+### D-013: Placeholder logo at public/wah-logo.png
+
+Prompt 4 expects `public/wah-logo.png`, but the new repo has no brand assets and we're not copying from
+the old UNICA-HIJA-UNI-WAH4E repo. We generated a simple placeholder (purple gradient circle with a white
+pulse line). Replace the file with the official logo; no code change needed.
+
+### D-014: Sidebar fits short screens without scrolling
+
+The sidebar can't use `overflow-y-auto`, because any overflow setting clips the hover tooltips that stick
+out to the right. On a ~700px-tall viewport, IT Admin's nine tabs overflowed by about 30px. We added a
+`short:` Tailwind variant (`max-height: 760px`) that trims the item and sidebar padding, and cut the
+sidebar's side padding to `px-1` so "ARCHITECTURE" (about 70px at 9px black) fits in the 80px column.
+The labels are the tab ids, uppercased, as Prompt 4 specifies.
+
+### D-015: Unbuilt tabs render a PlaceholderView
+
+Prompt 4 builds navigation for tabs whose screens come in later prompts. Those tabs show a
+`PlaceholderView` (icon, name, description, "coming in a later build prompt") instead of a blank area.
+The bell has no unread badge yet; that arrives with the Notifications service (Phase 2).

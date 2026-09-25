@@ -62,7 +62,14 @@ export interface AdmissionTrendPoint {
 }
 
 // Only the three portals from the login screen exist in the prototype.
-export type StaffRole = "Doctor" | "Nurse" | "IT Admin";
+// The IT role is stored as "IT" (per the app-state spec) but shown as "IT Admin".
+export type StaffRole = "Doctor" | "Nurse" | "IT";
+
+export const ROLE_LABELS: Record<StaffRole, string> = {
+  Doctor: "Doctor",
+  Nurse: "Nurse",
+  IT: "IT Admin",
+};
 
 export interface StaffProfile {
   name: string;

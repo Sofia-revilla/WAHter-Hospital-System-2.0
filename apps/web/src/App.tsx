@@ -1,32 +1,29 @@
 // WAHter — App.tsx
-// Main application file: login gate, theme switching, the topbar, and the
-// Profile tab. The sidebar and the other tab views land in later prompts.
+// Main application file: login gate, the app shell (sidebar + topbar), theme
+// switching, and tab routing. Individual tab views land in later prompts;
+// until then they render a placeholder.
 // Built by UNICA-HIJA | v2.41
 //
 // File layout (Ctrl+F to jump):
 //   1. Helpers
 //   2. Topbar
-//   3. Root App
+//   3. Tab views
+//   4. Root App
 
 "use client";
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react"; // not 'framer-motion' — package renamed in v11
-import { Activity, ArrowLeft, LogOut, Moon, Sun } from "lucide-react";
+import { Activity, Bell, Construction, LogOut, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DataProvider, useData } from "@/context/DataContext";
 import { LoginScreen, type LoginHandler } from "@/components/LoginScreen";
 import { ProfileView } from "@/components/ProfileView";
-import type { StaffProfile, StaffRole } from "@/types";
+import { Sidebar } from "@/components/Sidebar";
+import { TABS, type TabId } from "@/navigation";
+import { ROLE_LABELS, type StaffRole } from "@/types";
 
 // ─── 1. HELPERS ───
-
-type TabId = "dashboard" | "profile";
-
-const TAB_LABELS: Record<TabId, string> = {
-  dashboard: "Dashboard",
-  profile: "Profile",
-};
 
 // Applies the Dr./RN prefix the ward staff expect to see on screen. Checks the
 // raw name first so someone who typed "Dr. Reyes" doesn't become "Dr. Dr. Reyes".
@@ -40,7 +37,7 @@ export function formatDisplayName(rawName: string, role: StaffRole) {
 const ROLE_CHIP: Record<StaffRole, string> = {
   Doctor: "bg-wah-purple/20 text-wah-neon",
   Nurse: "bg-wah-neon/15 text-wah-neon",
-  "IT Admin": "bg-rose-500/15 text-rose-400",
+  IT: "bg-rose-500/15 text-rose-400",
 };
 
 // Login only asks for a name, so fill the badge with something sensible.
@@ -48,35 +45,37 @@ const ROLE_CHIP: Record<StaffRole, string> = {
 const DEFAULT_DEPARTMENT: Record<StaffRole, string> = {
   Doctor: "Internal Medicine",
   Nurse: "Nursing Service",
-  "IT Admin": "IT Department",
+  IT: "IT Department",
 };
 
 // ─── 2. TOPBAR ───
 
 interface TopbarProps {
   title: string;
-  // until the sidebar exists this is the only way back from Profile
-  onBack?: () => void;
   isLight: boolean;
   onToggleTheme: () => void;
   displayName: string;
   role: StaffRole;
   isDemoMode: boolean;
-  onOpenProfile: () => void;
+  demoStep: number;
   onLogout: () => void;
 }
 
 function Topbar({
   title,
-  onBack,
   isLight,
   onToggleTheme,
   displayName,
   role,
   isDemoMode,
-  onOpenProfile,
+  demoStep,
   onLogout,
 }: TopbarProps) {
+  const iconButton = cn(
+    "glass flex h-10 w-10 items-center justify-center rounded-xl",
+    "text-text-muted transition-colors hover:text-wah-neon",
+  );
+
   return (
     <header
       className={cn(
@@ -85,16 +84,6 @@ function Topbar({
       )}
     >
       <div className="flex items-center gap-3">
-        {onBack && (
-          <button
-            type="button"
-            onClick={onBack}
-            aria-label="Back to dashboard"
-            className="rounded-xl p-2 text-text-muted hover:bg-glass-bg hover:text-foreground"
-          >
-            <ArrowLeft size={18} />
-          </button>
-        )}
         <h1 className="text-xl font-bold">{title}</h1>
         {/* TODO(Prompt: demo tour): the guided tour overlay replaces this chip */}
         {isDemoMode && (
@@ -104,7 +93,7 @@ function Topbar({
               "text-[9px] font-black uppercase text-amber-500",
             )}
           >
-            Demo Mode
+            Demo · Step {demoStep + 1}
           </span>
         )}
       </div>
@@ -114,19 +103,17 @@ function Topbar({
           type="button"
           onClick={onToggleTheme}
           aria-label={isLight ? "Switch to dark mode" : "Switch to light mode"}
-          className={cn(
-            "glass flex h-10 w-10 items-center justify-center rounded-xl",
-            "text-text-muted transition-colors hover:text-wah-neon",
-          )}
+          className={iconButton}
         >
           {isLight ? <Moon size={18} /> : <Sun size={18} />}
         </button>
 
-        <button
-          type="button"
-          onClick={onOpenProfile}
-          className="flex items-center gap-2 rounded-xl px-3 py-2 hover:bg-glass-bg"
-        >
+        {/* TODO(Phase 2): unread count badge once the Notifications service pushes alerts */}
+        <button type="button" aria-label="Notifications" className={iconButton}>
+          <Bell size={18} />
+        </button>
+
+        <div className="flex items-center gap-2 px-2">
           <span className="text-sm font-semibold">{displayName}</span>
           <span
             className={cn(
@@ -134,9 +121,9 @@ function Topbar({
               ROLE_CHIP[role],
             )}
           >
-            {role}
+            {ROLE_LABELS[role]}
           </span>
-        </button>
+        </div>
 
         <button
           type="button"
@@ -151,7 +138,9 @@ function Topbar({
   );
 }
 
-// Temporary landing content so the theme can be checked against real cards.
+// ─── 3. TAB VIEWS ───
+
+// Temporary dashboard content so the theme can be checked against real cards.
 // It also shows where each dataset came from, which saves a trip to devtools
 // when someone asks "is this reading Supabase or the mock?"
 function SetupOverview() {
@@ -200,15 +189,48 @@ function SetupOverview() {
   );
 }
 
-// ─── 3. ROOT APP ───
+interface PlaceholderViewProps {
+  tab: TabId;
+}
+
+function PlaceholderView({ tab }: PlaceholderViewProps) {
+  const { icon: Icon, label, description } = TABS[tab];
+
+  return (
+    <div
+      className={cn(
+        "glass flex min-h-[420px] flex-col items-center justify-center gap-4",
+        "rounded-[2rem] p-8 text-center",
+      )}
+    >
+      <div className="rounded-2xl bg-wah-purple/15 p-4 text-wah-neon">
+        <Icon size={32} />
+      </div>
+      <h2 className="text-2xl font-black">{label}</h2>
+      <p className="max-w-md text-text-muted">{description}</p>
+      <span
+        className={cn(
+          "mt-2 flex items-center gap-2 rounded-full bg-amber-400/10 px-3 py-1",
+          "text-[10px] font-black uppercase tracking-widest text-amber-500",
+        )}
+      >
+        <Construction size={12} /> Screen coming in a later build prompt
+      </span>
+    </div>
+  );
+}
+
+// ─── 4. ROOT APP ───
 
 export function App() {
-  const [isLight, setIsLight] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabId>("dashboard");
-  // null means nobody is logged in and the login overlay shows
   const [userRole, setUserRole] = useState<StaffRole | null>(null);
-  const [profile, setProfile] = useState<StaffProfile | null>(null);
+  const [userName, setUserName] = useState("");
+  const [userDept, setUserDept] = useState("");
+  const [userLicense, setUserLicense] = useState("");
   const [isDemoMode, setIsDemoMode] = useState(false);
+  const [demoStep, setDemoStep] = useState(0);
+  const [activeTab, setActiveTab] = useState<TabId>("dashboard");
+  const [isLight, setIsLight] = useState(false);
 
   // The class goes on <html>, not a wrapper div, so the body background and
   // native scrollbars switch too — a wrapper left a dark strip on overscroll.
@@ -216,62 +238,74 @@ export function App() {
     document.documentElement.classList.toggle("light", isLight);
   }, [isLight]);
 
-  const handleLogin: LoginHandler = (role, name, department, license, demo) => {
+  const handleLogin: LoginHandler = (role, name, dept, license, demo) => {
     setUserRole(role);
-    setProfile({
-      name,
-      role,
-      department: department ?? DEFAULT_DEPARTMENT[role],
-      license: license ?? "Not on file",
-    });
+    setUserName(name);
+    setUserDept(dept ?? DEFAULT_DEPARTMENT[role]);
+    setUserLicense(license ?? "Not on file");
     setIsDemoMode(!!demo);
-    // TODO(Prompt: sidebar): IT Admin lands on 'architecture' once that tab exists
-    setActiveTab("dashboard");
+    setDemoStep(0);
+    // IT staff start on the system view; everyone else starts on patient care
+    setActiveTab(role === "IT" ? "architecture" : "dashboard");
   };
 
-  function handleLogout() {
-    setUserRole(null);
-    setProfile(null);
-    setIsDemoMode(false);
-  }
-
-  if (!userRole || !profile) {
+  if (!userRole) {
     return <LoginScreen onLogin={handleLogin} />;
   }
 
-  const displayName = formatDisplayName(profile.name, profile.role);
+  const displayName = formatDisplayName(userName, userRole);
 
   return (
     <DataProvider>
       <div className="min-h-screen bg-background text-foreground">
-        <Topbar
-          title={TAB_LABELS[activeTab]}
-          onBack={activeTab === "dashboard" ? undefined : () => setActiveTab("dashboard")}
-          isLight={isLight}
-          onToggleTheme={() => setIsLight((current) => !current)}
-          displayName={displayName}
-          role={profile.role}
-          isDemoMode={isDemoMode}
-          onOpenProfile={() => setActiveTab("profile")}
-          onLogout={handleLogout}
-        />
+        <Sidebar role={userRole} activeTab={activeTab} onSelect={setActiveTab} />
 
-        <main className="p-8">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.25 }}
-            >
-              {activeTab === "dashboard" && <SetupOverview />}
-              {activeTab === "profile" && (
-                <ProfileView profile={profile} displayName={displayName} onSave={setProfile} />
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </main>
+        {/* h-screen + overflow on <main> keeps the topbar pinned while only the tab content scrolls */}
+        <div className="ml-20 flex h-screen flex-col">
+          <Topbar
+            title={TABS[activeTab].label}
+            isLight={isLight}
+            onToggleTheme={() => setIsLight((current) => !current)}
+            displayName={displayName}
+            role={userRole}
+            isDemoMode={isDemoMode}
+            demoStep={demoStep}
+            onLogout={() => setUserRole(null)}
+          />
+
+          <main className="flex-1 overflow-y-auto p-8">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.25 }}
+              >
+                {activeTab === "dashboard" && <SetupOverview />}
+                {activeTab === "profile" && (
+                  <ProfileView
+                    profile={{
+                      name: userName,
+                      role: userRole,
+                      department: userDept,
+                      license: userLicense,
+                    }}
+                    displayName={displayName}
+                    onSave={(updated) => {
+                      setUserName(updated.name);
+                      setUserDept(updated.department);
+                      setUserLicense(updated.license);
+                    }}
+                  />
+                )}
+                {activeTab !== "dashboard" && activeTab !== "profile" && (
+                  <PlaceholderView tab={activeTab} />
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </main>
+        </div>
       </div>
     </DataProvider>
   );

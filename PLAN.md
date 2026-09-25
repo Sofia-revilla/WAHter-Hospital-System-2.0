@@ -15,6 +15,10 @@ a build, tests, a commit, and an update to this file.
 - [x] **Prompt 3: Login Screen** (2026-09-25)
   `LoginScreen` with select / login / signup / verify / demo modes, wired into App as a login gate,
   plus topbar logout. See DECISIONS.md D-010, D-011.
+- [x] **Prompt 4: App Shell** (2026-09-25)
+  Sidebar (logo, role-based SidebarItems with tooltips and sliding active bar), topbar (theme,
+  bell, name + role chip, logout), per-role tabs, animated tab content, PlaceholderView.
+  See DECISIONS.md D-012 to D-015.
 
 ## Master prompt phases
 

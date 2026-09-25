@@ -20,7 +20,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { StaffRole } from "@/types";
+import { ROLE_LABELS, type StaffRole } from "@/types";
 
 type LoginMode = "select" | "login" | "signup" | "verify" | "demo";
 
@@ -77,7 +77,7 @@ const ROLE_STYLES: Record<StaffRole, RoleStyle> = {
     chip: "bg-wah-neon/15 text-wah-neon",
     submit: "bg-wah-neon",
   },
-  "IT Admin": {
+  IT: {
     icon: Database,
     portal: "Administrator Portal",
     subtitle: "System Diagnostics",
@@ -91,7 +91,7 @@ const ROLE_STYLES: Record<StaffRole, RoleStyle> = {
   },
 };
 
-const ROLES: StaffRole[] = ["Doctor", "Nurse", "IT Admin"];
+const ROLES: StaffRole[] = ["Doctor", "Nurse", "IT"];
 
 // ─── SMALL PIECES ───
 
@@ -373,7 +373,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                         style.chip,
                       )}
                     >
-                      {mode === "login" ? style.portal : role}
+                      {mode === "login" ? style.portal : ROLE_LABELS[role]}
                     </span>
                     <h2 className="mt-4 text-3xl font-black">
                       {mode === "login" ? "Staff Login" : "New Staff"}
@@ -394,7 +394,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                             >
                               {ROLES.map((roleOption) => (
                                 <option key={roleOption} value={roleOption}>
-                                  {roleOption}
+                                  {ROLE_LABELS[roleOption]}
                                 </option>
                               ))}
                             </select>

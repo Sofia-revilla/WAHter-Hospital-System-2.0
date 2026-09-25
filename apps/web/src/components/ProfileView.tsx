@@ -3,13 +3,13 @@
 import { useState } from "react";
 import { BadgeCheck, Building2, IdCard, Pencil, Save, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { StaffProfile, StaffRole } from "@/types";
+import { ROLE_LABELS, type StaffProfile, type StaffRole } from "@/types";
 
 // role band colors mirror the login cards: doctor purple, nurse neon, IT rose
 const ROLE_BAND: Record<StaffRole, string> = {
   Doctor: "from-wah-purple to-indigo-700",
   Nurse: "from-wah-neon to-wah-purple",
-  "IT Admin": "from-rose-500 to-rose-700",
+  IT: "from-rose-500 to-rose-700",
 };
 
 function initialsOf(name: string) {
@@ -70,7 +70,7 @@ export function ProfileView({ profile, displayName, onSave }: ProfileViewProps) 
               "text-[10px] font-black uppercase tracking-wider text-wah-neon",
             )}
           >
-            {profile.role}
+            {ROLE_LABELS[profile.role]}
           </span>
 
           <dl className="mt-6 w-full space-y-3 text-left text-sm">
@@ -175,7 +175,7 @@ export function ProfileView({ profile, displayName, onSave }: ProfileViewProps) 
           <label className="space-y-2 text-xs font-semibold uppercase text-text-muted">
             Role
             {/* role changes go through the System Admin (step-up protected), so it's read-only here */}
-            <input className={fieldClass} disabled value={profile.role} />
+            <input className={fieldClass} disabled value={ROLE_LABELS[profile.role]} />
           </label>
         </div>
 
