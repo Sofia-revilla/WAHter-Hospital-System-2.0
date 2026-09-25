@@ -5,6 +5,7 @@ import { Activity, FileSpreadsheet, Plus, Search, Settings, User } from "lucide-
 import { cn } from "@/lib/utils";
 import { useData } from "@/context/DataContext";
 import { riskLevelFor } from "@/lib/mews";
+import { bedLabel } from "@/lib/beds";
 import type { Patient } from "@/types";
 import { MewsChip } from "./MewsChip";
 import { VitalsDialog } from "./VitalsDialog";
@@ -50,8 +51,16 @@ interface PatientsViewProps {
 }
 
 export function PatientsView({ staffName }: PatientsViewProps) {
-  const { patients } = useData();
+  const { patients, wards, bedAssignments } = useData();
   const [chartingPatientId, setChartingPatientId] = useState<string | null>(null);
+  // Beds assigned on the bed board win; everyone else keeps the design's
+  // placeholder room until Scheduling owns this (Phase 4)
+  function bedFor(patientId: string, index: number) {
+    const assignment = bedAssignments.find((item) => item.patientId === patientId);
+    const ward = assignment && wards.find((item) => item.id === assignment.wardId);
+    return ward && assignment ? bedLabel(ward, assignment.bedIndex) : `Room 30${index + 1}-B`;
+  }
+
   // looked up fresh so the dialog sees the updated MEWS right after saving
   const chartingPatient = patients.find((patient) => patient.id === chartingPatientId) ?? null;
   const [query, setQuery] = useState("");
@@ -205,8 +214,7 @@ export function PatientsView({ staffName }: PatientsViewProps) {
                     </td>
                     <td className="py-4 pr-4 text-sm">
                       <p>{patient.department}</p>
-                      {/* TODO(Phase 4): real bed from the Scheduling service's bed board */}
-                      <p className="font-mono text-xs text-wah-neon">Room 30{index + 1}-B</p>
+                      <p className="font-mono text-xs text-wah-neon">{bedFor(patient.id, index)}</p>
                     </td>
                     <td className="py-4 pr-4">
                       <p className="max-w-[200px] truncate text-sm" title={PLACEHOLDER_DIAGNOSIS}>

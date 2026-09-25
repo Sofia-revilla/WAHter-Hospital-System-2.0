@@ -143,3 +143,18 @@ export interface AuditEntry {
   // what was touched, by ID only (never clinical details)
   resource: string;
 }
+
+export type AdmissionType = "Direct admit" | "ER-to-ward transfer";
+
+// A patient placed in a specific bed (UC-04). One active assignment per
+// patient; assigning again moves them (a transfer, user story 8).
+export interface BedAssignment {
+  patientId: string;
+  wardId: string;
+  // 0-based index into the ward's bed grid
+  bedIndex: number;
+  admissionType: AdmissionType;
+  attendingPhysician: string;
+  assignedBy: string;
+  assignedAt: string;
+}

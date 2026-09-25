@@ -12,7 +12,7 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react"; // not 'framer-motion', the package got renamed in v11
-import { Bell, LayoutDashboard, LogOut, Moon, Sun } from "lucide-react";
+import { LayoutDashboard, LogOut, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDisplayName } from "@/lib/staff";
 import { DataProvider } from "@/context/DataContext";
@@ -27,6 +27,7 @@ import { PatientsView } from "@/components/PatientsView";
 import { PharmacyView } from "@/components/PharmacyView";
 import { PrescriptionView } from "@/components/PrescriptionView";
 import { LoginScreen, type LoginHandler } from "@/components/LoginScreen";
+import { NotificationBell } from "@/components/NotificationBell";
 import { ProfileView } from "@/components/ProfileView";
 import { StaffAccessView } from "@/components/StaffAccessView";
 import { Sidebar } from "@/components/Sidebar";
@@ -58,6 +59,7 @@ interface TopbarProps {
   onToggleTheme: () => void;
   displayName: string;
   role: StaffRole;
+  onOpenAlerts: () => void;
   onLogout: () => void;
 }
 
@@ -67,6 +69,7 @@ function Topbar({
   onToggleTheme,
   displayName,
   role,
+  onOpenAlerts,
   onLogout,
 }: TopbarProps) {
   const iconButton = cn(
@@ -95,10 +98,8 @@ function Topbar({
           {isLight ? <Moon size={18} /> : <Sun size={18} />}
         </button>
 
-        {/* TODO(Phase 2): unread count badge once the Notifications service pushes alerts */}
-        <button type="button" aria-label="Notifications" className={iconButton}>
-          <Bell size={18} />
-        </button>
+        {/* TODO(Phase 2): feed this from the Notifications service over SSE */}
+        <NotificationBell role={role} onOpenAlerts={onOpenAlerts} />
 
         <div className="flex items-center gap-2 px-2">
           {/* on tablet widths "E-Prescribing" and the name were wrapping onto two lines;
@@ -169,6 +170,19 @@ export function App() {
     document.documentElement.classList.toggle("light", isLight);
   }, [isLight]);
 
+  // The expanded sidebar is 256px, which eats most of a phone or portrait
+  // tablet, so below 1024px it folds into the icon rail. Users can still
+  // open it by hand; we only collapse when the screen gets narrow.
+  useEffect(() => {
+    const narrow = window.matchMedia("(max-width: 1023px)");
+    const collapseIfNarrow = () => {
+      if (narrow.matches) setIsSidebarExpanded(false);
+    };
+    collapseIfNarrow();
+    narrow.addEventListener("change", collapseIfNarrow);
+    return () => narrow.removeEventListener("change", collapseIfNarrow);
+  }, []);
+
   const handleLogin: LoginHandler = (role, name, dept, license, demo) => {
     setUserRole(role);
     setUserName(name);
@@ -213,7 +227,7 @@ export function App() {
       case "lab":
         return <LaboratoryView role={role} />;
       case "rooms":
-        return <BedManagementView role={role} />;
+        return <BedManagementView role={role} staffName={displayName} />;
       case "billing":
         return <BillingView role={role} />;
       case "inventory":
@@ -270,6 +284,7 @@ export function App() {
             onToggleTheme={() => setIsLight((current) => !current)}
             displayName={displayName}
             role={role}
+            onOpenAlerts={() => setActiveTab("dashboard")}
             onLogout={() => setUserRole(null)}
           />
 

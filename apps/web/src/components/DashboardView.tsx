@@ -13,8 +13,8 @@ import {
 } from "recharts";
 import { cn } from "@/lib/utils";
 import { useData } from "@/context/DataContext";
+import { wardLabel } from "@/lib/beds";
 import { REVENUE_DATA } from "@/constants";
-import { InventoryRow } from "./InventoryRow";
 import { MewsAlertsPanel } from "./MewsAlertsPanel";
 import { PatientCard } from "./PatientCard";
 import { StatCard } from "./StatCard";
@@ -48,7 +48,7 @@ interface DashboardViewProps {
 }
 
 export function DashboardView({ isLight, staffName }: DashboardViewProps) {
-  const { patients, inventory, mewsAlerts } = useData();
+  const { patients, wards, occupiedBeds, mewsAlerts } = useData();
   const activeAlerts = mewsAlerts.filter((alert) => !alert.acknowledgedAt);
   const highAlerts = activeAlerts.filter((alert) => alert.risk === "High").length;
 
@@ -95,8 +95,8 @@ export function DashboardView({ isLight, staffName }: DashboardViewProps) {
       </div>
 
       <div className="grid gap-8 xl:grid-cols-12">
-        {/* min-w-0: grid items default to min-width:auto, so the inventory table's
-            min-w pushed the whole column wider than the screen on tablets */}
+        {/* min-w-0: grid items default to min-width:auto, so a wide child could
+            push the whole column wider than the screen on tablets */}
         <div className="min-w-0 space-y-8 xl:col-span-8">
           <section className="glass rounded-[2rem] p-8">
             <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
@@ -163,41 +163,38 @@ export function DashboardView({ isLight, staffName }: DashboardViewProps) {
             </div>
           </section>
 
+          {/* Replaced the old inventory watchlist: pharmacy is dispensing-only in the
+              paper, and no service owns stock. Bed occupancy is in scope (UC-04, story 9). */}
           <section className="glass rounded-[2rem] p-8">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-bold">Inventory Status</h3>
-                <p className="text-xs text-text-muted">Stock Watchlist</p>
-              </div>
-              {/* TODO: switch to the Inventory tab (needs a tab setter passed down from App) */}
-              <button
-                type="button"
-                className="text-xs font-black uppercase tracking-widest text-wah-neon hover:underline"
-              >
-                View All
-              </button>
+            <div className="mb-6">
+              <h3 className="text-lg font-bold">Bed Occupancy by Ward</h3>
+              <p className="text-xs text-text-muted">Live from the bed board</p>
             </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[560px] text-left">
-                <thead>
-                  <tr className="text-[10px] font-black uppercase tracking-widest text-text-muted">
-                    <th className="pb-3">Item Name</th>
-                    <th className="pb-3">Quantity</th>
-                    <th className="pb-3">Stock Level</th>
-                    <th className="pb-3">Status</th>
-                    <th className="pb-3">
-                      <span className="sr-only">Actions</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {inventory.slice(0, 4).map((item) => (
-                    <InventoryRow key={item.id} item={item} />
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ul className="space-y-4">
+              {wards.map((ward) => {
+                const taken = occupiedBeds(ward.id).length;
+                const percent = ward.capacity === 0 ? 0 : Math.round((taken / ward.capacity) * 100);
+                return (
+                  <li key={ward.id}>
+                    <div className="flex items-center justify-between gap-3 text-sm">
+                      <span className="font-semibold">{wardLabel(ward)}</span>
+                      <span className="shrink-0 font-mono text-xs text-text-muted">
+                        {taken}/{ward.capacity} · {percent}%
+                      </span>
+                    </div>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-glass-bg">
+                      <div
+                        className={cn(
+                          "h-full rounded-full",
+                          percent >= 90 ? "bg-rose-500" : percent >= 70 ? "bg-orange-400" : "bg-emerald-500",
+                        )}
+                        style={{ width: `${percent}%` }}
+                      />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           </section>
         </div>
 

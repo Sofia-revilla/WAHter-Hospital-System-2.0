@@ -4,7 +4,16 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { supabase } from "@/lib/supabase";
 import { calculateMews, implausibleReadings, type VitalSigns } from "@/lib/mews";
 import { INVENTORY, LAB_TESTS, PATIENTS, WARDS } from "@/constants";
-import type { InventoryItem, LabTest, MewsAlert, Patient, VitalsRecord, Ward } from "@/types";
+import type {
+  AdmissionType,
+  BedAssignment,
+  InventoryItem,
+  LabTest,
+  MewsAlert,
+  Patient,
+  VitalsRecord,
+  Ward,
+} from "@/types";
 
 type DataSource = "mock" | "supabase";
 
@@ -24,6 +33,18 @@ interface DataContextValue {
     alertId: string,
     acknowledgement: { by: string; note?: string; isFalseAlarm?: boolean },
   ) => void;
+  bedAssignments: BedAssignment[];
+  occupiedBeds: (wardId: string) => number[];
+  assignBed: (request: BedRequest) => { ok: true } | { ok: false; reason: string };
+}
+
+export interface BedRequest {
+  patientId: string;
+  wardId: string;
+  bedIndex: number;
+  admissionType: AdmissionType;
+  attendingPhysician: string;
+  assignedBy: string;
 }
 
 const DataContext = createContext<DataContextValue | null>(null);
@@ -206,6 +227,50 @@ export function DataProvider({ children }: DataProviderProps) {
     return record;
   }
 
+  // ─── beds ───
+  // The mock wards only give a count of occupied beds, so the first
+  // `occupied` beds in each grid count as taken by patients we don't have
+  // records for. Anything assigned in this session is tracked by bed index.
+  const [bedAssignments, setBedAssignments] = useState<BedAssignment[]>([]);
+
+  function occupiedBeds(wardId: string) {
+    const ward = wards.find((candidate) => candidate.id === wardId);
+    if (!ward) return [];
+    const baseline = Array.from({ length: ward.occupied }, (_, index) => index);
+    const assigned = bedAssignments
+      .filter((assignment) => assignment.wardId === wardId)
+      .map((assignment) => assignment.bedIndex);
+    return [...baseline, ...assigned];
+  }
+
+  function assignBed(request: BedRequest): { ok: true } | { ok: false; reason: string } {
+    // checked against current state right before writing, the in-memory
+    // version of UC-04 BR-03's atomic reservation
+    if (occupiedBeds(request.wardId).includes(request.bedIndex)) {
+      return { ok: false, reason: "That bed was just taken. Please pick another one." };
+    }
+    const ward = wards.find((candidate) => candidate.id === request.wardId);
+    if (!ward || request.bedIndex < 0 || request.bedIndex >= ward.capacity) {
+      return { ok: false, reason: "That bed doesn't exist in this ward." };
+    }
+
+    // one active bed per patient (UC-04 BR-02): a new assignment replaces the old one
+    setBedAssignments((current) => [
+      ...current.filter((assignment) => assignment.patientId !== request.patientId),
+      {
+        patientId: request.patientId,
+        wardId: request.wardId,
+        bedIndex: request.bedIndex,
+        admissionType: request.admissionType,
+        attendingPhysician: request.attendingPhysician,
+        assignedBy: request.assignedBy,
+        assignedAt: new Date().toISOString(),
+      },
+    ]);
+    // TODO(Phase 4): POST to Scheduling, which publishes bed.assigned on the bus
+    return { ok: true };
+  }
+
   function acknowledgeAlert(
     alertId: string,
     acknowledgement: { by: string; note?: string; isFalseAlarm?: boolean },
@@ -239,6 +304,9 @@ export function DataProvider({ children }: DataProviderProps) {
         mewsAlerts,
         recordVitals,
         acknowledgeAlert,
+        bedAssignments,
+        occupiedBeds,
+        assignBed,
       }}
     >
       {children}

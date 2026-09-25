@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { AlertTriangle, Activity, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -118,7 +119,12 @@ export function VitalsDialog({ patient, recordedBy, onClose }: VitalsDialogProps
     "focus:ring-1 focus:ring-wah-purple",
   );
 
-  return (
+  // Portaled to <body>: the tab content wrapper animates with a transform,
+  // and a transformed parent traps position:fixed children inside it (the
+  // dialog ended up centered in the main column, under the sidebar).
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <AnimatePresence>
       {patient && (
         <>
@@ -218,8 +224,8 @@ export function VitalsDialog({ patient, recordedBy, onClose }: VitalsDialogProps
                 <div className="mt-5 rounded-2xl border border-orange-400/40 bg-orange-400/10 p-4 text-sm">
                   <p className="flex items-center gap-2 font-semibold text-orange-500">
                     <AlertTriangle size={16} /> Please verify:{" "}
-                    {flagged.map((key) => VITAL_LABELS[key]).join(", ")} look outside the
-                    normal range.
+                    {flagged.map((key) => VITAL_LABELS[key]).join(", ")}{" "}
+                    {flagged.length > 1 ? "look" : "looks"} outside the normal range.
                   </p>
                   <label className="mt-2 flex items-center gap-2 text-text-muted">
                     <input
@@ -271,9 +277,14 @@ export function VitalsDialog({ patient, recordedBy, onClose }: VitalsDialogProps
                       <li key={record.id} className="flex flex-wrap items-center gap-2">
                         <span>{new Date(record.recordedAt).toLocaleTimeString()}</span>
                         <span>
-                          RR {record.vitals.respiratoryRate} · SpO2 {record.vitals.oxygenSaturation}
-                          · T {record.vitals.temperature} · SBP {record.vitals.systolicBp} · HR{" "}
-                          {record.vitals.heartRate} · {record.vitals.consciousness}
+                          {[
+                            `RR ${record.vitals.respiratoryRate}`,
+                            `SpO2 ${record.vitals.oxygenSaturation}`,
+                            `T ${record.vitals.temperature}`,
+                            `SBP ${record.vitals.systolicBp}`,
+                            `HR ${record.vitals.heartRate}`,
+                            record.vitals.consciousness,
+                          ].join(" · ")}
                         </span>
                         <MewsChip risk={record.risk} score={record.mewsScore} />
                       </li>
@@ -285,6 +296,7 @@ export function VitalsDialog({ patient, recordedBy, onClose }: VitalsDialogProps
           </motion.div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }

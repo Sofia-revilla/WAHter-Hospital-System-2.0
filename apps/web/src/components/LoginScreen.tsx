@@ -258,7 +258,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
         {/* ─── brand panel ─── */}
         <div
           className={cn(
-            "relative flex flex-col overflow-hidden p-10",
+            "relative flex flex-col overflow-hidden p-6 sm:p-10",
             "bg-gradient-to-br from-wah-purple via-indigo-600 to-indigo-800",
           )}
         >
@@ -303,7 +303,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
 
         {/* ─── form panel ─── */}
         <div className="flex min-h-[640px] flex-col bg-card-bg/60">
-          <div className="flex-1 p-8 md:p-12">
+          <div className="flex-1 p-5 sm:p-8 md:p-12">
             <AnimatePresence mode="wait">
               <motion.div
                 key={mode}
@@ -327,7 +327,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                             type="button"
                             onClick={() => chooseRole(roleOption)}
                             className={cn(
-                              "group flex w-full items-center gap-5 rounded-[2rem] border-2 p-6 text-left",
+                              "group flex w-full items-center gap-4 rounded-[2rem] border-2 p-4 text-left sm:gap-5 sm:p-6",
                               "border-glass-border transition-all duration-300",
                               "hover:-translate-y-1 hover:shadow-xl",
                               roleStyle.hoverBorder,

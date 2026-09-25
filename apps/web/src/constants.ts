@@ -268,6 +268,8 @@ export const WARDS: Ward[] = [
 // for roles whose portals come in later phases.
 export const STAFF_ACCOUNTS: StaffAccount[] = [
   { id: "EMP-0001", name: "Dr. Andrea Mendoza", role: "Physician", department: "Internal Medicine", status: "Active", lastLogin: "Today 07:02" },
+  { id: "EMP-0011", name: "Dr. Miguel Torres", role: "Physician", department: "Surgery", status: "Active", lastLogin: "Today 06:30" },
+  { id: "EMP-0012", name: "Dr. Carla Dizon", role: "Physician", department: "Pediatrics", status: "Active", lastLogin: "Today 07:15" },
   { id: "EMP-0002", name: "RN Carlo Bautista", role: "Nurse", department: "Medical Ward", status: "Active", lastLogin: "Today 06:55" },
   { id: "EMP-0003", name: "Liza Ramos", role: "Laboratory Staff", department: "Laboratory", status: "Active", lastLogin: "Today 07:30" },
   { id: "EMP-0004", name: "Paolo Santos", role: "Radiology Staff", department: "Radiology", status: "Active", lastLogin: "Yesterday 16:12" },

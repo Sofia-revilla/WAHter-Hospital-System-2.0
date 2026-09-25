@@ -317,3 +317,24 @@ The pre-change build is tagged `prompt-build-v1` (also still on `main`) so it ca
   isolation. New Staff & Access tab covers UC-16 (accounts, step-up note for role changes, append-only
   audit log with search, CSV export and meta-audit).
 - Master prompt §7.4's nav table and §7.8 designs are superseded where they conflict with the above.
+
+### D-037: Dashboard inventory removed, bed admission flow, notification inbox
+
+- **Inventory Status (Dashboard) removed.** None of the paper's 8 FSAs owns inventory, no use case
+  or diagram covers it, and limitation (d) keeps pharmacy dispensing-only. Replaced with Bed Occupancy
+  by Ward (UC-04, user story 9). `InventoryRow.tsx` was deleted.
+- **Admit / Assign Bed** (`AdmitDialog.tsx`, UC-04): searchable patient picker, ward and bed dropdowns
+  (only free beds), admission type, and attending physician (the required fields from UC-04.1). One
+  active bed per patient: assigning again becomes a transfer that frees the old bed (UC-04 BR-02,
+  user story 8). A double-booked bed is rejected (BR-03). An ICU bed for a non-Critical patient needs a
+  confirmation (UC-04.3 2a). Free beds on the grid are clickable for staff who can admit. Bed Total and
+  Available stats are now counted from bed state. Mock wards only give occupied counts, so the first N
+  beds per ward count as taken by patients without records.
+- **Notification bell** opens an inbox of unacknowledged MEWS alerts with an unread badge. With
+  nothing to show it says "No notifications available". IT Admin's inbox stays empty because MEWS
+  alerts carry patient data.
+- **Dialogs are portaled to `<body>`.** The tab content wrapper animates with a transform, which
+  traps `position: fixed` children; the vitals and admit dialogs were rendering inside the main
+  column under the sidebar.
+- **Narrow screens:** the sidebar folds to the icon rail below 1024px, and the login card uses tighter
+  padding on phones.

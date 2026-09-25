@@ -1,40 +1,35 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "motion/react";
 import { Activity, Bed, History, Network, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { can } from "@/lib/staff";
+import { bedLabel } from "@/lib/beds";
 import { useData } from "@/context/DataContext";
 import type { StaffRole, Ward } from "@/types";
+import { AdmitDialog, type AdmitPreset } from "./AdmitDialog";
 import { StatCard } from "./StatCard";
-
-// Fixed numbers from the UI design. Heads up: the mock wards add up to 70 beds
-// and 24 free, not 23. They'll match once both come from Scheduling (Phase 4).
-const STAT_CARDS = [
-  { title: "Total Beds", value: "70", sub: "Hospital Capacity", icon: Bed },
-  { title: "Available", value: "23", sub: "Ready for Admission", icon: Plus, trend: "Open" },
-  { title: "Waitlist", value: "08", sub: "Pending ER", icon: History, trend: "Urgent" },
-];
 
 // a ward with more than this many empty beds shows up in "Near-Empty Wards"
 const NEAR_EMPTY_THRESHOLD = 5;
 
-function vacantBeds(ward: Ward) {
-  return ward.capacity - ward.occupied;
-}
-
 interface WardCardProps {
   ward: Ward;
+  occupied: number[];
+  // who's in each bed we have a record for, keyed by bed index
+  occupantNames: Map<number, string>;
   canManageBeds: boolean;
+  onOpenAdmit: (preset: AdmitPreset) => void;
 }
 
-function WardCard({ ward, canManageBeds }: WardCardProps) {
-  const occupancy = ward.capacity === 0 ? 0 : (ward.occupied / ward.capacity) * 100;
+function WardCard({ ward, occupied, occupantNames, canManageBeds, onOpenAdmit }: WardCardProps) {
+  const occupancy = ward.capacity === 0 ? 0 : (occupied.length / ward.capacity) * 100;
 
   return (
     <div
       className={cn(
-        "group cursor-pointer rounded-[2rem] border border-glass-border bg-glass-bg p-6",
+        "group rounded-[2rem] border border-glass-border bg-glass-bg p-6",
         "transition-colors hover:border-wah-lavender/30",
       )}
     >
@@ -49,22 +44,46 @@ function WardCard({ ward, canManageBeds }: WardCardProps) {
             "text-[10px] font-black uppercase text-wah-neon",
           )}
         >
-          {ward.occupied}/{ward.capacity} Beds
+          {occupied.length}/{ward.capacity} Beds
         </span>
       </div>
 
       <div className="mt-5 grid grid-cols-5 gap-2.5">
         {Array.from({ length: ward.capacity }, (_, index) => {
-          const isOccupied = index < ward.occupied;
+          const isOccupied = occupied.includes(index);
+          const label = bedLabel(ward, index);
+          const occupant = occupantNames.get(index);
+          const title = isOccupied ? `${label}: ${occupant ?? "occupied"}` : `${label}: available`;
+
+          // free beds are buttons for staff who can admit; everything else is just a square
+          if (!isOccupied && canManageBeds) {
+            return (
+              <motion.button
+                key={index}
+                type="button"
+                whileHover={{ scale: 1.1 }}
+                onClick={() => onOpenAdmit({ wardId: ward.id, bedIndex: index })}
+                title={`${title} (click to admit)`}
+                aria-label={`Admit a patient to ${label}`}
+                className={cn(
+                  "aspect-square rounded-lg border border-dashed border-glass-border bg-glass-bg",
+                  "hover:border-wah-neon hover:bg-wah-purple/10",
+                )}
+              />
+            );
+          }
           return (
             <motion.div
               key={index}
               whileHover={{ scale: 1.1 }}
-              aria-label={`Bed ${index + 1}: ${isOccupied ? "occupied" : "available"}`}
+              title={title}
+              aria-label={title}
               className={cn(
                 "aspect-square rounded-lg",
                 isOccupied
-                  ? "bg-wah-purple shadow-md ring-1 ring-white/10"
+                  ? occupant
+                    ? "bg-wah-neon shadow-md ring-2 ring-wah-purple/40"
+                    : "bg-wah-purple shadow-md ring-1 ring-white/10"
                   : "border border-glass-border bg-glass-bg",
               )}
             />
@@ -82,12 +101,12 @@ function WardCard({ ward, canManageBeds }: WardCardProps) {
           />
         </div>
         {canManageBeds && (
-          // TODO(Phase 4): open this ward on the Scheduling service's bed board
           <button
             type="button"
+            onClick={() => onOpenAdmit({ wardId: ward.id })}
             className={cn(
               "rounded-xl bg-white px-3 py-1.5 text-[10px] font-black uppercase text-wah-deep",
-              "opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100",
+              "opacity-0 shadow transition-opacity group-hover:opacity-100 focus:opacity-100",
             )}
           >
             Manage
@@ -100,23 +119,70 @@ function WardCard({ ward, canManageBeds }: WardCardProps) {
 
 interface BedManagementViewProps {
   role: StaffRole;
+  staffName: string;
 }
 
-export function BedManagementView({ role }: BedManagementViewProps) {
-  const { wards } = useData();
+export function BedManagementView({ role, staffName }: BedManagementViewProps) {
+  const { wards, patients, bedAssignments, occupiedBeds } = useData();
   // admitting and moving patients between beds is the registrar's or nurse's job (UC-04)
   const canManageBeds = can(role, "admitPatient");
-  const nearEmptyWards = wards.filter((ward) => vacantBeds(ward) > NEAR_EMPTY_THRESHOLD);
+  const [admitPreset, setAdmitPreset] = useState<AdmitPreset | null>(null);
+
+  const occupiedByWard = new Map(wards.map((ward) => [ward.id, occupiedBeds(ward.id)]));
+  const totalBeds = wards.reduce((sum, ward) => sum + ward.capacity, 0);
+  const takenBeds = [...occupiedByWard.values()].reduce((sum, beds) => sum + beds.length, 0);
+  const freeCount = (ward: Ward) => ward.capacity - (occupiedByWard.get(ward.id)?.length ?? 0);
+  const nearEmptyWards = wards.filter((ward) => freeCount(ward) > NEAR_EMPTY_THRESHOLD);
+
+  function occupantNamesFor(wardId: string) {
+    const names = new Map<number, string>();
+    bedAssignments
+      .filter((assignment) => assignment.wardId === wardId)
+      .forEach((assignment) => {
+        const patient = patients.find((candidate) => candidate.id === assignment.patientId);
+        names.set(assignment.bedIndex, patient?.name ?? assignment.patientId);
+      });
+    return names;
+  }
+
+  // Total and Available are counted from the ward data now; Waitlist is still
+  // a design figure until Scheduling has an admission queue (Phase 4)
+  const statCards = [
+    { title: "Total Beds", value: String(totalBeds), sub: "Hospital Capacity", icon: Bed },
+    {
+      title: "Available",
+      value: String(totalBeds - takenBeds),
+      sub: "Ready for Admission",
+      icon: Plus,
+      trend: "Open",
+    },
+    { title: "Waitlist", value: "08", sub: "Pending ER", icon: History, trend: "Urgent" },
+  ];
 
   return (
     <div className="space-y-8">
-      <div>
-        <p className="text-sm font-semibold text-wah-purple">Facility Management</p>
-        <h2 className="text-3xl font-bold tracking-tight">Bed Management Board</h2>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold text-wah-purple">Facility Management</p>
+          <h2 className="text-3xl font-bold tracking-tight">Bed Management Board</h2>
+        </div>
+        {canManageBeds && (
+          <button
+            type="button"
+            onClick={() => setAdmitPreset({})}
+            className={cn(
+              "flex items-center gap-2 rounded-xl bg-wah-purple px-4 py-3",
+              "text-[10px] font-bold uppercase tracking-widest text-white",
+              "shadow-lg shadow-wah-purple/30 transition-transform hover:scale-105",
+            )}
+          >
+            <Plus size={14} /> Admit Patient
+          </button>
+        )}
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
-        {STAT_CARDS.map((card) => (
+        {statCards.map((card) => (
           <StatCard key={card.title} {...card} />
         ))}
       </div>
@@ -126,11 +192,18 @@ export function BedManagementView({ role }: BedManagementViewProps) {
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <h3 className="text-lg font-bold">Wards &amp; Occupancy</h3>
-              <p className="text-xs text-text-muted">Visual Grid Layout</p>
+              <p className="text-xs text-text-muted">
+                {canManageBeds
+                  ? "Click a free bed to admit someone into it."
+                  : "Hover a bed to see its number."}
+              </p>
             </div>
-            <div className="flex items-center gap-4 text-xs text-text-muted">
+            <div className="flex flex-wrap items-center gap-4 text-xs text-text-muted">
               <span className="flex items-center gap-2">
                 <span className="h-3 w-3 rounded-full bg-wah-purple" /> Occupied
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="h-3 w-3 rounded-full bg-wah-neon" /> Admitted today
               </span>
               <span className="flex items-center gap-2">
                 <span className="h-3 w-3 rounded-full border border-glass-border bg-glass-bg" /> Available
@@ -140,7 +213,14 @@ export function BedManagementView({ role }: BedManagementViewProps) {
 
           <div className="mt-6 grid gap-6 lg:grid-cols-2">
             {wards.map((ward) => (
-              <WardCard key={ward.id} ward={ward} canManageBeds={canManageBeds} />
+              <WardCard
+                key={ward.id}
+                ward={ward}
+                occupied={occupiedByWard.get(ward.id) ?? []}
+                occupantNames={occupantNamesFor(ward.id)}
+                canManageBeds={canManageBeds}
+                onOpenAdmit={setAdmitPreset}
+              />
             ))}
           </div>
         </section>
@@ -163,13 +243,13 @@ export function BedManagementView({ role }: BedManagementViewProps) {
                         {ward.name} <span className="text-text-muted">· {ward.type}</span>
                       </p>
                       <p className="font-mono text-xs uppercase text-wah-neon">
-                        {vacantBeds(ward)} Vacant Slots
+                        {freeCount(ward)} Vacant Slots
                       </p>
                     </div>
                     {canManageBeds && (
-                      // TODO(Phase 9a): start an admission into this ward
                       <button
                         type="button"
+                        onClick={() => setAdmitPreset({ wardId: ward.id })}
                         aria-label={`Admit a patient to ${ward.name} (${ward.type})`}
                         className="rounded-xl bg-wah-purple p-2.5 text-white transition-colors hover:bg-wah-neon"
                       >
@@ -213,6 +293,8 @@ export function BedManagementView({ role }: BedManagementViewProps) {
           </section>
         </div>
       </div>
+
+      <AdmitDialog preset={admitPreset} staffName={staffName} onClose={() => setAdmitPreset(null)} />
     </div>
   );
 }
