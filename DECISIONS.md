@@ -258,3 +258,9 @@ Supabase URL and publishable key go in Vercel's env settings only, never in the 
 lists the variable names. Note that DataContext expects Supabase tables named `patients`, `inventory`,
 `lab_tests`, `wards` with camelCase columns matching `types.ts`. Tables with a different shape would
 render wrong, although empty or missing tables safely fall back to mock data.
+
+### D-032: Version label is "v2", not "v2.41"
+
+The team asked for the version to read just "v2" (WAH2.0). The login screen's bottom strip now says
+"Secure Access • v2" and the App.tsx header says v2. docs/MASTER_PROMPT.md still says v2.41 because it's
+kept as a verbatim copy of the original spec.

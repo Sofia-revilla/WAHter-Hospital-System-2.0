@@ -576,7 +576,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
 
           <div className="flex items-center justify-between border-t border-glass-border px-8 py-4 md:px-12">
             <p className="text-[10px] font-bold uppercase tracking-widest text-text-muted">
-              Secure Access • v2.41 <span className="ml-2 text-wah-purple">UNICA-HIJA</span>
+              Secure Access • v2 <span className="ml-2 text-wah-purple">UNICA-HIJA</span>
             </p>
             <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-text-muted">
               <span className="relative flex h-2 w-2">

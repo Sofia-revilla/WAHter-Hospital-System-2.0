@@ -1,7 +1,7 @@
 // WAHter — App.tsx
 // Main application file: login gate, the app shell (sidebar + topbar), theme
 // switching, and tab routing to the ten tab views.
-// Built by UNICA-HIJA | v2.41
+// Built by UNICA-HIJA | v2
 //
 // File layout (Ctrl+F to jump):
 //   1. Helpers
