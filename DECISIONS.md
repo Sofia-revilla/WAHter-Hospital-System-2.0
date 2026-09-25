@@ -102,3 +102,20 @@ The labels are the tab ids, uppercased, as Prompt 4 specifies.
 Prompt 4 builds navigation for tabs whose screens come in later prompts. Those tabs show a
 `PlaceholderView` (icon, name, description, "coming in a later build prompt") instead of a blank area.
 The bell has no unread badge yet; that arrives with the Notifications service (Phase 2).
+
+### D-016: Dashboard stat values and date are hardcoded (Prompt 5)
+
+Prompt 5 specifies fixed stat values ("1,248", "84%", "03", "₱ 242,500") and a hardcoded date
+("Tuesday, May 5, 2026"). Master prompt §7.10 wants live API data on production screens. We followed
+Prompt 5 for the prototype; they become live figures once Clinical Records, Scheduling and Billing exist.
+The chart's range picker is visual only for now (TODO(Phase 6)).
+
+### D-017: Stock bar treats 2× minStock as full
+
+The inventory data has `stock` and `minStock` (a reorder point) but no maximum, so the stock-level bar
+shows `stock / (2 × minStock)`, capped at 100%. Items at the reorder point show half full.
+
+### D-018: Recharts gets hex colors, not CSS variables
+
+Recharts writes colors into SVG attributes, where `var(--…)` doesn't resolve, so the dashboard chart
+uses the token hex values directly and picks grid and tooltip colors from `isLight`.

@@ -19,6 +19,9 @@ a build, tests, a commit, and an update to this file.
   Sidebar (logo, role-based SidebarItems with tooltips and sliding active bar), topbar (theme,
   bell, name + role chip, logout), per-role tabs, animated tab content, PlaceholderView.
   See DECISIONS.md D-012 to D-015.
+- [x] **Prompt 5: Dashboard Tab** (2026-09-25)
+  DashboardView with header, four StatCards, revenue AreaChart, inventory watchlist (InventoryRow),
+  and the patient feed (PatientCard). See DECISIONS.md D-016 to D-018.
 
 ## Master prompt phases
 

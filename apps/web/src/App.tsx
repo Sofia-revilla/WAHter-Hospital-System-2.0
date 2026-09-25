@@ -1,7 +1,7 @@
 // WAHter — App.tsx
 // Main application file: login gate, the app shell (sidebar + topbar), theme
-// switching, and tab routing. Individual tab views land in later prompts;
-// until then they render a placeholder.
+// switching, and tab routing. Dashboard and Profile are built; the other tab
+// views land in later prompts and render a placeholder until then.
 // Built by UNICA-HIJA | v2.41
 //
 // File layout (Ctrl+F to jump):
@@ -14,9 +14,10 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react"; // not 'framer-motion' — package renamed in v11
-import { Activity, Bell, Construction, LogOut, Moon, Sun } from "lucide-react";
+import { Bell, Construction, LogOut, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { DataProvider, useData } from "@/context/DataContext";
+import { DataProvider } from "@/context/DataContext";
+import { DashboardView } from "@/components/DashboardView";
 import { LoginScreen, type LoginHandler } from "@/components/LoginScreen";
 import { ProfileView } from "@/components/ProfileView";
 import { Sidebar } from "@/components/Sidebar";
@@ -140,55 +141,6 @@ function Topbar({
 
 // ─── 3. TAB VIEWS ───
 
-// Temporary dashboard content so the theme can be checked against real cards.
-// It also shows where each dataset came from, which saves a trip to devtools
-// when someone asks "is this reading Supabase or the mock?"
-function SetupOverview() {
-  const { patients, inventory, labTests, wards, isLoading, sources } = useData();
-
-  const datasets = [
-    { label: "Patients", count: patients.length, source: sources.patients },
-    { label: "Inventory", count: inventory.length, source: sources.inventory },
-    { label: "Lab Tests", count: labTests.length, source: sources.labTests },
-    { label: "Wards", count: wards.length, source: sources.wards },
-  ];
-
-  return (
-    <div className="glass rounded-[2rem] p-8 purple-shadow">
-      <div className="mb-6 flex items-center gap-3">
-        <div className="rounded-xl bg-wah-purple/20 p-2.5 text-wah-neon">
-          <Activity size={20} />
-        </div>
-        <div>
-          <h2 className="text-lg font-bold">Data sources</h2>
-          <p className="text-sm text-text-muted">
-            {isLoading ? "Checking Supabase…" : "Mock data fills in anything Supabase doesn't return."}
-          </p>
-        </div>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {datasets.map((dataset) => (
-          <div key={dataset.label} className="rounded-2xl bg-card-bg p-5">
-            <p className="text-xs font-bold uppercase text-text-muted">{dataset.label}</p>
-            <p className="mt-2 text-3xl font-black">{dataset.count}</p>
-            <span
-              className={cn(
-                "mt-3 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold uppercase",
-                dataset.source === "supabase"
-                  ? "bg-emerald-500/15 text-emerald-400"
-                  : "bg-wah-lavender/20 text-wah-neon",
-              )}
-            >
-              {dataset.source}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 interface PlaceholderViewProps {
   tab: TabId;
 }
@@ -282,7 +234,7 @@ export function App() {
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.25 }}
               >
-                {activeTab === "dashboard" && <SetupOverview />}
+                {activeTab === "dashboard" && <DashboardView isLight={isLight} />}
                 {activeTab === "profile" && (
                   <ProfileView
                     profile={{
