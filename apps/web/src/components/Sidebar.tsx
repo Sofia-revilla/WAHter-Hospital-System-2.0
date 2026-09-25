@@ -38,13 +38,14 @@ export function SidebarItem({ tab, isActive, isExpanded, onSelect }: SidebarItem
       aria-label={label}
       aria-current={isActive ? "page" : undefined}
       className={cn(
-        "group relative flex w-full items-center rounded-xl transition-all duration-200",
+        "group relative flex w-full items-center rounded-lg transition-all duration-200",
         isExpanded
-          ? "flex-row gap-3 px-4 py-3 short:py-2.5"
+          ? "flex-row gap-3 px-4 py-2.5 short:py-2"
           : "flex-col gap-1 py-3 short:py-2",
-        isActive
-          ? "bg-wah-purple text-white shadow-lg shadow-wah-purple/20"
-          : "text-text-muted hover:bg-glass-bg hover:text-foreground",
+        // expanded rows get a soft tint like a classic side menu; the rail keeps the solid pill
+        isActive && isExpanded && "bg-wah-purple/10 font-semibold text-wah-purple",
+        isActive && !isExpanded && "bg-wah-purple text-white shadow-lg shadow-wah-purple/20",
+        !isActive && "text-text-muted hover:bg-glass-bg hover:text-foreground",
       )}
     >
       {/* layoutId lets motion slide this bar from the old tab to the new one
@@ -52,7 +53,10 @@ export function SidebarItem({ tab, isActive, isExpanded, onSelect }: SidebarItem
       {isActive && (
         <motion.span
           layoutId="active-nav"
-          className="absolute left-0 top-1/2 h-10 w-1 -translate-y-1/2 rounded-r-full bg-white"
+          className={cn(
+            "absolute left-0 top-1/2 w-1 -translate-y-1/2 rounded-r-full",
+            isExpanded ? "h-6 bg-wah-purple" : "h-10 bg-white",
+          )}
           transition={{ type: "spring", stiffness: 500, damping: 35 }}
         />
       )}
@@ -73,7 +77,7 @@ export function SidebarItem({ tab, isActive, isExpanded, onSelect }: SidebarItem
             role="tooltip"
             className={cn(
               "pointer-events-none absolute left-24 top-1/2 z-50 w-56 -translate-y-1/2",
-              "origin-left scale-0 rounded-xl border border-slate-700 bg-slate-900 p-3 text-left",
+              "origin-left scale-0 rounded-lg border border-slate-700 bg-slate-900 p-3 text-left",
               "opacity-0 shadow-2xl transition-all duration-200",
               "group-hover:scale-100 group-hover:opacity-100",
             )}
@@ -172,7 +176,7 @@ export function Sidebar({ role, activeTab, isExpanded, onToggle, onSelect }: Sid
       {isExpanded && (
         <div
           className={cn(
-            "flex items-center gap-2 rounded-xl border border-glass-border bg-glass-bg px-3 py-2",
+            "flex items-center gap-2 rounded-lg border border-glass-border bg-glass-bg px-3 py-2",
             "focus-within:ring-2 focus-within:ring-wah-purple/40",
           )}
         >
@@ -202,6 +206,11 @@ export function Sidebar({ role, activeTab, isExpanded, onToggle, onSelect }: Sid
       )}
 
       <nav className="flex w-full flex-col gap-1.5">
+        {isExpanded && (
+          <p className="px-4 pb-1 text-[10px] font-semibold uppercase tracking-widest text-text-secondary">
+            Main Menu
+          </p>
+        )}
         {visibleTabs.map((tab) => (
           <SidebarItem
             key={tab}

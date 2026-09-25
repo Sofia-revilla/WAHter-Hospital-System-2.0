@@ -115,7 +115,7 @@ export function VitalsDialog({ patient, recordedBy, onClose }: VitalsDialogProps
   }
 
   const inputClass = cn(
-    "w-full rounded-xl border bg-glass-bg p-3 text-sm text-foreground outline-none",
+    "w-full rounded-lg border bg-glass-bg p-3 text-sm text-foreground outline-none",
     "focus:ring-1 focus:ring-wah-purple",
   );
 
@@ -154,7 +154,7 @@ export function VitalsDialog({ patient, recordedBy, onClose }: VitalsDialogProps
               role="dialog"
               aria-modal="true"
               aria-labelledby="vitals-title"
-              className="glass pointer-events-auto w-full max-w-2xl rounded-[2rem] bg-card-bg p-8 shadow-2xl"
+              className="glass pointer-events-auto w-full max-w-2xl rounded-xl bg-card-bg p-5 shadow-2xl"
             >
               <div className="mb-6 flex items-start justify-between gap-4">
                 <div>
@@ -221,7 +221,7 @@ export function VitalsDialog({ patient, recordedBy, onClose }: VitalsDialogProps
               </div>
 
               {flagged.length > 0 && (
-                <div className="mt-5 rounded-2xl border border-orange-400/40 bg-orange-400/10 p-4 text-sm">
+                <div className="mt-5 rounded-xl border border-orange-400/40 bg-orange-400/10 p-4 text-sm">
                   <p className="flex items-center gap-2 font-semibold text-orange-500">
                     <AlertTriangle size={16} /> Please verify:{" "}
                     {flagged.map((key) => VITAL_LABELS[key]).join(", ")}{" "}
@@ -251,7 +251,7 @@ export function VitalsDialog({ patient, recordedBy, onClose }: VitalsDialogProps
                 <button
                   type="submit"
                   className={cn(
-                    "rounded-xl bg-wah-purple px-6 py-3 text-xs font-black uppercase text-white",
+                    "rounded-lg bg-wah-purple px-6 py-3 text-xs font-black uppercase text-white",
                     "shadow-lg shadow-wah-purple/20 transition-colors hover:bg-wah-neon",
                   )}
                 >

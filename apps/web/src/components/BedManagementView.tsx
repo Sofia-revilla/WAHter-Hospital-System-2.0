@@ -29,7 +29,7 @@ function WardCard({ ward, occupied, occupantNames, canManageBeds, onOpenAdmit }:
   return (
     <div
       className={cn(
-        "group rounded-[2rem] border border-glass-border bg-glass-bg p-6",
+        "group rounded-xl border border-glass-border bg-glass-bg p-6",
         "transition-colors hover:border-wah-lavender/30",
       )}
     >
@@ -105,7 +105,7 @@ function WardCard({ ward, occupied, occupantNames, canManageBeds, onOpenAdmit }:
             type="button"
             onClick={() => onOpenAdmit({ wardId: ward.id })}
             className={cn(
-              "rounded-xl bg-white px-3 py-1.5 text-[10px] font-black uppercase text-wah-deep",
+              "rounded-lg bg-white px-3 py-1.5 text-[10px] font-black uppercase text-wah-deep",
               "opacity-0 shadow transition-opacity group-hover:opacity-100 focus:opacity-100",
             )}
           >
@@ -160,18 +160,18 @@ export function BedManagementView({ role, staffName }: BedManagementViewProps) {
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-sm font-semibold text-wah-purple">Facility Management</p>
-          <h2 className="text-3xl font-bold tracking-tight">Bed Management Board</h2>
+          <h2 className="text-2xl font-bold tracking-tight">Bed Management Board</h2>
         </div>
         {canManageBeds && (
           <button
             type="button"
             onClick={() => setAdmitPreset({})}
             className={cn(
-              "flex items-center gap-2 rounded-xl bg-wah-purple px-4 py-3",
+              "flex items-center gap-2 rounded-lg bg-wah-purple px-4 py-3",
               "text-[10px] font-bold uppercase tracking-widest text-white",
               "shadow-lg shadow-wah-purple/30 transition-transform hover:scale-105",
             )}
@@ -187,8 +187,8 @@ export function BedManagementView({ role, staffName }: BedManagementViewProps) {
         ))}
       </div>
 
-      <div className="grid gap-8 xl:grid-cols-12">
-        <section className="glass min-w-0 rounded-[2rem] p-8 xl:col-span-8">
+      <div className="grid gap-6 xl:grid-cols-12">
+        <section className="glass min-w-0 rounded-xl p-5 xl:col-span-8">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <h3 className="text-lg font-bold">Wards &amp; Occupancy</h3>
@@ -225,8 +225,8 @@ export function BedManagementView({ role, staffName }: BedManagementViewProps) {
           </div>
         </section>
 
-        <div className="flex min-w-0 flex-col gap-8 xl:col-span-4">
-          <section className="glass rounded-[2rem] p-8">
+        <div className="flex min-w-0 flex-col gap-6 xl:col-span-4">
+          <section className="glass rounded-xl p-5">
             <h3 className="mb-6 text-lg font-bold">Near-Empty Wards</h3>
             {nearEmptyWards.length === 0 ? (
               <p className="text-sm text-text-muted">Every ward is close to full right now.</p>
@@ -235,7 +235,7 @@ export function BedManagementView({ role, staffName }: BedManagementViewProps) {
                 {nearEmptyWards.map((ward) => (
                   <li
                     key={ward.id}
-                    className="flex items-center justify-between gap-3 rounded-2xl bg-wah-lavender/5 p-4"
+                    className="flex items-center justify-between gap-3 rounded-xl bg-wah-lavender/5 p-4"
                   >
                     <div className="min-w-0">
                       {/* type is included because two wards are both "General Ward" */}
@@ -251,7 +251,7 @@ export function BedManagementView({ role, staffName }: BedManagementViewProps) {
                         type="button"
                         onClick={() => setAdmitPreset({ wardId: ward.id })}
                         aria-label={`Admit a patient to ${ward.name} (${ward.type})`}
-                        className="rounded-xl bg-wah-purple p-2.5 text-white transition-colors hover:bg-wah-neon"
+                        className="rounded-lg bg-wah-purple p-2.5 text-white transition-colors hover:bg-wah-neon"
                       >
                         <Plus size={16} />
                       </button>
@@ -264,7 +264,7 @@ export function BedManagementView({ role, staffName }: BedManagementViewProps) {
 
           <section
             className={cn(
-              "relative flex flex-1 flex-col gap-4 overflow-hidden rounded-[2rem] p-8",
+              "relative flex flex-1 flex-col gap-4 overflow-hidden rounded-xl p-5",
               "bg-gradient-to-br from-wah-purple to-wah-neon",
             )}
           >
@@ -273,7 +273,7 @@ export function BedManagementView({ role, staffName }: BedManagementViewProps) {
               aria-hidden
               className="pointer-events-none absolute -bottom-12 -right-12 text-white/10"
             />
-            <div className="relative w-fit rounded-2xl bg-white/20 p-3 text-white">
+            <div className="relative w-fit rounded-xl bg-white/20 p-3 text-white">
               <Network size={24} />
             </div>
             <h3 className="relative text-xl font-bold text-white">Smart Referral</h3>
@@ -284,7 +284,7 @@ export function BedManagementView({ role, staffName }: BedManagementViewProps) {
             <button
               type="button"
               className={cn(
-                "relative mt-auto w-full rounded-2xl bg-white py-3",
+                "relative mt-auto w-full rounded-xl bg-white py-3",
                 "font-bold uppercase text-wah-purple transition-transform hover:scale-105",
               )}
             >

@@ -57,7 +57,7 @@ export function DemoTour({
               aria-labelledby="demo-tour-title"
               className={cn(
                 "pointer-events-auto w-full max-w-md overflow-hidden",
-                "rounded-[2rem] bg-white shadow-2xl",
+                "rounded-xl bg-white shadow-2xl",
               )}
             >
               <div
@@ -150,7 +150,7 @@ export function DemoTour({
                       type="button"
                       onClick={() => onStepChange(currentStep - 1)}
                       className={cn(
-                        "rounded-2xl border-2 border-amber-200 px-4 py-2.5",
+                        "rounded-xl border-2 border-amber-200 px-4 py-2.5",
                         "text-xs font-black uppercase text-amber-600 hover:border-amber-400",
                       )}
                     >
@@ -162,7 +162,7 @@ export function DemoTour({
                       type="button"
                       onClick={onClose}
                       className={cn(
-                        "rounded-2xl bg-wah-purple px-5 py-2.5 text-xs font-black uppercase text-white",
+                        "rounded-xl bg-wah-purple px-5 py-2.5 text-xs font-black uppercase text-white",
                         "shadow-lg shadow-wah-purple/20 hover:bg-wah-purple/90",
                       )}
                     >
@@ -173,7 +173,7 @@ export function DemoTour({
                       type="button"
                       onClick={() => onStepChange(currentStep + 1)}
                       className={cn(
-                        "rounded-2xl bg-amber-400 px-5 py-2.5 text-xs font-black uppercase text-white",
+                        "rounded-xl bg-amber-400 px-5 py-2.5 text-xs font-black uppercase text-white",
                         "shadow-lg shadow-amber-200 hover:bg-amber-500",
                       )}
                     >

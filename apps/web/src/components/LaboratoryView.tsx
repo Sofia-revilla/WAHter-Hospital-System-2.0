@@ -63,12 +63,12 @@ function OrderTestForm({ onOrder }: OrderTestFormProps) {
   }
 
   const fieldClass = cn(
-    "w-full rounded-xl border border-glass-border bg-glass-bg p-3 text-sm",
+    "w-full rounded-lg border border-glass-border bg-glass-bg p-3 text-sm",
     "text-foreground outline-none focus:ring-1 focus:ring-wah-purple",
   );
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="glass space-y-4 rounded-[2rem] p-8">
+    <form onSubmit={handleSubmit} noValidate className="glass space-y-4 rounded-xl p-5">
       <h3 className="flex items-center gap-2 text-lg font-bold">
         <Plus size={18} className="text-wah-neon" /> Order Test
       </h3>
@@ -119,7 +119,7 @@ function OrderTestForm({ onOrder }: OrderTestFormProps) {
       <button
         type="submit"
         className={cn(
-          "w-full rounded-xl bg-wah-purple py-3 text-xs font-black uppercase text-white",
+          "w-full rounded-lg bg-wah-purple py-3 text-xs font-black uppercase text-white",
           "shadow-lg shadow-wah-purple/20 transition-colors hover:bg-wah-neon",
         )}
       >
@@ -183,10 +183,10 @@ export function LaboratoryView({ role }: LaboratoryViewProps) {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
         <p className="text-sm font-semibold text-wah-purple">Laboratory Information System</p>
-        <h2 className="text-3xl font-bold tracking-tight">Diagnostic Workflows</h2>
+        <h2 className="text-2xl font-bold tracking-tight">Diagnostic Workflows</h2>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
@@ -195,8 +195,8 @@ export function LaboratoryView({ role }: LaboratoryViewProps) {
         ))}
       </div>
 
-      <div className="grid gap-8 xl:grid-cols-12">
-        <section className="glass min-w-0 rounded-[2rem] p-8 xl:col-span-8">
+      <div className="grid gap-6 xl:grid-cols-12">
+        <section className="glass min-w-0 rounded-xl p-5 xl:col-span-8">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
             <div>
               <h3 className="text-lg font-bold">Laboratory Worklist</h3>
@@ -206,7 +206,7 @@ export function LaboratoryView({ role }: LaboratoryViewProps) {
                 </p>
               )}
             </div>
-            <div className="glass flex rounded-xl p-1" role="tablist" aria-label="Worklist view">
+            <div className="glass flex rounded-lg p-1" role="tablist" aria-label="Worklist view">
               {(["queue", "results"] as const).map((option) => (
                 <button
                   key={option}
@@ -247,14 +247,14 @@ export function LaboratoryView({ role }: LaboratoryViewProps) {
                   <li
                     key={test.id}
                     className={cn(
-                      "group flex flex-wrap items-center justify-between gap-4 rounded-2xl p-5",
+                      "group flex flex-wrap items-center justify-between gap-4 rounded-xl p-5",
                       "border border-glass-border bg-glass-bg transition-all hover:border-wah-purple/50",
                     )}
                   >
                     <div className="flex min-w-0 items-center gap-4">
                       <div
                         className={cn(
-                          "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl",
+                          "flex h-12 w-12 shrink-0 items-center justify-center rounded-lg",
                           isCompleted
                             ? "bg-emerald-500/15 text-emerald-500"
                             : "bg-wah-purple/10 text-wah-neon",
@@ -298,7 +298,7 @@ export function LaboratoryView({ role }: LaboratoryViewProps) {
                           // TODO(Phase 9b): VIEW opens the released result report
                           onClick={isCompleted ? undefined : () => processTest(test.id)}
                           className={cn(
-                            "rounded-xl bg-wah-purple px-5 py-2.5 text-[10px] font-black uppercase text-white",
+                            "rounded-lg bg-wah-purple px-5 py-2.5 text-[10px] font-black uppercase text-white",
                             "opacity-0 transition-all hover:bg-wah-neon",
                             "group-hover:opacity-100 group-focus-within:opacity-100",
                           )}
@@ -314,11 +314,11 @@ export function LaboratoryView({ role }: LaboratoryViewProps) {
           )}
         </section>
 
-        <div className="min-w-0 space-y-8 xl:col-span-4">
+        <div className="min-w-0 space-y-6 xl:col-span-4">
           {canOrder ? (
             <OrderTestForm onOrder={addOrder} />
           ) : (
-            <section className="glass rounded-[2rem] p-8">
+            <section className="glass rounded-xl p-5">
               <h3 className="mb-4 flex items-center gap-2 text-lg font-bold">
                 <ListChecks size={18} className="text-wah-neon" /> Result Release Rules
               </h3>

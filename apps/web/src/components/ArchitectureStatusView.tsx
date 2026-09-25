@@ -162,7 +162,7 @@ function ServiceCard({
   return (
     <div
       className={cn(
-        "glass flex min-h-[160px] flex-col justify-between rounded-2xl border-l-4 p-5",
+        "glass flex min-h-[160px] flex-col justify-between rounded-xl border-l-4 p-5",
         borderClass,
       )}
     >
@@ -369,7 +369,7 @@ export function ArchitectureStatusView() {
 
   const roleButton = (role: SandboxRole) =>
     cn(
-      "flex-1 rounded-xl border px-3 py-2 text-xs font-black transition-colors",
+      "flex-1 rounded-lg border px-3 py-2 text-xs font-black transition-colors",
       selectedRole === role
         ? "border-wah-purple bg-wah-purple text-white"
         : "border-glass-border bg-background/40 text-text-secondary hover:text-foreground",
@@ -384,10 +384,10 @@ export function ArchitectureStatusView() {
     );
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
         <p className="text-sm font-semibold text-wah-purple">Active System Architecture Monitor</p>
-        <h2 className="text-3xl font-bold tracking-tight">Infrastructure Stack Panel</h2>
+        <h2 className="text-2xl font-bold tracking-tight">Infrastructure Stack Panel</h2>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
@@ -396,9 +396,9 @@ export function ArchitectureStatusView() {
         ))}
       </div>
 
-      <div className="grid gap-8 xl:grid-cols-12">
-        <div className="min-w-0 space-y-8 xl:col-span-8">
-          <section className="glass rounded-[2rem] p-8">
+      <div className="grid gap-6 xl:grid-cols-12">
+        <div className="min-w-0 space-y-6 xl:col-span-8">
+          <section className="glass rounded-xl p-5">
             <div className="mb-6 flex flex-wrap gap-6 border-b border-glass-border" role="tablist">
               <button
                 type="button"
@@ -454,7 +454,7 @@ export function ArchitectureStatusView() {
                       value={endpointId}
                       onChange={(event) => setEndpointId(event.target.value)}
                       className={cn(
-                        "w-full rounded-xl border border-glass-border bg-glass-bg px-3 py-2",
+                        "w-full rounded-lg border border-glass-border bg-glass-bg px-3 py-2",
                         "text-sm text-foreground outline-none focus:border-wah-purple",
                       )}
                     >
@@ -467,7 +467,7 @@ export function ArchitectureStatusView() {
                   </label>
                 </div>
 
-                <div className="rounded-xl border border-slate-800 bg-slate-950 p-3">
+                <div className="rounded-lg border border-slate-800 bg-slate-950 p-3">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-wah-neon">
                     Bearer token sent with the request:
                   </p>
@@ -482,7 +482,7 @@ export function ArchitectureStatusView() {
                     onClick={sendRequest}
                     disabled={isRequesting}
                     className={cn(
-                      "rounded-xl bg-wah-purple px-8 py-3.5 text-sm font-bold text-white shadow-lg",
+                      "rounded-lg bg-wah-purple px-8 py-3.5 text-sm font-bold text-white shadow-lg",
                       "transition-all hover:scale-105 hover:bg-wah-neon active:scale-95",
                       "disabled:cursor-wait disabled:opacity-70 disabled:hover:scale-100",
                     )}
@@ -540,7 +540,7 @@ export function ArchitectureStatusView() {
             )}
           </section>
 
-          <section className="glass rounded-[2rem] border-l-4 border-l-orange-500/50 p-8">
+          <section className="glass rounded-xl border-l-4 border-l-orange-500/50 p-5">
             <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
               <div className="space-y-4">
                 <h3 className="text-lg font-bold">Event Bus (RabbitMQ)</h3>
@@ -565,7 +565,7 @@ export function ArchitectureStatusView() {
                   type="button"
                   onClick={publishTestEvent}
                   className={cn(
-                    "flex items-center justify-center gap-2 rounded-xl bg-wah-purple px-5 py-3",
+                    "flex items-center justify-center gap-2 rounded-lg bg-wah-purple px-5 py-3",
                     "text-xs font-black uppercase tracking-widest text-white hover:bg-wah-neon",
                   )}
                 >
@@ -575,7 +575,7 @@ export function ArchitectureStatusView() {
                   type="button"
                   onClick={toggleNotifications}
                   className={cn(
-                    "flex items-center justify-center gap-2 rounded-xl border px-5 py-3",
+                    "flex items-center justify-center gap-2 rounded-lg border px-5 py-3",
                     "text-xs font-black uppercase tracking-widest transition-colors",
                     isNotificationsUp
                       ? "border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500/20"
@@ -590,7 +590,7 @@ export function ArchitectureStatusView() {
           </section>
         </div>
 
-        <section className="glass min-w-0 rounded-[2rem] p-8 xl:col-span-4">
+        <section className="glass min-w-0 rounded-xl p-5 xl:col-span-4">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-lg font-bold">Docker Compose Logs</h3>
             <span className="relative flex h-2.5 w-2.5">

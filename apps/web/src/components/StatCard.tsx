@@ -9,44 +9,40 @@ interface StatCardProps {
   value: string;
   sub: string;
   icon: LucideIcon;
-  // optional: some cards (Pharmacy's "Expired Soon") have no trend badge
+  // optional: some cards have nothing worth flagging next to the number
   trend?: string;
 }
 
+// Compact KPI card: label on top, big number with a small chip beside it,
+// caption underneath. Flat and bordered to match the rest of the layout.
 export function StatCard({ title, value, sub, icon: Icon, trend }: StatCardProps) {
   return (
     <motion.div
-      whileHover={{ y: -5 }}
+      whileHover={{ y: -2 }}
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
-      className="glass relative overflow-hidden rounded-2xl p-5"
+      className="glass rounded-xl p-4"
     >
-      {/* oversized watermark; overflow-hidden on the card crops it to a corner */}
-      <Icon
-        aria-hidden
-        className="pointer-events-none absolute -right-6 -top-6 size-[120px] text-wah-purple opacity-10"
-      />
+      <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
+        <span className="rounded-md bg-wah-purple/10 p-1.5 text-wah-purple">
+          <Icon size={15} />
+        </span>
+        {title}
+      </p>
 
-      <div className="relative flex items-start justify-between">
-        <div className="rounded-xl bg-wah-purple/20 p-2.5 text-wah-neon">
-          <Icon size={20} />
-        </div>
+      <div className="mt-3 flex items-baseline gap-2">
+        <span className="text-2xl font-bold text-foreground">{value}</span>
         {trend && (
           <span
             className={cn(
-              "rounded-full bg-wah-neon/10 px-2 py-0.5",
-              "text-[10px] font-bold uppercase text-wah-neon",
+              "rounded-md bg-wah-neon/10 px-1.5 py-0.5",
+              "text-[10px] font-semibold text-wah-purple",
             )}
           >
             {trend}
           </span>
         )}
       </div>
-
-      <p className="relative mt-4 text-sm text-text-secondary">{title}</p>
-      <p className="relative mt-1 text-2xl font-bold text-foreground">{value}</p>
-      <p className="relative mt-1 font-mono text-xs uppercase tracking-widest text-text-muted">
-        {sub}
-      </p>
+      <p className="mt-1 text-xs text-text-muted">{sub}</p>
     </motion.div>
   );
 }

@@ -12,7 +12,7 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react"; // not 'framer-motion', the package got renamed in v11
-import { LayoutDashboard, LogOut, Moon, Sun } from "lucide-react";
+import { ChevronDown, LayoutDashboard, LogOut, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDisplayName } from "@/lib/staff";
 import { DataProvider } from "@/context/DataContext";
@@ -38,9 +38,9 @@ import { ROLE_LABELS, type StaffRole } from "@/types";
 // ─── 1. HELPERS ───
 
 const ROLE_CHIP: Record<StaffRole, string> = {
-  Doctor: "bg-wah-purple/20 text-wah-neon",
+  Doctor: "bg-wah-purple/15 text-wah-purple",
   Nurse: "bg-wah-neon/15 text-wah-neon",
-  IT: "bg-rose-500/15 text-rose-400",
+  IT: "bg-rose-500/15 text-rose-500",
 };
 
 // Plain login only asks for a name, so we fill the badge with a default.
@@ -60,7 +60,17 @@ interface TopbarProps {
   displayName: string;
   role: StaffRole;
   onOpenAlerts: () => void;
+  onOpenProfile: () => void;
   onLogout: () => void;
+}
+
+function initialsOf(name: string) {
+  return name
+    .replace(/^(dr\.?|rn)\s+/i, "")
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
 }
 
 function Topbar({
@@ -70,18 +80,19 @@ function Topbar({
   displayName,
   role,
   onOpenAlerts,
+  onOpenProfile,
   onLogout,
 }: TopbarProps) {
   const iconButton = cn(
-    "glass flex h-10 w-10 items-center justify-center rounded-xl",
+    "glass flex h-10 w-10 items-center justify-center rounded-lg",
     "text-text-muted transition-colors hover:text-wah-neon",
   );
 
   return (
     <header
       className={cn(
-        "sticky top-0 z-20 flex items-center justify-between px-8 py-4",
-        "border-b border-glass-border bg-background/80 backdrop-blur-md",
+        "sticky top-0 z-20 flex items-center justify-between px-6 py-3",
+        "border-b border-glass-border bg-card-bg",
       )}
     >
       <div className="flex min-w-0 items-center gap-3">
@@ -101,27 +112,35 @@ function Topbar({
         {/* TODO(Phase 2): feed this from the Notifications service over SSE */}
         <NotificationBell role={role} onOpenAlerts={onOpenAlerts} />
 
-        <div className="flex items-center gap-2 px-2">
-          {/* on tablet widths "E-Prescribing" and the name were wrapping onto two lines;
-              the role chip alone is enough there */}
-          <span className="hidden whitespace-nowrap text-sm font-semibold md:inline">
-            {displayName}
-          </span>
+        {/* profile block: avatar + name over role, opens the Profile tab */}
+        <button
+          type="button"
+          onClick={onOpenProfile}
+          aria-label="Open my profile"
+          className="flex items-center gap-2.5 rounded-lg py-1 pl-1 pr-2 transition-colors hover:bg-glass-bg"
+        >
           <span
             className={cn(
-              "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase",
+              "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
+              "text-xs font-bold",
               ROLE_CHIP[role],
             )}
           >
-            {ROLE_LABELS[role]}
+            {initialsOf(displayName)}
           </span>
-        </div>
+          {/* on tablet widths the name wrapped onto two lines; the avatar is enough there */}
+          <span className="hidden text-left leading-tight md:block">
+            <span className="block whitespace-nowrap text-sm font-semibold">{displayName}</span>
+            <span className="block text-xs text-text-muted">{ROLE_LABELS[role]}</span>
+          </span>
+          <ChevronDown size={16} className="hidden text-text-muted md:block" />
+        </button>
 
         <button
           type="button"
           onClick={onLogout}
           aria-label="Log out"
-          className="rounded-xl p-2 text-text-muted transition-colors hover:text-foreground"
+          className="rounded-lg p-2 text-text-muted transition-colors hover:text-foreground"
         >
           <LogOut size={18} />
         </button>
@@ -285,10 +304,11 @@ export function App() {
             displayName={displayName}
             role={role}
             onOpenAlerts={() => setActiveTab("dashboard")}
+            onOpenProfile={() => setActiveTab("profile")}
             onLogout={() => setUserRole(null)}
           />
 
-          <main className="flex-1 overflow-y-auto p-8">
+          <main className="flex-1 overflow-y-auto p-6">
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}

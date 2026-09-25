@@ -29,7 +29,7 @@ export function PatientCard({ patient }: PatientCardProps) {
   const mewsPercent = Math.min(patient.mewsScore / MAX_MEWS_SCORE, 1) * 100;
 
   return (
-    <div className="rounded-2xl bg-card-bg p-4 transition-shadow hover:ring-2 hover:ring-wah-purple/20">
+    <div className="rounded-xl bg-card-bg p-4 transition-shadow hover:ring-2 hover:ring-wah-purple/20">
       <div className="flex items-center gap-3">
         <div className="relative shrink-0">
           <div

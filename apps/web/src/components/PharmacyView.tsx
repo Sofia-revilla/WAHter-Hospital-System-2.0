@@ -97,10 +97,10 @@ export function PharmacyView({ role }: PharmacyViewProps) {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
         <p className="text-sm font-semibold text-wah-purple">Pharmacy Module</p>
-        <h2 className="text-3xl font-bold tracking-tight">Medication Dispensing</h2>
+        <h2 className="text-2xl font-bold tracking-tight">Medication Dispensing</h2>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
@@ -109,8 +109,8 @@ export function PharmacyView({ role }: PharmacyViewProps) {
         ))}
       </div>
 
-      <div className="grid gap-8 xl:grid-cols-12">
-        <section className="glass min-w-0 rounded-[2rem] p-8 xl:col-span-8">
+      <div className="grid gap-6 xl:grid-cols-12">
+        <section className="glass min-w-0 rounded-xl p-5 xl:col-span-8">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-lg font-bold">Prescription Worklist</h3>
             {!canDispense && (
@@ -127,12 +127,12 @@ export function PharmacyView({ role }: PharmacyViewProps) {
                 <li
                   key={order.id}
                   className={cn(
-                    "group flex flex-wrap items-center justify-between gap-4 rounded-2xl p-5",
+                    "group flex flex-wrap items-center justify-between gap-4 rounded-xl p-5",
                     "border border-glass-border bg-glass-bg transition-colors hover:border-wah-purple/50",
                   )}
                 >
                   <div className="flex min-w-0 items-center gap-4">
-                    <div className="rounded-xl bg-wah-lavender/5 p-3 text-wah-neon">
+                    <div className="rounded-lg bg-wah-lavender/5 p-3 text-wah-neon">
                       <Pill size={20} />
                     </div>
                     <div className="min-w-0">
@@ -159,7 +159,7 @@ export function PharmacyView({ role }: PharmacyViewProps) {
                         type="button"
                         onClick={isDispensed ? undefined : () => dispense(order.id)}
                         className={cn(
-                          "rounded-xl bg-wah-purple px-4 py-2 text-[10px] font-black uppercase text-white",
+                          "rounded-lg bg-wah-purple px-4 py-2 text-[10px] font-black uppercase text-white",
                           "transition-colors hover:bg-wah-neon",
                         )}
                       >
@@ -174,9 +174,9 @@ export function PharmacyView({ role }: PharmacyViewProps) {
           </ul>
         </section>
 
-        <aside className="glass min-w-0 rounded-[2rem] p-8 xl:col-span-4">
+        <aside className="glass min-w-0 rounded-xl p-5 xl:col-span-4">
           <div className="mb-6 flex items-center gap-3">
-            <div className="rounded-xl bg-wah-purple/15 p-2.5 text-wah-neon">
+            <div className="rounded-lg bg-wah-purple/15 p-2.5 text-wah-neon">
               <ClipboardCheck size={20} />
             </div>
             <h3 className="text-lg font-bold">Dispensing Checks</h3>

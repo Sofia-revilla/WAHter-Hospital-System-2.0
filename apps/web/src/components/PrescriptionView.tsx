@@ -41,7 +41,7 @@ const DOSING_FIELDS: { key: keyof PrescriptionDraft; label: string; placeholder:
 ];
 
 const inputClass = cn(
-  "w-full rounded-xl border border-glass-border bg-glass-bg p-3",
+  "w-full rounded-lg border border-glass-border bg-glass-bg p-3",
   "text-sm text-foreground outline-none transition-colors",
   "placeholder:text-text-secondary focus:border-wah-purple",
 );
@@ -115,17 +115,17 @@ export function PrescriptionView() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
         <p className="text-sm font-semibold text-wah-purple">Electronic Prescription Pad</p>
-        <h2 className="text-3xl font-bold tracking-tight">E-Prescribing</h2>
+        <h2 className="text-2xl font-bold tracking-tight">E-Prescribing</h2>
       </div>
 
-      <div className="grid gap-8 xl:grid-cols-12">
+      <div className="grid gap-6 xl:grid-cols-12">
         <form
           onSubmit={handleSend}
           noValidate
-          className="glass min-w-0 rounded-[2rem] p-8 xl:col-span-8"
+          className="glass min-w-0 rounded-xl p-5 xl:col-span-8"
         >
           <div className="mb-6 flex items-center justify-between">
             <h3 className="text-lg font-bold">Compose New Prescription</h3>
@@ -195,7 +195,7 @@ export function PrescriptionView() {
                 value={draft.instructions}
                 onChange={(event) => updateField("instructions", event.target.value)}
                 placeholder="Enter special instructions…"
-                className={cn(inputClass, "h-32 resize-none rounded-2xl")}
+                className={cn(inputClass, "h-32 resize-none rounded-xl")}
               />
             </label>
 
@@ -211,7 +211,7 @@ export function PrescriptionView() {
               <button
                 type="button"
                 className={cn(
-                  "rounded-xl px-5 py-3 text-xs font-bold uppercase tracking-widest",
+                  "rounded-lg px-5 py-3 text-xs font-bold uppercase tracking-widest",
                   "text-text-secondary transition-colors hover:bg-glass-bg hover:text-foreground",
                 )}
               >
@@ -220,7 +220,7 @@ export function PrescriptionView() {
               <button
                 type="submit"
                 className={cn(
-                  "rounded-xl bg-wah-purple px-5 py-3 text-xs font-bold uppercase tracking-widest text-white",
+                  "rounded-lg bg-wah-purple px-5 py-3 text-xs font-bold uppercase tracking-widest text-white",
                   "shadow-lg shadow-wah-purple/20 transition-transform hover:scale-105",
                 )}
               >
@@ -230,13 +230,13 @@ export function PrescriptionView() {
           </div>
         </form>
 
-        <aside className="glass min-w-0 rounded-[2rem] p-8 xl:col-span-4">
+        <aside className="glass min-w-0 rounded-xl p-5 xl:col-span-4">
           <h3 className="mb-6 text-lg font-bold">Recent Prescriptions</h3>
           <ul className="space-y-3">
             {recent.map((prescription) => (
               <li
                 key={prescription.id}
-                className="rounded-2xl border border-glass-border bg-glass-bg p-4"
+                className="rounded-xl border border-glass-border bg-glass-bg p-4"
               >
                 <div className="flex items-start justify-between gap-3">
                   <p className="font-bold">{prescription.medication}</p>

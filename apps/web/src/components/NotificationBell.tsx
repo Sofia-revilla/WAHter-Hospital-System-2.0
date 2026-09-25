@@ -57,7 +57,7 @@ export function NotificationBell({ role, onOpenAlerts }: NotificationBellProps) 
         }
         aria-expanded={isOpen}
         className={cn(
-          "glass relative flex h-10 w-10 items-center justify-center rounded-xl",
+          "glass relative flex h-10 w-10 items-center justify-center rounded-lg",
           "text-text-muted transition-colors hover:text-wah-neon",
         )}
       >
@@ -84,7 +84,7 @@ export function NotificationBell({ role, onOpenAlerts }: NotificationBellProps) 
             role="dialog"
             aria-label="Notifications"
             className={cn(
-              "absolute right-0 top-12 z-40 w-80 overflow-hidden rounded-2xl",
+              "absolute right-0 top-12 z-40 w-80 overflow-hidden rounded-xl",
               "border border-glass-border bg-card-bg shadow-2xl",
             )}
           >
@@ -111,7 +111,7 @@ export function NotificationBell({ role, onOpenAlerts }: NotificationBellProps) 
                         setIsOpen(false);
                         onOpenAlerts();
                       }}
-                      className="w-full rounded-xl px-3 py-2.5 text-left hover:bg-glass-bg"
+                      className="w-full rounded-lg px-3 py-2.5 text-left hover:bg-glass-bg"
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="truncate text-sm font-semibold">

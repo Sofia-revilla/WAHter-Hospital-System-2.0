@@ -75,11 +75,11 @@ export function PatientsView({ staffName }: PatientsViewProps) {
   );
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-sm font-semibold text-wah-purple">Master Directory</p>
-          <h2 className="text-3xl font-bold tracking-tight">Patient Management</h2>
+          <h2 className="text-2xl font-bold tracking-tight">Patient Management</h2>
         </div>
 
         <div className="flex gap-3">
@@ -87,7 +87,7 @@ export function PatientsView({ staffName }: PatientsViewProps) {
           <button
             type="button"
             className={cn(
-              "glass flex items-center gap-2 rounded-xl px-4 py-3",
+              "glass flex items-center gap-2 rounded-lg px-4 py-3",
               "text-[10px] font-bold uppercase tracking-widest text-text-muted hover:text-foreground",
             )}
           >
@@ -97,7 +97,7 @@ export function PatientsView({ staffName }: PatientsViewProps) {
           <button
             type="button"
             className={cn(
-              "flex items-center gap-2 rounded-xl bg-wah-purple px-4 py-3",
+              "flex items-center gap-2 rounded-lg bg-wah-purple px-4 py-3",
               "text-[10px] font-bold uppercase tracking-widest text-white",
               "shadow-lg shadow-wah-purple/30 transition-transform hover:scale-105",
             )}
@@ -107,11 +107,11 @@ export function PatientsView({ staffName }: PatientsViewProps) {
         </div>
       </div>
 
-      <section className="glass rounded-[2rem] p-8">
+      <section className="glass rounded-xl p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
           <div
             className={cn(
-              "flex flex-1 items-center gap-3 rounded-2xl border border-glass-border bg-glass-bg px-4 py-3",
+              "flex flex-1 items-center gap-3 rounded-xl border border-glass-border bg-glass-bg px-4 py-3",
               "transition-shadow focus-within:ring-2 focus-within:ring-wah-purple/40",
             )}
           >
@@ -147,7 +147,7 @@ export function PatientsView({ staffName }: PatientsViewProps) {
                 onClick={() => setFilter(option)}
                 aria-pressed={filter === option}
                 className={cn(
-                  "rounded-xl px-4 py-2 text-xs font-bold transition-all",
+                  "rounded-lg px-4 py-2 text-xs font-bold transition-all",
                   filter === option
                     ? "bg-wah-purple text-white shadow-lg shadow-wah-purple/30"
                     : "text-text-muted hover:bg-glass-bg hover:text-foreground",

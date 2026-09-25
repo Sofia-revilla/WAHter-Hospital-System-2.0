@@ -97,7 +97,7 @@ const ROLES: StaffRole[] = ["Doctor", "Nurse", "IT"];
 // ─── SMALL PIECES ───
 
 const inputClass = cn(
-  "w-full rounded-2xl border-2 border-glass-border bg-glass-bg px-4 py-4",
+  "w-full rounded-xl border-2 border-glass-border bg-glass-bg px-4 py-4",
   "text-sm text-foreground outline-none transition-colors",
   "placeholder:text-text-secondary focus:border-wah-purple",
 );
@@ -155,7 +155,7 @@ function SubmitButton({ isLoading, colorClass, label }: SubmitButtonProps) {
       type="submit"
       disabled={isLoading}
       className={cn(
-        "flex w-full items-center justify-center gap-3 rounded-[2rem] py-5",
+        "flex w-full items-center justify-center gap-3 rounded-xl py-5",
         "font-black text-white shadow-xl transition-all hover:brightness-110",
         "disabled:cursor-wait disabled:opacity-80",
         colorClass,
@@ -251,7 +251,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
         transition={{ duration: 0.4 }}
         className={cn(
           // 2fr/3fr gives the 40/60 split from the design; a plain grid-cols-2 would be 50/50
-          "glass grid w-full max-w-5xl overflow-hidden rounded-[3rem]",
+          "glass grid w-full max-w-5xl overflow-hidden rounded-2xl",
           "border-2 border-wah-lavender/20 shadow-2xl md:grid-cols-[2fr_3fr]",
         )}
       >
@@ -271,7 +271,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
           <div
             className={cn(
               "relative flex h-20 w-20 rotate-3 items-center justify-center",
-              "rounded-3xl bg-white/20 backdrop-blur",
+              "rounded-xl bg-white/20 backdrop-blur",
             )}
           >
             <Image
@@ -327,7 +327,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                             type="button"
                             onClick={() => chooseRole(roleOption)}
                             className={cn(
-                              "group flex w-full items-center gap-4 rounded-[2rem] border-2 p-4 text-left sm:gap-5 sm:p-6",
+                              "group flex w-full items-center gap-4 rounded-xl border-2 p-4 text-left sm:gap-5 sm:p-6",
                               "border-glass-border transition-all duration-300",
                               "hover:-translate-y-1 hover:shadow-xl",
                               roleStyle.hoverBorder,
@@ -335,7 +335,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                           >
                             <div
                               className={cn(
-                                "flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl",
+                                "flex h-16 w-16 shrink-0 items-center justify-center rounded-xl",
                                 "transition-transform duration-300",
                                 roleStyle.iconBox,
                                 roleStyle.hoverRotate,
@@ -483,7 +483,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                     </span>
                     <h2 className="mt-4 text-3xl font-black">Access Key Verification</h2>
 
-                    <div className="mt-6 flex items-center gap-3 rounded-2xl bg-wah-purple/10 p-4">
+                    <div className="mt-6 flex items-center gap-3 rounded-xl bg-wah-purple/10 p-4">
                       <span className="relative flex h-2.5 w-2.5">
                         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-wah-neon opacity-75" />
                         <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-wah-neon" />
@@ -548,14 +548,14 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                               onLogin(roleOption, roleStyle.demoName, undefined, undefined, true)
                             }
                             className={cn(
-                              "group flex w-full items-center gap-4 rounded-2xl border-2 p-4 text-left",
+                              "group flex w-full items-center gap-4 rounded-xl border-2 p-4 text-left",
                               "border-glass-border transition-all duration-300 hover:-translate-y-0.5",
                               roleStyle.hoverBorder,
                             )}
                           >
                             <div
                               className={cn(
-                                "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl",
+                                "flex h-11 w-11 shrink-0 items-center justify-center rounded-lg",
                                 "transition-transform duration-300",
                                 roleStyle.iconBox,
                                 roleStyle.hoverRotate,

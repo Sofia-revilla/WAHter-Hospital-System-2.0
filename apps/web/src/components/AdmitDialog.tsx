@@ -24,7 +24,7 @@ export interface AdmitPreset {
 }
 
 const fieldClass = cn(
-  "w-full rounded-xl border border-glass-border bg-glass-bg p-3 text-sm text-foreground",
+  "w-full rounded-lg border border-glass-border bg-glass-bg p-3 text-sm text-foreground",
   "outline-none focus:ring-1 focus:ring-wah-purple",
 );
 
@@ -94,7 +94,7 @@ function PatientPicker({ patients, selected, onSelect, describe }: PatientPicker
         <ul
           role="listbox"
           className={cn(
-            "absolute left-0 right-0 top-full z-10 mt-1 max-h-60 overflow-y-auto rounded-xl",
+            "absolute left-0 right-0 top-full z-10 mt-1 max-h-60 overflow-y-auto rounded-lg",
             "border border-glass-border bg-card-bg p-1 shadow-xl",
           )}
         >
@@ -246,7 +246,7 @@ export function AdmitDialog({ preset, staffName, onClose }: AdmitDialogProps) {
               role="dialog"
               aria-modal="true"
               aria-labelledby="admit-title"
-              className="glass pointer-events-auto w-full max-w-xl rounded-[2rem] bg-card-bg p-8 shadow-2xl"
+              className="glass pointer-events-auto w-full max-w-xl rounded-xl bg-card-bg p-5 shadow-2xl"
             >
               <div className="mb-6 flex items-start justify-between gap-4">
                 <div>
@@ -365,7 +365,7 @@ export function AdmitDialog({ preset, staffName, onClose }: AdmitDialogProps) {
                 {needsIcuConfirm && (
                   <label
                     className={cn(
-                      "flex items-start gap-2 rounded-xl border border-orange-400/40 bg-orange-400/10 p-3",
+                      "flex items-start gap-2 rounded-lg border border-orange-400/40 bg-orange-400/10 p-3",
                       "text-sm text-orange-600",
                     )}
                   >
@@ -389,14 +389,14 @@ export function AdmitDialog({ preset, staffName, onClose }: AdmitDialogProps) {
                   <button
                     type="button"
                     onClick={onClose}
-                    className="rounded-xl px-5 py-3 text-xs font-bold uppercase text-text-muted hover:bg-glass-bg"
+                    className="rounded-lg px-5 py-3 text-xs font-bold uppercase text-text-muted hover:bg-glass-bg"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     className={cn(
-                      "rounded-xl bg-wah-purple px-6 py-3 text-xs font-black uppercase text-white",
+                      "rounded-lg bg-wah-purple px-6 py-3 text-xs font-black uppercase text-white",
                       "shadow-lg shadow-wah-purple/20 transition-colors hover:bg-wah-neon",
                     )}
                   >

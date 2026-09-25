@@ -51,11 +51,12 @@ body {
    Unlayered, .glass's border shorthand beat classes like border-l-4 and
    border-wah-lavender/20 no matter where they appeared in the markup. */
 @layer components {
+  /* The name stuck from the first design, but it's a flat card now: solid
+     background, thin border, barely-there shadow. Same color tokens. */
   .glass {
-    background: var(--color-glass-bg);
+    background: var(--color-card-bg);
     border: 1px solid var(--color-glass-border);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 1px 2px rgba(30, 27, 75, 0.05);
   }
 
   .purple-shadow {

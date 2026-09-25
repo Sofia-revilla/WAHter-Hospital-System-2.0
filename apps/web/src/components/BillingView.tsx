@@ -58,10 +58,10 @@ export function BillingView({ role }: BillingViewProps) {
   const [balances] = useState(() => queue.map(() => randomBalance()));
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
         <p className="text-sm font-semibold text-wah-purple">Billing &amp; Claims</p>
-        <h2 className="text-3xl font-bold tracking-tight">Financial Dashboard</h2>
+        <h2 className="text-2xl font-bold tracking-tight">Financial Dashboard</h2>
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
@@ -70,8 +70,8 @@ export function BillingView({ role }: BillingViewProps) {
         ))}
       </div>
 
-      <div className="grid gap-8 xl:grid-cols-12">
-        <section className="glass min-w-0 rounded-[2rem] p-8 xl:col-span-8">
+      <div className="grid gap-6 xl:grid-cols-12">
+        <section className="glass min-w-0 rounded-xl p-5 xl:col-span-8">
           <h3 className="mb-6 text-lg font-bold">Patient Billing Queue</h3>
 
           <div className="overflow-x-auto">
@@ -139,8 +139,8 @@ export function BillingView({ role }: BillingViewProps) {
           </div>
         </section>
 
-        <div className="flex min-w-0 flex-col gap-8 xl:col-span-4">
-          <section className="glass rounded-[2rem] border-l-4 border-l-wah-neon p-8">
+        <div className="flex min-w-0 flex-col gap-6 xl:col-span-4">
+          <section className="glass rounded-xl border-l-4 border-l-wah-neon p-5">
             <h3 className="font-bold">PhilHealth 3.0 Ready</h3>
             <p className="mt-2 text-sm text-text-muted">
               Automatically mapping attributes for eClaims submission. 80% coverage on active cases.
@@ -151,7 +151,7 @@ export function BillingView({ role }: BillingViewProps) {
             </div>
           </section>
 
-          <section className="rounded-[2rem] bg-wah-purple/40 p-8 text-center">
+          <section className="rounded-xl bg-wah-purple/40 p-5 text-center">
             <DollarSign size={40} className="mx-auto mb-4 text-white" />
             <h3 className="font-bold text-white">End-of-Day Report</h3>
             <p className="mt-2 text-sm text-wah-lavender/80">
@@ -162,7 +162,7 @@ export function BillingView({ role }: BillingViewProps) {
               <button
                 type="button"
                 className={cn(
-                  "mt-6 w-full rounded-xl bg-white py-3",
+                  "mt-6 w-full rounded-lg bg-white py-3",
                   "font-bold uppercase text-wah-deep transition-transform hover:scale-105",
                 )}
               >

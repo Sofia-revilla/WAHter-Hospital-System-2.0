@@ -30,7 +30,7 @@ function AlertRow({ alert, staffName }: AlertRowProps) {
   return (
     <li
       className={cn(
-        "rounded-2xl border p-4",
+        "rounded-xl border p-4",
         alert.risk === "High"
           ? "border-rose-500/30 bg-rose-500/5"
           : "border-orange-400/30 bg-orange-400/5",
@@ -111,7 +111,7 @@ export function MewsAlertsPanel({ staffName }: MewsAlertsPanelProps) {
   const acknowledgedCount = mewsAlerts.length - active.length;
 
   return (
-    <section className="glass rounded-[2rem] p-6">
+    <section className="glass rounded-xl p-6">
       <div className="mb-4 flex items-center justify-between">
         <h3 className="flex items-center gap-2 font-bold">
           <BellRing size={18} className="text-rose-500" /> MEWS Alerts

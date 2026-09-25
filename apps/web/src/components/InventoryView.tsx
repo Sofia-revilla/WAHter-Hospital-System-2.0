@@ -55,11 +55,11 @@ export function InventoryView() {
   const visibleItems = inventory.filter((item) => matchesFilter(item, filter));
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-sm font-semibold text-wah-purple">Supply Chain &amp; Logistics</p>
-          <h2 className="text-3xl font-bold tracking-tight">Inventory Management</h2>
+          <h2 className="text-2xl font-bold tracking-tight">Inventory Management</h2>
         </div>
         <div className="flex gap-3">
           {/* TODO: stock audit and batch intake need an inventory backend, which is out of
@@ -67,7 +67,7 @@ export function InventoryView() {
           <button
             type="button"
             className={cn(
-              "glass rounded-xl px-4 py-3",
+              "glass rounded-lg px-4 py-3",
               "text-[10px] font-bold uppercase tracking-widest text-text-muted hover:text-foreground",
             )}
           >
@@ -76,7 +76,7 @@ export function InventoryView() {
           <button
             type="button"
             className={cn(
-              "flex items-center gap-2 rounded-xl bg-wah-purple px-4 py-3",
+              "flex items-center gap-2 rounded-lg bg-wah-purple px-4 py-3",
               "text-[10px] font-bold uppercase tracking-widest text-white",
               "shadow-lg shadow-wah-purple/30 transition-transform hover:scale-105",
             )}
@@ -86,7 +86,7 @@ export function InventoryView() {
         </div>
       </div>
 
-      <section className="rounded-[2rem] border border-glass-border bg-glass-bg p-8">
+      <section className="rounded-xl border border-glass-border bg-glass-bg p-5">
         <p className="text-[10px] font-black uppercase tracking-widest text-wah-neon">Module Vision</p>
         <p className="mt-3 text-sm leading-relaxed text-text-muted">
           <span className="font-semibold text-foreground">
@@ -105,14 +105,14 @@ export function InventoryView() {
         ))}
       </div>
 
-      <div className="grid gap-8 xl:grid-cols-12">
-        <section className="glass min-w-0 rounded-[2rem] p-8 xl:col-span-8">
+      <div className="grid gap-6 xl:grid-cols-12">
+        <section className="glass min-w-0 rounded-xl p-5 xl:col-span-8">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
             <h3 className="text-lg font-bold">Comprehensive Inventory</h3>
             <div
               role="tablist"
               aria-label="Category filter"
-              className="flex rounded-xl bg-white/5 p-1"
+              className="flex rounded-lg bg-white/5 p-1"
             >
               {FILTERS.map((option) => (
                 <button
@@ -210,15 +210,15 @@ export function InventoryView() {
           </div>
         </section>
 
-        <div className="flex min-w-0 flex-col gap-8 xl:col-span-4">
-          <section className="glass rounded-[2rem] border-l-4 border-l-wah-lavender/30 p-8">
+        <div className="flex min-w-0 flex-col gap-6 xl:col-span-4">
+          <section className="glass rounded-xl border-l-4 border-l-wah-lavender/30 p-5">
             <h3 className="mb-6 text-lg font-bold">Expiry Watch</h3>
             <ul className="space-y-3">
               {EXPIRY_WATCH.map((item) => (
                 <li
                   key={item.name}
                   className={cn(
-                    "flex items-center justify-between gap-3 rounded-xl p-3",
+                    "flex items-center justify-between gap-3 rounded-lg p-3",
                     "border border-glass-border bg-glass-bg",
                   )}
                 >
@@ -238,7 +238,7 @@ export function InventoryView() {
             <button
               type="button"
               className={cn(
-                "mt-6 w-full rounded-xl bg-wah-lavender/10 py-3",
+                "mt-6 w-full rounded-lg bg-wah-lavender/10 py-3",
                 "text-xs font-black uppercase tracking-widest text-wah-lavender",
                 "transition-colors hover:bg-wah-lavender/20",
               )}
@@ -249,7 +249,7 @@ export function InventoryView() {
 
           <section
             className={cn(
-              "relative overflow-hidden rounded-[2rem] p-8",
+              "relative overflow-hidden rounded-xl p-5",
               "bg-gradient-to-br from-wah-purple/40 to-wah-neon/10",
             )}
           >
@@ -264,7 +264,7 @@ export function InventoryView() {
             </p>
             <button
               type="button"
-              className="relative mt-6 rounded-xl bg-white px-4 py-2 text-sm font-bold text-wah-deep"
+              className="relative mt-6 rounded-lg bg-white px-4 py-2 text-sm font-bold text-wah-deep"
             >
               Review Drafts
             </button>

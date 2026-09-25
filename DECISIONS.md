@@ -338,3 +338,18 @@ The pre-change build is tagged `prompt-build-v1` (also still on `main`) so it ca
   column under the sidebar.
 - **Narrow screens:** the sidebar folds to the icon rail below 1024px, and the login card uses tighter
   padding on phones.
+
+### D-038: Clinical dashboard without revenue, and a flatter card style
+
+- **No revenue for Doctor and Nurse.** The paper puts financial reports with Billing Staff and the
+  Hospital Administrator (TABLE XIII, user stories 33–40), so "Daily Revenue" and the revenue chart
+  are gone from the clinical dashboard. REVENUE_DATA stays in constants for those future portals.
+  All four KPIs are now live: Admitted Patients, Bed Occupancy (from the bed board), MEWS Alerts,
+  Pending Results (UC-11). The chart is now **Patient Risk by Department**: Low/Medium/High MEWS
+  counts, since early warning is the paper's objective 4. The dashboard date is today's date.
+- **Shapes and look** (team reference: a HealthSync-style HIS). Colors are unchanged. Cards are flat
+  (`.glass` is now a solid card with a thin border, no blur) with 12px corners. Buttons use 8px. Card
+  padding and section gaps are tighter, and page titles are one size smaller. StatCard is compact:
+  icon + label, value with a small chip, caption. The topbar has an avatar/name/role profile block that
+  opens Profile. The expanded sidebar has a "Main Menu" label and a tinted active row; the collapsed
+  rail keeps its solid purple pill.

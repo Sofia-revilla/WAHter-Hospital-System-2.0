@@ -101,11 +101,11 @@ export function ProfileView({
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-sm font-semibold text-wah-purple">Staff Profile</p>
-          <h2 className="text-3xl font-bold tracking-tight">
+          <h2 className="text-2xl font-bold tracking-tight">
             {role === "IT" ? "Administrator Profile" : "Clinician Profile"}
           </h2>
         </div>
@@ -113,7 +113,7 @@ export function ProfileView({
           type="button"
           onClick={toggleEditing}
           className={cn(
-            "flex items-center gap-2 rounded-xl border-2 border-wah-purple px-5 py-2.5",
+            "flex items-center gap-2 rounded-lg border-2 border-wah-purple px-5 py-2.5",
             "text-sm font-bold transition-colors",
             isEditing ? "bg-wah-purple text-white" : "text-wah-purple hover:bg-wah-purple/10",
           )}
@@ -123,8 +123,8 @@ export function ProfileView({
         </button>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-3">
-        <section className="glass overflow-hidden rounded-[2rem] lg:col-span-1">
+      <div className="grid gap-6 lg:grid-cols-3">
+        <section className="glass overflow-hidden rounded-xl lg:col-span-1">
           <div className={cn("h-16", style.band)} />
           <div
             className={cn(
@@ -200,7 +200,7 @@ export function ProfileView({
           </div>
         </section>
 
-        <section className="glass rounded-[2rem] p-8 lg:col-span-2">
+        <section className="glass rounded-xl p-5 lg:col-span-2">
           <h3 className="mb-6 text-lg font-bold">Profile Details</h3>
 
           <div className="grid gap-6 sm:grid-cols-2">
@@ -223,7 +223,7 @@ export function ProfileView({
                     }
                     aria-label={field.label}
                     className={cn(
-                      "w-full rounded-xl border border-glass-border bg-glass-bg p-3 text-sm",
+                      "w-full rounded-lg border border-glass-border bg-glass-bg p-3 text-sm",
                       "text-foreground outline-none focus:ring-1 focus:ring-wah-purple",
                     )}
                   />
@@ -242,7 +242,7 @@ export function ProfileView({
                 onChange={(event) => setBio(event.target.value)}
                 aria-label="Biography"
                 className={cn(
-                  "h-32 w-full resize-none rounded-2xl border border-glass-border bg-glass-bg p-4",
+                  "h-32 w-full resize-none rounded-xl border border-glass-border bg-glass-bg p-4",
                   "text-sm text-foreground outline-none focus:ring-1 focus:ring-wah-purple",
                 )}
               />

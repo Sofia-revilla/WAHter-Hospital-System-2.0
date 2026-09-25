@@ -113,10 +113,10 @@ export function StaffAccessView({ adminName }: StaffAccessViewProps) {
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
         <p className="text-sm font-semibold text-wah-purple">System Administration</p>
-        <h2 className="text-3xl font-bold tracking-tight">Staff &amp; Access</h2>
+        <h2 className="text-2xl font-bold tracking-tight">Staff &amp; Access</h2>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
@@ -125,7 +125,7 @@ export function StaffAccessView({ adminName }: StaffAccessViewProps) {
         ))}
       </div>
 
-      <section className="glass rounded-[2rem] p-8">
+      <section className="glass rounded-xl p-5">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <h3 className="flex items-center gap-2 text-lg font-bold">
             <ShieldCheck size={18} className="text-wah-neon" /> Staff Accounts &amp; Roles
@@ -135,7 +135,7 @@ export function StaffAccessView({ adminName }: StaffAccessViewProps) {
           </span>
         </div>
         {notice && (
-          <p className="mb-4 flex items-center gap-2 rounded-xl bg-amber-400/10 px-4 py-3 text-sm text-amber-600">
+          <p className="mb-4 flex items-center gap-2 rounded-lg bg-amber-400/10 px-4 py-3 text-sm text-amber-600">
             <Lock size={14} /> {notice}
           </p>
         )}
@@ -209,7 +209,7 @@ export function StaffAccessView({ adminName }: StaffAccessViewProps) {
         </div>
       </section>
 
-      <section className="glass rounded-[2rem] p-8">
+      <section className="glass rounded-xl p-5">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <h3 className="flex items-center gap-2 text-lg font-bold">
             <ScrollText size={18} className="text-wah-neon" /> Audit Log
@@ -222,7 +222,7 @@ export function StaffAccessView({ adminName }: StaffAccessViewProps) {
         <div className="mb-6 flex flex-col gap-3 lg:flex-row">
           <div
             className={cn(
-              "flex flex-1 items-center gap-3 rounded-xl border border-glass-border bg-glass-bg px-4 py-2",
+              "flex flex-1 items-center gap-3 rounded-lg border border-glass-border bg-glass-bg px-4 py-2",
               "focus-within:ring-2 focus-within:ring-wah-purple/40",
             )}
           >
@@ -240,7 +240,7 @@ export function StaffAccessView({ adminName }: StaffAccessViewProps) {
             value={actionFilter}
             onChange={(event) => setActionFilter(event.target.value as (typeof ACTION_FILTERS)[number])}
             aria-label="Filter by action"
-            className="rounded-xl border border-glass-border bg-glass-bg px-3 py-2 text-sm"
+            className="rounded-lg border border-glass-border bg-glass-bg px-3 py-2 text-sm"
           >
             {ACTION_FILTERS.map((option) => (
               <option key={option} value={option}>
@@ -253,7 +253,7 @@ export function StaffAccessView({ adminName }: StaffAccessViewProps) {
             onClick={exportCsv}
             disabled={visibleAudit.length === 0}
             className={cn(
-              "flex items-center justify-center gap-2 rounded-xl bg-wah-purple px-4 py-2",
+              "flex items-center justify-center gap-2 rounded-lg bg-wah-purple px-4 py-2",
               "text-xs font-bold uppercase text-white disabled:opacity-50",
             )}
           >

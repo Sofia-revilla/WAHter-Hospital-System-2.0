@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { Activity, Bed, DollarSign, Plus, Users } from "lucide-react";
+import { Activity, Bed, FlaskConical, Plus, Users } from "lucide-react";
 import {
-  Area,
-  AreaChart,
+  Bar,
+  BarChart,
   CartesianGrid,
+  Legend,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -14,31 +14,22 @@ import {
 import { cn } from "@/lib/utils";
 import { useData } from "@/context/DataContext";
 import { wardLabel } from "@/lib/beds";
-import { REVENUE_DATA } from "@/constants";
+import { riskLevelFor, type RiskLevel } from "@/lib/mews";
 import { MewsAlertsPanel } from "./MewsAlertsPanel";
 import { PatientCard } from "./PatientCard";
 import { StatCard } from "./StatCard";
 
 // Recharts writes these straight into SVG attributes, where var(--…) doesn't
-// resolve, so the chart gets literal hex values instead of our CSS tokens.
-const CHART_PURPLE = "#6d28d9";
-const CHART_NEON = "#a855f7";
+// resolve, so the chart gets literal hex values. Same shades as MewsChip.
+const RISK_COLORS: Record<RiskLevel, string> = {
+  Low: "#10b981",
+  Medium: "#fb923c",
+  High: "#f43f5e",
+};
 const AXIS_GREY = "#8b87b0";
 
-const STAT_CARDS = [
-  { title: "Total Patients", value: "1,248", sub: "Admitted Active", icon: Users, trend: "+12%" },
-  { title: "Bed Occupancy", value: "84%", sub: "West Ward Full", icon: Bed, trend: "Stable" },
-  {
-    title: "Daily Revenue",
-    value: "₱ 242,500",
-    sub: "Pending Filing",
-    icon: DollarSign,
-    trend: "+8.4%",
-  },
-];
-
-function formatPeso(value: number) {
-  return `₱ ${value.toLocaleString()}`;
+function twoDigits(count: number) {
+  return String(count).padStart(2, "0");
 }
 
 interface DashboardViewProps {
@@ -47,127 +38,159 @@ interface DashboardViewProps {
   staffName: string;
 }
 
+// Clinical dashboard for doctors and nurses. Revenue lives with Billing Staff
+// and the Hospital Administrator (paper user classes), so it isn't here.
 export function DashboardView({ isLight, staffName }: DashboardViewProps) {
-  const { patients, wards, occupiedBeds, mewsAlerts } = useData();
+  const { patients, wards, occupiedBeds, mewsAlerts, labTests } = useData();
+
   const activeAlerts = mewsAlerts.filter((alert) => !alert.acknowledgedAt);
   const highAlerts = activeAlerts.filter((alert) => alert.risk === "High").length;
+  const totalBeds = wards.reduce((sum, ward) => sum + ward.capacity, 0);
+  const takenBeds = wards.reduce((sum, ward) => sum + occupiedBeds(ward.id).length, 0);
+  const occupancy = totalBeds === 0 ? 0 : Math.round((takenBeds / totalBeds) * 100);
+  const pendingResults = labTests.filter((test) => test.status !== "Completed");
+  const urgentResults = pendingResults.filter((test) => test.priority === "Urgent").length;
 
-  // MEWS count is live from the alerts list; the other three are still design figures
+  // every card is counted from live data now, nothing hardcoded
   const statCards = [
-    STAT_CARDS[0],
-    STAT_CARDS[1],
+    {
+      title: "Admitted Patients",
+      value: String(patients.length),
+      sub: "Current inpatients",
+      icon: Users,
+    },
+    {
+      title: "Bed Occupancy",
+      value: `${occupancy}%`,
+      sub: `${takenBeds} of ${totalBeds} beds`,
+      icon: Bed,
+      trend: occupancy >= 85 ? "High" : undefined,
+    },
     {
       title: "MEWS Alerts",
-      value: String(activeAlerts.length).padStart(2, "0"),
-      sub: activeAlerts.length > 0 ? "Requires Attention" : "All Acknowledged",
+      value: twoDigits(activeAlerts.length),
+      sub: activeAlerts.length > 0 ? "Requires attention" : "All acknowledged",
       icon: Activity,
       trend: highAlerts > 0 ? "Critical" : undefined,
     },
-    STAT_CARDS[2],
+    {
+      title: "Pending Results",
+      value: twoDigits(pendingResults.length),
+      sub: "Lab & radiology",
+      icon: FlaskConical,
+      trend: urgentResults > 0 ? `${urgentResults} urgent` : undefined,
+    },
   ];
-  // TODO(Phase 6): drive the chart from the Billing service; for now the
-  // range picker only changes the label, the data is always REVENUE_DATA
-  const [range, setRange] = useState("this-week");
+
+  // MEWS risk per department, the paper's early-warning view (objective 4)
+  const departments = [...new Set(patients.map((patient) => patient.department))];
+  const riskByDepartment = departments.map((department) => {
+    const counts = { Low: 0, Medium: 0, High: 0 };
+    patients
+      .filter((patient) => patient.department === department)
+      .forEach((patient) => counts[riskLevelFor(patient.mewsScore)]++);
+    return { department, ...counts };
+  });
+
+  const today = new Date().toLocaleDateString("en-PH", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          {/* hardcoded for the prototype walkthrough */}
-          <p className="text-sm font-semibold text-wah-purple">Tuesday, May 5, 2026</p>
-          <h2 className="text-3xl font-bold tracking-tight">Hospital Operations Center</h2>
+          <p className="text-sm font-semibold text-wah-purple">{today}</p>
+          <h2 className="text-2xl font-bold tracking-tight">Hospital Operations Center</h2>
+          <p className="text-sm text-text-muted">Ward census, patient risk, and pending work.</p>
         </div>
-        <div className="glass flex items-center gap-2 rounded-full px-4 py-2">
+        <div className="glass flex items-center gap-2 rounded-lg px-3 py-2">
           <span className="relative flex h-2.5 w-2.5">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-wah-neon opacity-75" />
             <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-wah-neon" />
           </span>
-          <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">
-            Connectivity: Optimal
-          </span>
+          <span className="text-xs font-semibold text-text-muted">Connectivity: Optimal</span>
         </div>
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {statCards.map((card) => (
           <StatCard key={card.title} {...card} />
         ))}
       </div>
 
-      <div className="grid gap-8 xl:grid-cols-12">
+      <div className="grid gap-6 xl:grid-cols-12">
         {/* min-w-0: grid items default to min-width:auto, so a wide child could
             push the whole column wider than the screen on tablets */}
-        <div className="min-w-0 space-y-8 xl:col-span-8">
-          <section className="glass rounded-[2rem] p-8">
-            <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <h3 className="text-lg font-bold">Revenue &amp; Admissions</h3>
-                <p className="font-mono text-xs text-text-muted">7-Day Analysis</p>
-              </div>
-              <select
-                value={range}
-                onChange={(event) => setRange(event.target.value)}
-                aria-label="Chart range"
-                className={cn(
-                  "rounded-xl border border-glass-border bg-glass-bg px-3 py-2",
-                  "text-sm text-foreground outline-none focus:border-wah-purple",
-                )}
-              >
-                <option value="this-week">This week</option>
-                <option value="last-week">Last week</option>
-              </select>
+        <div className="min-w-0 space-y-6 xl:col-span-8">
+          <section className="glass rounded-xl p-5">
+            <div className="mb-4">
+              <h3 className="font-bold">Patient Risk by Department</h3>
+              <p className="text-xs text-text-muted">Latest MEWS for each admitted patient</p>
             </div>
 
-            <div className="h-[300px]">
+            <div className="h-[280px]">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={REVENUE_DATA} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={CHART_PURPLE} stopOpacity={0.3} />
-                      <stop offset="100%" stopColor={CHART_PURPLE} stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
+                <BarChart data={riskByDepartment} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid
                     strokeDasharray="4 4"
                     vertical={false}
-                    stroke={isLight ? "rgba(109,40,217,0.14)" : "rgba(168,85,247,0.18)"}
+                    stroke={isLight ? "rgba(109,40,217,0.12)" : "rgba(168,85,247,0.18)"}
                   />
-                  <XAxis dataKey="name" stroke={AXIS_GREY} axisLine={false} tickLine={false} fontSize={12} />
+                  <XAxis
+                    dataKey="department"
+                    stroke={AXIS_GREY}
+                    axisLine={false}
+                    tickLine={false}
+                    fontSize={12}
+                  />
                   <YAxis
                     stroke={AXIS_GREY}
                     axisLine={false}
                     tickLine={false}
                     fontSize={12}
-                    tickFormatter={(value: number) => `₱${value / 1000}k`}
+                    allowDecimals={false}
                   />
                   <Tooltip
-                    formatter={(value) => [formatPeso(Number(value)), "Revenue"]}
+                    cursor={{ fill: isLight ? "rgba(109,40,217,0.06)" : "rgba(168,85,247,0.08)" }}
                     contentStyle={{
                       background: isLight ? "#fdfbff" : "#17143a",
                       border: `1px solid ${isLight ? "rgba(109,40,217,0.14)" : "rgba(168,85,247,0.25)"}`,
-                      borderRadius: 12,
+                      borderRadius: 8,
                       color: isLight ? "#1e1b4b" : "#ede9fe",
                     }}
-                    labelStyle={{ color: isLight ? "#6b6592" : "#a5a1c9" }}
-                    cursor={{ stroke: CHART_NEON, strokeOpacity: 0.3 }}
                   />
-                  <Area
-                    type="monotone"
-                    dataKey="revenue"
-                    stroke={CHART_NEON}
-                    strokeWidth={3}
-                    fill="url(#revenueFill)"
+                  {/* itemSorter null keeps Low → Medium → High instead of alphabetical */}
+                  <Legend
+                    iconType="circle"
+                    iconSize={8}
+                    itemSorter={null}
+                    wrapperStyle={{ fontSize: 12 }}
                   />
-                </AreaChart>
+                  {(["Low", "Medium", "High"] as const).map((risk) => (
+                    <Bar
+                      key={risk}
+                      dataKey={risk}
+                      stackId="risk"
+                      fill={RISK_COLORS[risk]}
+                      // rounded on every segment so the stack reads as separate blocks
+                      radius={[6, 6, 6, 6]}
+                      maxBarSize={48}
+                    />
+                  ))}
+                </BarChart>
               </ResponsiveContainer>
             </div>
           </section>
 
           {/* Replaced the old inventory watchlist: pharmacy is dispensing-only in the
               paper, and no service owns stock. Bed occupancy is in scope (UC-04, story 9). */}
-          <section className="glass rounded-[2rem] p-8">
-            <div className="mb-6">
-              <h3 className="text-lg font-bold">Bed Occupancy by Ward</h3>
+          <section className="glass rounded-xl p-5">
+            <div className="mb-4">
+              <h3 className="font-bold">Bed Occupancy by Ward</h3>
               <p className="text-xs text-text-muted">Live from the bed board</p>
             </div>
             <ul className="space-y-4">
@@ -201,12 +224,12 @@ export function DashboardView({ isLight, staffName }: DashboardViewProps) {
         <aside className="min-w-0 space-y-4 xl:col-span-4">
           <MewsAlertsPanel staffName={staffName} />
 
-          <div className="glass flex items-center justify-between rounded-full py-2 pl-5 pr-2">
+          <div className="glass flex items-center justify-between rounded-xl px-4 py-2.5">
             <span className="text-sm font-bold">Active Cases</span>
             <span
               className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-full",
-                "bg-wah-purple text-sm font-black text-white",
+                "flex h-7 min-w-7 items-center justify-center rounded-md px-1.5",
+                "bg-wah-purple text-sm font-bold text-white",
               )}
             >
               {patients.length}
@@ -221,12 +244,12 @@ export function DashboardView({ isLight, staffName }: DashboardViewProps) {
 
             <div
               className={cn(
-                "glass flex flex-col items-center gap-2 rounded-2xl border-2 border-dashed p-6",
+                "flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-glass-border p-5",
                 "text-text-muted",
               )}
             >
               <Plus size={20} />
-              <span className="text-xs font-bold uppercase tracking-widest">End of Daily Feed</span>
+              <span className="text-xs font-semibold">End of daily feed</span>
             </div>
           </div>
         </aside>
