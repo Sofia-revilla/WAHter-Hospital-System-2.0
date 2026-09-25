@@ -40,6 +40,9 @@ a build, tests, a commit, and an update to this file.
 - [x] **Prompt 11: Billing Tab** (2026-09-25)
   BillingView: stat cards, patient billing queue, PhilHealth 3.0 card, End-of-Day Report.
   Also fixed .glass overriding Tailwind borders. See DECISIONS.md D-025, D-026.
+- [x] **Prompt 12: Inventory Tab** (2026-09-25)
+  InventoryView (IT Admin): module vision, stat cards, filterable inventory table, expiry watch,
+  automated ordering card. See DECISIONS.md D-027.
 
 ## Master prompt phases
 

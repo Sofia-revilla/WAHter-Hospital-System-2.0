@@ -185,3 +185,16 @@ The eSOA must be XML only (eClaims 3.0) when it is built.
 Tailwind's layered utilities. That meant `.glass`'s `border` shorthand silently overrode `border-l-4
 border-l-wah-neon` on the PhilHealth card, and the login card's `border-2 border-wah-lavender/20`. They
 now live in `@layer components`, so utilities override them as expected.
+
+### D-027: Inventory tab built as designed, although inventory is out of WAH2.0 scope
+
+Master prompt §1 lists "pharmacy inventory or stock tracking" as out of scope, while Prompt 12 and master
+§7.8 define this IT Admin tab. We built the screen as a prototype view over the mock inventory. Stock
+Audit, Add New Batch, Routing Suggestions and Review Drafts stay visual, with no inventory backend
+planned. Filter mapping: Meds → Medication, Surgical → Supply (all current Supply items are surgical or
+clinical consumables), Equip → an "Equipment" category that doesn't exist yet, so it shows the empty
+state. Expiry is the hardcoded "05/2026" from the prompt.
+
+The Automated Ordering card keeps Prompt 12's exact wording ("AI detected low levels…"). The paper and
+master prompt exclude machine learning, so the team may want to reword this to "The system detected…"
+before the defense.

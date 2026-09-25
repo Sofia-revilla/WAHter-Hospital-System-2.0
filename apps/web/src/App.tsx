@@ -20,6 +20,7 @@ import { DataProvider } from "@/context/DataContext";
 import { BedManagementView } from "@/components/BedManagementView";
 import { BillingView } from "@/components/BillingView";
 import { DashboardView } from "@/components/DashboardView";
+import { InventoryView } from "@/components/InventoryView";
 import { LaboratoryView } from "@/components/LaboratoryView";
 import { PatientsView } from "@/components/PatientsView";
 import { PharmacyView } from "@/components/PharmacyView";
@@ -56,6 +57,7 @@ const BUILT_TABS: TabId[] = [
   "lab",
   "rooms",
   "billing",
+  "inventory",
   "profile",
 ];
 
@@ -263,6 +265,7 @@ export function App() {
                 {activeTab === "lab" && <LaboratoryView />}
                 {activeTab === "rooms" && <BedManagementView />}
                 {activeTab === "billing" && <BillingView />}
+                {activeTab === "inventory" && <InventoryView />}
                 {activeTab === "profile" && (
                   <ProfileView
                     profile={{
