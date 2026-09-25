@@ -270,3 +270,13 @@ kept as a verbatim copy of the original spec.
 The master prompt made dark mode the default. The team asked for light mode instead, so `isLight`
 starts as `true` and `layout.tsx` puts `.light` on `<html>` in the server HTML (no dark flash on load).
 Dark mode is still one click away in the topbar.
+
+### D-034: Collapsible sidebar (expanded list or icon rail)
+
+The team wanted the sidebar laid out like a classic HIS nav when it's open (logo + name at the top, a
+search box, then full-width icon + label rows), while keeping the current 80px icon rail when it's
+collapsed. Colors are unchanged. It starts expanded (w-64); the collapse button sits in the header
+where the reference had its gear. The expand button is a small tab on the rail's edge, so the rail
+doesn't lose height and IT Admin's nine tabs still fit. The search box filters the module list (Enter
+opens the first match). It doesn't search patients. Tooltips only show in the rail, since the expanded
+rows already show names. The main area's margin (ml-64 / ml-20) animates with the width.

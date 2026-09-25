@@ -160,6 +160,7 @@ export function App() {
   const [activeTab, setActiveTab] = useState<TabId>("dashboard");
   // light mode is the default look; the toggle in the topbar switches to dark
   const [isLight, setIsLight] = useState(true);
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
 
   // The class goes on <html>, not a wrapper div, so the body background and
   // native scrollbars switch too. With a wrapper we got a dark strip on overscroll.
@@ -244,10 +245,22 @@ export function App() {
   return (
     <DataProvider>
       <div className="min-h-screen bg-background text-foreground">
-        <Sidebar role={role} activeTab={activeTab} onSelect={setActiveTab} />
+        <Sidebar
+          role={role}
+          activeTab={activeTab}
+          isExpanded={isSidebarExpanded}
+          onToggle={() => setIsSidebarExpanded((current) => !current)}
+          onSelect={setActiveTab}
+        />
 
         {/* h-screen + overflow on <main> keeps the topbar pinned while only the tab content scrolls */}
-        <div className="ml-20 flex h-screen flex-col">
+        {/* margin tracks the sidebar width (w-64 / w-20) and animates with it */}
+        <div
+          className={cn(
+            "flex h-screen flex-col transition-[margin] duration-300",
+            isSidebarExpanded ? "ml-64" : "ml-20",
+          )}
+        >
           <Topbar
             title={TABS[activeTab].label}
             isLight={isLight}
