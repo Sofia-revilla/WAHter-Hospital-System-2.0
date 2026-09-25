@@ -20,6 +20,7 @@ import { ArchitectureStatusView } from "@/components/ArchitectureStatusView";
 import { BedManagementView } from "@/components/BedManagementView";
 import { BillingView } from "@/components/BillingView";
 import { DashboardView } from "@/components/DashboardView";
+import { DemoTour } from "@/components/DemoTour";
 import { InventoryView } from "@/components/InventoryView";
 import { LaboratoryView } from "@/components/LaboratoryView";
 import { PatientsView } from "@/components/PatientsView";
@@ -29,6 +30,7 @@ import { LoginScreen, type LoginHandler } from "@/components/LoginScreen";
 import { ProfileView } from "@/components/ProfileView";
 import { Sidebar } from "@/components/Sidebar";
 import { TABS, type TabId } from "@/navigation";
+import { DEMO_STEPS } from "@/demoTour";
 import { ROLE_LABELS, type StaffRole } from "@/types";
 
 // ─── 1. HELPERS ───
@@ -55,8 +57,6 @@ interface TopbarProps {
   onToggleTheme: () => void;
   displayName: string;
   role: StaffRole;
-  isDemoMode: boolean;
-  demoStep: number;
   onLogout: () => void;
 }
 
@@ -66,8 +66,6 @@ function Topbar({
   onToggleTheme,
   displayName,
   role,
-  isDemoMode,
-  demoStep,
   onLogout,
 }: TopbarProps) {
   const iconButton = cn(
@@ -84,17 +82,6 @@ function Topbar({
     >
       <div className="flex min-w-0 items-center gap-3">
         <h1 className="truncate whitespace-nowrap text-xl font-bold">{title}</h1>
-        {/* TODO(Prompt: demo tour): the guided tour overlay replaces this chip */}
-        {isDemoMode && (
-          <span
-            className={cn(
-              "whitespace-nowrap rounded-full bg-amber-400/10 px-2 py-1",
-              "text-[9px] font-black uppercase text-amber-500",
-            )}
-          >
-            Demo · Step {demoStep + 1}
-          </span>
-        )}
       </div>
 
       <div className="flex shrink-0 items-center gap-3">
@@ -175,6 +162,13 @@ export function App() {
   }
 
   const displayName = formatDisplayName(userName, userRole);
+  const demoSteps = DEMO_STEPS[userRole];
+
+  // the tour drives the page behind it: every step change also switches tabs
+  function goToDemoStep(step: number) {
+    setDemoStep(step);
+    setActiveTab(demoSteps[step].tab);
+  }
 
   return (
     <DataProvider>
@@ -189,8 +183,6 @@ export function App() {
             onToggleTheme={() => setIsLight((current) => !current)}
             displayName={displayName}
             role={userRole}
-            isDemoMode={isDemoMode}
-            demoStep={demoStep}
             onLogout={() => setUserRole(null)}
           />
 
@@ -230,6 +222,14 @@ export function App() {
             </AnimatePresence>
           </main>
         </div>
+
+        <DemoTour
+          isOpen={isDemoMode}
+          steps={demoSteps}
+          currentStep={demoStep}
+          onStepChange={goToDemoStep}
+          onClose={() => setIsDemoMode(false)}
+        />
       </div>
     </DataProvider>
   );

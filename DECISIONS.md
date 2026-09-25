@@ -227,3 +227,14 @@ and the track disappeared. Bio and on-duty status are local component state, as 
 they reset when you leave the tab. Activity numbers (12 / 8 / 07:00 AM) are hardcoded until
 Phase 9a. `formatDisplayName` moved from App.tsx to `src/lib/staff.ts` so ProfileView can use it without
 importing App.
+
+### D-030: Demo guided tour
+
+Prompt 15's step descriptions were truncated ("Your real-time command center...") and Nurse/IT copy was
+left for us to write. We finished each Doctor sentence in the same voice and wrote Nurse and IT steps
+around their daily tasks (MEWS checks and bed prep for nurses; service health, access testing and data
+checks for IT). Tour content lives in `src/demoTour.ts` (DEMO_STEPS, TAB_FEATURES, TAB_EMOJI), typed
+against `TabId` so a typo in a step's tab fails the build. The tour replaces the temporary "Demo · Step"
+chip in the topbar. The card uses `bg-white` as Prompt 15 specifies, the one deliberate exception to
+master §7.2's "no pure white" rule, because the amber tour card is meant to stand apart from the app
+theme. It has `role="dialog"`, and each progress dot has an aria-label.

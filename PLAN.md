@@ -49,6 +49,9 @@ a build, tests, a commit, and an update to this file.
 - [x] **Prompt 14: Profile Tab** (2026-09-25)
   ProfileView rebuilt: digital badge, on-duty switch, editable details and bio, activity summary.
   See DECISIONS.md D-029.
+- [x] **Prompt 15: Demo Guided Tour** (2026-09-25)
+  DemoTour modal with per-role steps (Doctor 7, Nurse 7, IT 9), feature chips, clickable progress
+  dots, Back/Next/Finish that also switch tabs. See DECISIONS.md D-030.
 
 ## Master prompt phases
 
