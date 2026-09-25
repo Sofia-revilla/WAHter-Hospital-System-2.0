@@ -3,8 +3,9 @@
 import { motion } from "motion/react";
 import { Activity, Bed, History, Network, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { can } from "@/lib/staff";
 import { useData } from "@/context/DataContext";
-import type { Ward } from "@/types";
+import type { StaffRole, Ward } from "@/types";
 import { StatCard } from "./StatCard";
 
 // Fixed numbers from the UI design. Heads up: the mock wards add up to 70 beds
@@ -24,9 +25,10 @@ function vacantBeds(ward: Ward) {
 
 interface WardCardProps {
   ward: Ward;
+  canManageBeds: boolean;
 }
 
-function WardCard({ ward }: WardCardProps) {
+function WardCard({ ward, canManageBeds }: WardCardProps) {
   const occupancy = ward.capacity === 0 ? 0 : (ward.occupied / ward.capacity) * 100;
 
   return (
@@ -79,23 +81,31 @@ function WardCard({ ward }: WardCardProps) {
             className="h-full rounded-full bg-wah-neon"
           />
         </div>
-        {/* TODO(Phase 4): open this ward on the Scheduling service's bed board */}
-        <button
-          type="button"
-          className={cn(
-            "rounded-xl bg-white px-3 py-1.5 text-[10px] font-black uppercase text-wah-deep",
-            "opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100",
-          )}
-        >
-          Manage
-        </button>
+        {canManageBeds && (
+          // TODO(Phase 4): open this ward on the Scheduling service's bed board
+          <button
+            type="button"
+            className={cn(
+              "rounded-xl bg-white px-3 py-1.5 text-[10px] font-black uppercase text-wah-deep",
+              "opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100",
+            )}
+          >
+            Manage
+          </button>
+        )}
       </div>
     </div>
   );
 }
 
-export function BedManagementView() {
+interface BedManagementViewProps {
+  role: StaffRole;
+}
+
+export function BedManagementView({ role }: BedManagementViewProps) {
   const { wards } = useData();
+  // admitting and moving patients between beds is the registrar's or nurse's job (UC-04)
+  const canManageBeds = can(role, "admitPatient");
   const nearEmptyWards = wards.filter((ward) => vacantBeds(ward) > NEAR_EMPTY_THRESHOLD);
 
   return (
@@ -130,7 +140,7 @@ export function BedManagementView() {
 
           <div className="mt-6 grid gap-6 lg:grid-cols-2">
             {wards.map((ward) => (
-              <WardCard key={ward.id} ward={ward} />
+              <WardCard key={ward.id} ward={ward} canManageBeds={canManageBeds} />
             ))}
           </div>
         </section>
@@ -156,14 +166,16 @@ export function BedManagementView() {
                         {vacantBeds(ward)} Vacant Slots
                       </p>
                     </div>
-                    {/* TODO(Phase 9a): start an admission into this ward */}
-                    <button
-                      type="button"
-                      aria-label={`Admit a patient to ${ward.name} (${ward.type})`}
-                      className="rounded-xl bg-wah-purple p-2.5 text-white transition-colors hover:bg-wah-neon"
-                    >
-                      <Plus size={16} />
-                    </button>
+                    {canManageBeds && (
+                      // TODO(Phase 9a): start an admission into this ward
+                      <button
+                        type="button"
+                        aria-label={`Admit a patient to ${ward.name} (${ward.type})`}
+                        className="rounded-xl bg-wah-purple p-2.5 text-white transition-colors hover:bg-wah-neon"
+                      >
+                        <Plus size={16} />
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>

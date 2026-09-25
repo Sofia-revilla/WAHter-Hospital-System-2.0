@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { AlertTriangle, DollarSign, History, Receipt } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { can } from "@/lib/staff";
+import type { StaffRole } from "@/types";
 import { useData } from "@/context/DataContext";
 import { StatCard } from "./StatCard";
 
@@ -39,8 +41,15 @@ function formatPeso(amount: number) {
   return `₱ ${formatted}`;
 }
 
-export function BillingView() {
+interface BillingViewProps {
+  role: StaffRole;
+}
+
+// Doctors and nurses get the paper's read-only "Financial Dashboard"; SOA and
+// reconciliation are Billing Staff actions (UC-12 / UC-13).
+export function BillingView({ role }: BillingViewProps) {
   const { patients } = useData();
+  const canManageBilling = can(role, "manageBilling");
   const queue = patients.slice(0, QUEUE_SIZE);
 
   // TODO(Phase 6): real balances from the Billing service's invoices.
@@ -110,16 +119,18 @@ export function BillingView() {
                       </span>
                     </td>
                     <td className="py-4 text-right">
-                      {/* TODO(Phase 7a): generate the eSOA (XML only, never PDF) via Interoperability */}
-                      <button
-                        type="button"
-                        className={cn(
-                          "text-xs font-bold text-wah-neon hover:underline",
-                          "opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100",
-                        )}
-                      >
-                        Generate SOA
-                      </button>
+                      {canManageBilling && (
+                        // TODO(Phase 7a): generate the eSOA (XML only, never PDF) via Interoperability
+                        <button
+                          type="button"
+                          className={cn(
+                            "text-xs font-bold text-wah-neon hover:underline",
+                            "opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100",
+                          )}
+                        >
+                          Generate SOA
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -146,16 +157,22 @@ export function BillingView() {
             <p className="mt-2 text-sm text-wah-lavender/80">
               Consolidate all departmental charges for financial closing.
             </p>
-            {/* TODO(Phase 6): reconcile the day's charges against payments in Billing */}
-            <button
-              type="button"
-              className={cn(
-                "mt-6 w-full rounded-xl bg-white py-3",
-                "font-bold uppercase text-wah-deep transition-transform hover:scale-105",
-              )}
-            >
-              Reconcile All
-            </button>
+            {canManageBilling ? (
+              // TODO(Phase 6): reconcile the day's charges against payments in Billing
+              <button
+                type="button"
+                className={cn(
+                  "mt-6 w-full rounded-xl bg-white py-3",
+                  "font-bold uppercase text-wah-deep transition-transform hover:scale-105",
+                )}
+              >
+                Reconcile All
+              </button>
+            ) : (
+              <p className="mt-6 text-xs font-semibold uppercase tracking-widest text-white/70">
+                Done by the billing office
+              </p>
+            )}
           </section>
         </div>
       </div>

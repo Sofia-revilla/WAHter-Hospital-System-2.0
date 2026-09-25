@@ -208,13 +208,13 @@ export function App() {
       case "prescription":
         return <PrescriptionView />;
       case "pharmacy":
-        return <PharmacyView />;
+        return <PharmacyView role={role} />;
       case "lab":
-        return <LaboratoryView />;
+        return <LaboratoryView role={role} />;
       case "rooms":
-        return <BedManagementView />;
+        return <BedManagementView role={role} />;
       case "billing":
-        return <BillingView />;
+        return <BillingView role={role} />;
       case "inventory":
         return <InventoryView />;
       case "architecture":

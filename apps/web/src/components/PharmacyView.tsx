@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { AlertTriangle, CheckCircle2, ClipboardCheck, Clock, Pill } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { can } from "@/lib/staff";
+import type { StaffRole } from "@/types";
 import { StatCard } from "./StatCard";
 
 type WorklistStatus = "Pending" | "Dispensed" | "Review";
@@ -56,8 +58,13 @@ function countByStatus(orders: WorklistOrder[], status: WorklistStatus) {
   return String(orders.filter((order) => order.status === status).length).padStart(2, "0");
 }
 
-export function PharmacyView() {
+interface PharmacyViewProps {
+  role: StaffRole;
+}
+
+export function PharmacyView({ role }: PharmacyViewProps) {
   const [worklist, setWorklist] = useState<WorklistOrder[]>(INITIAL_WORKLIST);
+  const canDispense = can(role, "dispenseMedication");
 
   // counted from the worklist so the cards always agree with the list below
   const statCards = [
@@ -104,7 +111,14 @@ export function PharmacyView() {
 
       <div className="grid gap-8 xl:grid-cols-12">
         <section className="glass min-w-0 rounded-[2rem] p-8 xl:col-span-8">
-          <h3 className="mb-6 text-lg font-bold">Prescription Worklist</h3>
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-lg font-bold">Prescription Worklist</h3>
+            {!canDispense && (
+              <span className="text-xs text-text-muted">
+                View only. Dispensing is done by the pharmacist.
+              </span>
+            )}
+          </div>
 
           <ul className="space-y-4">
             {worklist.map((order) => {
@@ -140,17 +154,19 @@ export function PharmacyView() {
                     >
                       {order.status}
                     </span>
-                    <button
-                      type="button"
-                      onClick={isDispensed ? undefined : () => dispense(order.id)}
-                      className={cn(
-                        "rounded-xl bg-wah-purple px-4 py-2 text-[10px] font-black uppercase text-white",
-                        "transition-colors hover:bg-wah-neon",
-                      )}
-                    >
-                      {/* TODO(Phase 9b): VIEW opens the dispensing record */}
-                      {isDispensed ? "View" : "Dispense"}
-                    </button>
+                    {canDispense && (
+                      <button
+                        type="button"
+                        onClick={isDispensed ? undefined : () => dispense(order.id)}
+                        className={cn(
+                          "rounded-xl bg-wah-purple px-4 py-2 text-[10px] font-black uppercase text-white",
+                          "transition-colors hover:bg-wah-neon",
+                        )}
+                      >
+                        {/* TODO(Phase 9b): VIEW opens the dispensing record */}
+                        {isDispensed ? "View" : "Dispense"}
+                      </button>
+                    )}
                   </div>
                 </li>
               );
