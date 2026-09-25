@@ -280,3 +280,15 @@ where the reference had its gear. The expand button is a small tab on the rail's
 doesn't lose height and IT Admin's nine tabs still fit. The search box filters the module list (Enter
 opens the first match). It doesn't search patients. Tooltips only show in the rail, since the expanded
 rows already show names. The main area's margin (ml-64 / ml-20) animates with the width.
+
+### D-035: Pharmacy tab is dispensing-only (supersedes the stock parts of D-022)
+
+The Pharmacy KPIs "Low Stock / Resupply Needed" and "Expired Soon / B-Blockers Batch", plus the Drug
+Inventory panel and its Stock Management button, were stock tracking. The paper's limitation (d) makes
+the Medication Service dispensing-only (no inventory, stock tracking, or reorder thresholds), master
+prompt §1/§3.4 says the same, and UC-10 only has the pharmacist review, verify, dispense (or partial
+fill) and flag back to the prescriber. The §7.8 visual design contradicted that. The KPIs are now Pending
+Dispensing, Dispensed and For Review, counted live from the worklist. The right panel is a Dispensing
+Checks list built from UC-10's steps and business rules, plus master §13's second approval for
+controlled drugs. The heading changed from "Medication & Inventory" to "Medication Dispensing". The
+demo tour's pharmacy copy dropped its "stock" wording to match.

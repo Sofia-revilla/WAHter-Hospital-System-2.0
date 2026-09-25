@@ -104,7 +104,7 @@ export const DEMO_STEPS: Record<StaffRole, DemoStep[]> = {
     {
       tab: "pharmacy",
       title: "Pharmacy Module",
-      desc: "Verify the dispensing queue and stock view are in sync for the pharmacy team.",
+      desc: "Check that the dispensing queue and review flags work as expected for the pharmacy team.",
     },
     {
       tab: "lab",
@@ -161,7 +161,7 @@ export const TAB_FEATURES: Record<TabId, string[]> = {
     "Mark medications dispensed",
     "Flag items for review",
     "Prescription history log",
-    "Stock coordination",
+    "Send back to prescriber",
   ],
   lab: [
     "View test requests",

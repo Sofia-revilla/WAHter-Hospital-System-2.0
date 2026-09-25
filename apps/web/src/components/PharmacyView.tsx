@@ -1,10 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { AlertTriangle, Package, Pill } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ClipboardCheck, Clock, Pill } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useData } from "@/context/DataContext";
-import type { InventoryItem } from "@/types";
 import { StatCard } from "./StatCard";
 
 type WorklistStatus = "Pending" | "Dispensed" | "Review";
@@ -42,23 +40,47 @@ const INITIAL_WORKLIST: WorklistOrder[] = [
   },
 ];
 
-const STAT_CARDS = [
-  { title: "Active Orders", value: "18", sub: "Pending Dispensing", icon: Pill, trend: "High" },
-  { title: "Low Stock", value: "05", sub: "Resupply Needed", icon: Package, trend: "Alert" },
-  { title: "Expired Soon", value: "02", sub: "B-Blockers Batch", icon: AlertTriangle },
+// Pharmacy is dispensing-only in WAH2.0 (paper limitation d, master prompt §1),
+// so there's no stock or expiry here on purpose. These are the checks the
+// pharmacist runs before releasing a drug, taken from UC-10 and its rules.
+const DISPENSING_CHECKS = [
+  "A valid physician order exists for this patient (no order, no dispensing)",
+  "Patient identity matches the order",
+  "Drug, dose, route, frequency, and prescriber match the order",
+  "Controlled or dangerous drugs (RA 9165) need a second staff approval",
+  "Partial fills are recorded separately from full dispensing",
+  "Any mismatch goes back to the prescribing doctor for clarification",
 ];
 
-// Per the design: at minStock the bar sits at 50%, so anything past the
-// halfway mark is above the reorder point. Capped so big stocks don't overflow.
-function stockBarWidth(item: InventoryItem) {
-  return Math.min((item.stock / item.minStock) * 50, 100);
+function countByStatus(orders: WorklistOrder[], status: WorklistStatus) {
+  return String(orders.filter((order) => order.status === status).length).padStart(2, "0");
 }
 
 export function PharmacyView() {
-  const { inventory } = useData();
   const [worklist, setWorklist] = useState<WorklistOrder[]>(INITIAL_WORKLIST);
 
-  const medications = inventory.filter((item) => item.category === "Medication");
+  // counted from the worklist so the cards always agree with the list below
+  const statCards = [
+    {
+      title: "Pending Dispensing",
+      value: countByStatus(worklist, "Pending"),
+      sub: "Awaiting pharmacist",
+      icon: Clock,
+    },
+    {
+      title: "Dispensed",
+      value: countByStatus(worklist, "Dispensed"),
+      sub: "Released to the ward",
+      icon: CheckCircle2,
+    },
+    {
+      title: "For Review",
+      value: countByStatus(worklist, "Review"),
+      sub: "Needs prescriber check",
+      icon: AlertTriangle,
+      trend: "Review",
+    },
+  ];
 
   function dispense(orderId: string) {
     // TODO(Phase 5): POST the dispense to Orders & Diagnostics (controlled drugs need step-up, §13)
@@ -71,11 +93,11 @@ export function PharmacyView() {
     <div className="space-y-8">
       <div>
         <p className="text-sm font-semibold text-wah-purple">Pharmacy Module</p>
-        <h2 className="text-3xl font-bold tracking-tight">Medication &amp; Inventory</h2>
+        <h2 className="text-3xl font-bold tracking-tight">Medication Dispensing</h2>
       </div>
 
       <div className="grid gap-6 md:grid-cols-3">
-        {STAT_CARDS.map((card) => (
+        {statCards.map((card) => (
           <StatCard key={card.title} {...card} />
         ))}
       </div>
@@ -137,44 +159,28 @@ export function PharmacyView() {
         </section>
 
         <aside className="glass min-w-0 rounded-[2rem] p-8 xl:col-span-4">
-          <h3 className="mb-6 text-lg font-bold">Drug Inventory</h3>
+          <div className="mb-6 flex items-center gap-3">
+            <div className="rounded-xl bg-wah-purple/15 p-2.5 text-wah-neon">
+              <ClipboardCheck size={20} />
+            </div>
+            <h3 className="text-lg font-bold">Dispensing Checks</h3>
+          </div>
 
-          {medications.length === 0 ? (
-            <p className="text-sm text-text-muted">No medications on file.</p>
-          ) : (
-            <ul className="space-y-5">
-              {medications.map((item) => (
-                <li key={item.id}>
-                  <div className="flex items-center justify-between gap-3 text-sm">
-                    <span className="font-semibold">{item.name}</span>
-                    <span className="shrink-0 font-mono text-xs text-text-muted">
-                      {item.stock.toLocaleString()} {item.unit}
-                    </span>
-                  </div>
-                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-glass-bg">
-                    <div
-                      className={cn(
-                        "h-full rounded-full",
-                        item.status === "Critical" ? "bg-rose-500" : "bg-wah-neon",
-                      )}
-                      style={{ width: `${stockBarWidth(item)}%` }}
-                    />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {/* TODO: link to the Inventory tab (needs a tab setter passed down from App) */}
-          <button
-            type="button"
-            className={cn(
-              "glass mt-8 w-full rounded-xl py-3",
-              "text-xs font-black uppercase tracking-widest text-text-muted hover:text-foreground",
-            )}
-          >
-            Stock Management
-          </button>
+          <ol className="space-y-3">
+            {DISPENSING_CHECKS.map((check, index) => (
+              <li key={check} className="flex gap-3 text-sm">
+                <span
+                  className={cn(
+                    "flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
+                    "bg-wah-purple/10 text-[10px] font-black text-wah-neon",
+                  )}
+                >
+                  {index + 1}
+                </span>
+                <span className="text-text-muted">{check}</span>
+              </li>
+            ))}
+          </ol>
         </aside>
       </div>
     </div>
