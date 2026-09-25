@@ -162,3 +162,12 @@ Pending → In-Progress → Completed. This is a local copy of the mock data unt
 owns results (TODO(Phase 5)). Testing slots (5 of 8 in use) and the 70% lab-inventory bars are fixed
 values, as the prompt specifies. Each lab card also shows how long ago the test was requested, since
 the mock data carries it.
+
+### D-024: Bed board stat figures vs ward data
+
+Prompt 10 hardcodes Total Beds 70, Available 23, Waitlist 08. The Prompt 2 wards add up to 70 beds with
+46 occupied, which is 24 free, not 23. We kept the prompt's figures and noted the mismatch in
+`BedManagementView.tsx`; both will come from the Scheduling service in Phase 4. Near-Empty Wards
+(more than 5 vacant beds) is computed from the ward data and shows the ward type next to the name, because
+two wards are both called "General Ward". MANAGE, the admit (+) buttons, and ROUTING ENGINE aren't wired
+yet. The referral engine is Phase 7b and must stay rule-based with doctor approval.

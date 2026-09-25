@@ -17,6 +17,7 @@ import { AnimatePresence, motion } from "motion/react"; // not 'framer-motion' â
 import { Bell, Construction, LogOut, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DataProvider } from "@/context/DataContext";
+import { BedManagementView } from "@/components/BedManagementView";
 import { DashboardView } from "@/components/DashboardView";
 import { LaboratoryView } from "@/components/LaboratoryView";
 import { PatientsView } from "@/components/PatientsView";
@@ -52,6 +53,7 @@ const BUILT_TABS: TabId[] = [
   "prescription",
   "pharmacy",
   "lab",
+  "rooms",
   "profile",
 ];
 
@@ -257,6 +259,7 @@ export function App() {
                 {activeTab === "prescription" && <PrescriptionView />}
                 {activeTab === "pharmacy" && <PharmacyView />}
                 {activeTab === "lab" && <LaboratoryView />}
+                {activeTab === "rooms" && <BedManagementView />}
                 {activeTab === "profile" && (
                   <ProfileView
                     profile={{

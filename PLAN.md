@@ -34,6 +34,9 @@ a build, tests, a commit, and an update to this file.
 - [x] **Prompt 9: Lab Tab** (2026-09-25)
   LaboratoryView: stat cards, Queue/Results worklist with local PROCESS, testing slots, lab inventory,
   calibration card. See DECISIONS.md D-023.
+- [x] **Prompt 10: Rooms Tab** (2026-09-25)
+  BedManagementView: stat cards, ward cards with bed grids and occupancy bars, near-empty wards,
+  Smart Referral card. See DECISIONS.md D-024.
 
 ## Master prompt phases
 
