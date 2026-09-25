@@ -25,6 +25,9 @@ a build, tests, a commit, and an update to this file.
 - [x] **Prompt 6: Patients Tab** (2026-09-25)
   PatientsView with search, filter chips, patient table, hover actions, and empty state.
   See DECISIONS.md D-019.
+- [x] **Prompt 7: Prescription Tab** (2026-09-25)
+  PrescriptionView: compose form with patient select, drug type-ahead, dosing fields, sig, and a
+  working (local-only) E-Sign & Send into Recent Prescriptions. See DECISIONS.md D-020, D-021.
 
 ## Master prompt phases
 

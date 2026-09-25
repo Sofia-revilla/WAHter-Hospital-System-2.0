@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { DataProvider } from "@/context/DataContext";
 import { DashboardView } from "@/components/DashboardView";
 import { PatientsView } from "@/components/PatientsView";
+import { PrescriptionView } from "@/components/PrescriptionView";
 import { LoginScreen, type LoginHandler } from "@/components/LoginScreen";
 import { ProfileView } from "@/components/ProfileView";
 import { Sidebar } from "@/components/Sidebar";
@@ -43,7 +44,7 @@ const ROLE_CHIP: Record<StaffRole, string> = {
 };
 
 // tabs with a real view; everything else falls through to PlaceholderView
-const BUILT_TABS: TabId[] = ["dashboard", "patients", "profile"];
+const BUILT_TABS: TabId[] = ["dashboard", "patients", "prescription", "profile"];
 
 // Login only asks for a name, so fill the badge with something sensible.
 // Signup passes the real department and license through instead.
@@ -88,13 +89,13 @@ function Topbar({
         "border-b border-glass-border bg-background/80 backdrop-blur-md",
       )}
     >
-      <div className="flex items-center gap-3">
-        <h1 className="text-xl font-bold">{title}</h1>
+      <div className="flex min-w-0 items-center gap-3">
+        <h1 className="truncate whitespace-nowrap text-xl font-bold">{title}</h1>
         {/* TODO(Prompt: demo tour): the guided tour overlay replaces this chip */}
         {isDemoMode && (
           <span
             className={cn(
-              "rounded-full bg-amber-400/10 px-2 py-1",
+              "whitespace-nowrap rounded-full bg-amber-400/10 px-2 py-1",
               "text-[9px] font-black uppercase text-amber-500",
             )}
           >
@@ -103,7 +104,7 @@ function Topbar({
         )}
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex shrink-0 items-center gap-3">
         <button
           type="button"
           onClick={onToggleTheme}
@@ -119,7 +120,11 @@ function Topbar({
         </button>
 
         <div className="flex items-center gap-2 px-2">
-          <span className="text-sm font-semibold">{displayName}</span>
+          {/* on tablet widths "E-Prescribing" and the name were wrapping onto two lines;
+              the role chip alone is enough there */}
+          <span className="hidden whitespace-nowrap text-sm font-semibold md:inline">
+            {displayName}
+          </span>
           <span
             className={cn(
               "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase",
@@ -240,6 +245,7 @@ export function App() {
               >
                 {activeTab === "dashboard" && <DashboardView isLight={isLight} />}
                 {activeTab === "patients" && <PatientsView />}
+                {activeTab === "prescription" && <PrescriptionView />}
                 {activeTab === "profile" && (
                   <ProfileView
                     profile={{

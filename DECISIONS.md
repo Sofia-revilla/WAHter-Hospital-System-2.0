@@ -128,3 +128,18 @@ associated symptoms…". We built it as specified, with TODOs pointing at the se
 values (Clinical Records for diagnosis, Scheduling for bed). The Out-Patient chip is kept as designed even
 though WAH2.0 is inpatient-only. The "Discharged" filter compares status as a plain string, because the
 Prompt 2 mock statuses don't include Discharged; with mock data it shows the empty state.
+
+### D-020: E-Prescribing form works locally until Orders & Diagnostics exists
+
+Prompt 7 describes the compose form and a list of 3 recent prescriptions. To make it demo-able, E-Sign &
+Send checks the essentials (patient, medication, dosage, frequency), then adds the prescription to the
+top of the Recent list ("JUST NOW") and clears the form. Nothing is persisted; TODO(Phase 5) marks
+where the POST to Orders & Diagnostics goes. The medication field offers type-ahead from the Medication
+items in inventory through a native `<datalist>`. The three seeded recent items use the first three mock
+patients so they match the patient dropdown. Save as Template is not wired yet.
+
+### D-021: Topbar name hides below md width
+
+On tablet-width screens the topbar title ("E-Prescribing") and the display name wrapped onto two lines.
+The title and demo chip are now `whitespace-nowrap`, and the display name hides below the `md`
+breakpoint; the role chip still shows who's logged in.
