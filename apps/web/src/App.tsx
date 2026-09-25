@@ -1,6 +1,6 @@
 // WAHter — App.tsx
-// Main application file. Right now: theme switching, the topbar, and the
-// Profile tab. Login, sidebar, and the other tab views land in later prompts.
+// Main application file: login gate, theme switching, the topbar, and the
+// Profile tab. The sidebar and the other tab views land in later prompts.
 // Built by UNICA-HIJA | v2.41
 //
 // File layout (Ctrl+F to jump):
@@ -12,10 +12,12 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react"; // not 'framer-motion' — package renamed in v11
-import { Activity, ArrowLeft, Moon, Sun } from "lucide-react";
+import { Activity, ArrowLeft, LogOut, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DataProvider, useData } from "@/context/DataContext";
-import { ProfileView, type StaffProfile, type StaffRole } from "@/components/ProfileView";
+import { LoginScreen, type LoginHandler } from "@/components/LoginScreen";
+import { ProfileView } from "@/components/ProfileView";
+import type { StaffProfile, StaffRole } from "@/types";
 
 // ─── 1. HELPERS ───
 
@@ -41,6 +43,14 @@ const ROLE_CHIP: Record<StaffRole, string> = {
   "IT Admin": "bg-rose-500/15 text-rose-400",
 };
 
+// Login only asks for a name, so fill the badge with something sensible.
+// Signup passes the real department and license through instead.
+const DEFAULT_DEPARTMENT: Record<StaffRole, string> = {
+  Doctor: "Internal Medicine",
+  Nurse: "Nursing Service",
+  "IT Admin": "IT Department",
+};
+
 // ─── 2. TOPBAR ───
 
 interface TopbarProps {
@@ -51,10 +61,22 @@ interface TopbarProps {
   onToggleTheme: () => void;
   displayName: string;
   role: StaffRole;
+  isDemoMode: boolean;
   onOpenProfile: () => void;
+  onLogout: () => void;
 }
 
-function Topbar({ title, onBack, isLight, onToggleTheme, displayName, role, onOpenProfile }: TopbarProps) {
+function Topbar({
+  title,
+  onBack,
+  isLight,
+  onToggleTheme,
+  displayName,
+  role,
+  isDemoMode,
+  onOpenProfile,
+  onLogout,
+}: TopbarProps) {
   return (
     <header
       className={cn(
@@ -74,6 +96,17 @@ function Topbar({ title, onBack, isLight, onToggleTheme, displayName, role, onOp
           </button>
         )}
         <h1 className="text-xl font-bold">{title}</h1>
+        {/* TODO(Prompt: demo tour): the guided tour overlay replaces this chip */}
+        {isDemoMode && (
+          <span
+            className={cn(
+              "rounded-full bg-amber-400/10 px-2 py-1",
+              "text-[9px] font-black uppercase text-amber-500",
+            )}
+          >
+            Demo Mode
+          </span>
+        )}
       </div>
 
       <div className="flex items-center gap-3">
@@ -103,6 +136,15 @@ function Topbar({ title, onBack, isLight, onToggleTheme, displayName, role, onOp
           >
             {role}
           </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={onLogout}
+          aria-label="Log out"
+          className="rounded-xl p-2 text-text-muted transition-colors hover:text-foreground"
+        >
+          <LogOut size={18} />
         </button>
       </div>
     </header>
@@ -163,20 +205,39 @@ function SetupOverview() {
 export function App() {
   const [isLight, setIsLight] = useState(false);
   const [activeTab, setActiveTab] = useState<TabId>("dashboard");
-
-  // TODO(Prompt: login screen): this comes from handleLogin once the login screen exists
-  const [profile, setProfile] = useState<StaffProfile>({
-    name: "Andrea Mendoza",
-    role: "Doctor",
-    department: "Internal Medicine",
-    license: "MED-2026-0417",
-  });
+  // null means nobody is logged in and the login overlay shows
+  const [userRole, setUserRole] = useState<StaffRole | null>(null);
+  const [profile, setProfile] = useState<StaffProfile | null>(null);
+  const [isDemoMode, setIsDemoMode] = useState(false);
 
   // The class goes on <html>, not a wrapper div, so the body background and
   // native scrollbars switch too — a wrapper left a dark strip on overscroll.
   useEffect(() => {
     document.documentElement.classList.toggle("light", isLight);
   }, [isLight]);
+
+  const handleLogin: LoginHandler = (role, name, department, license, demo) => {
+    setUserRole(role);
+    setProfile({
+      name,
+      role,
+      department: department ?? DEFAULT_DEPARTMENT[role],
+      license: license ?? "Not on file",
+    });
+    setIsDemoMode(!!demo);
+    // TODO(Prompt: sidebar): IT Admin lands on 'architecture' once that tab exists
+    setActiveTab("dashboard");
+  };
+
+  function handleLogout() {
+    setUserRole(null);
+    setProfile(null);
+    setIsDemoMode(false);
+  }
+
+  if (!userRole || !profile) {
+    return <LoginScreen onLogin={handleLogin} />;
+  }
 
   const displayName = formatDisplayName(profile.name, profile.role);
 
@@ -190,7 +251,9 @@ export function App() {
           onToggleTheme={() => setIsLight((current) => !current)}
           displayName={displayName}
           role={profile.role}
+          isDemoMode={isDemoMode}
           onOpenProfile={() => setActiveTab("profile")}
+          onLogout={handleLogout}
         />
 
         <main className="p-8">

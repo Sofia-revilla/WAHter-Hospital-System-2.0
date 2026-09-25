@@ -60,3 +60,13 @@ export interface AdmissionTrendPoint {
   opd: number;
   ipd: number;
 }
+
+// Only the three portals from the login screen exist in the prototype.
+export type StaffRole = "Doctor" | "Nurse" | "IT Admin";
+
+export interface StaffProfile {
+  name: string;
+  role: StaffRole;
+  department: string;
+  license: string;
+}

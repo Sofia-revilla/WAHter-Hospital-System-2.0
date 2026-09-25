@@ -63,3 +63,17 @@ the mock, with a TODO(Phase 8) to generate avatars locally or seed them by patie
 
 Prompt 2 includes outpatient counts. WAH2.0 is inpatient-only (OPD belongs to WAH4C), so the `opd`
 field is treated as context data only and noted as such in `constants.ts`.
+
+### D-010: Login card uses a 2fr/3fr grid
+
+Prompt 3 asks for `md:grid-cols-2` and also a 40% / 60% split between the brand panel and the form.
+`grid-cols-2` gives 50/50, so we used `md:grid-cols-[2fr_3fr]`, which keeps the two-column grid and
+matches the stated proportions.
+
+### D-011: Logout button and login defaults added with Prompt 3
+
+Once the login gate exists there has to be a way back to it, so the topbar got the logout button from
+master prompt §7.5 (sets `userRole` to null). The plain login form only asks for a name, so
+`handleLogin` fills in a default department per role and "Not on file" for the license; signup passes
+the real values. Demo logins show a "Demo Mode" chip in the topbar until the guided tour prompt replaces it.
+The verify (OTP) mode is fully built but, per Prompt 3, nothing in the UI routes to it yet.

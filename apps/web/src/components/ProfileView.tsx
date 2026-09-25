@@ -3,15 +3,7 @@
 import { useState } from "react";
 import { BadgeCheck, Building2, IdCard, Pencil, Save, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-export type StaffRole = "Doctor" | "Nurse" | "IT Admin";
-
-export interface StaffProfile {
-  name: string;
-  role: StaffRole;
-  department: string;
-  license: string;
-}
+import type { StaffProfile, StaffRole } from "@/types";
 
 // role band colors mirror the login cards: doctor purple, nurse neon, IT rose
 const ROLE_BAND: Record<StaffRole, string> = {

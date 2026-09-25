@@ -12,6 +12,9 @@ a build, tests, a commit, and an update to this file.
 - [x] **Prompt 2: Mock Data** (2026-09-25)
   12 generated patients (seeded), 5 inventory items, 4 lab tests, 5 wards, revenue and admission
   trend series, reshaped types. See DECISIONS.md D-006 to D-009.
+- [x] **Prompt 3: Login Screen** (2026-09-25)
+  `LoginScreen` with select / login / signup / verify / demo modes, wired into App as a login gate,
+  plus topbar logout. See DECISIONS.md D-010, D-011.
 
 ## Master prompt phases
 
