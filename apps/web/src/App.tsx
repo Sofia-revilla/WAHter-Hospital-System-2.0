@@ -1,7 +1,7 @@
 // WAHter — App.tsx
 // Main application file: login gate, the app shell (sidebar + topbar), theme
-// switching, and tab routing. Dashboard and Profile are built; the other tab
-// views land in later prompts and render a placeholder until then.
+// switching, and tab routing. Tabs not listed in BUILT_TABS land in later
+// prompts and render a placeholder until then.
 // Built by UNICA-HIJA | v2.41
 //
 // File layout (Ctrl+F to jump):
@@ -18,6 +18,7 @@ import { Bell, Construction, LogOut, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DataProvider } from "@/context/DataContext";
 import { DashboardView } from "@/components/DashboardView";
+import { PatientsView } from "@/components/PatientsView";
 import { LoginScreen, type LoginHandler } from "@/components/LoginScreen";
 import { ProfileView } from "@/components/ProfileView";
 import { Sidebar } from "@/components/Sidebar";
@@ -40,6 +41,9 @@ const ROLE_CHIP: Record<StaffRole, string> = {
   Nurse: "bg-wah-neon/15 text-wah-neon",
   IT: "bg-rose-500/15 text-rose-400",
 };
+
+// tabs with a real view; everything else falls through to PlaceholderView
+const BUILT_TABS: TabId[] = ["dashboard", "patients", "profile"];
 
 // Login only asks for a name, so fill the badge with something sensible.
 // Signup passes the real department and license through instead.
@@ -235,6 +239,7 @@ export function App() {
                 transition={{ duration: 0.25 }}
               >
                 {activeTab === "dashboard" && <DashboardView isLight={isLight} />}
+                {activeTab === "patients" && <PatientsView />}
                 {activeTab === "profile" && (
                   <ProfileView
                     profile={{
@@ -251,9 +256,7 @@ export function App() {
                     }}
                   />
                 )}
-                {activeTab !== "dashboard" && activeTab !== "profile" && (
-                  <PlaceholderView tab={activeTab} />
-                )}
+                {!BUILT_TABS.includes(activeTab) && <PlaceholderView tab={activeTab} />}
               </motion.div>
             </AnimatePresence>
           </main>

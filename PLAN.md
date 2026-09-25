@@ -22,6 +22,9 @@ a build, tests, a commit, and an update to this file.
 - [x] **Prompt 5: Dashboard Tab** (2026-09-25)
   DashboardView with header, four StatCards, revenue AreaChart, inventory watchlist (InventoryRow),
   and the patient feed (PatientCard). See DECISIONS.md D-016 to D-018.
+- [x] **Prompt 6: Patients Tab** (2026-09-25)
+  PatientsView with search, filter chips, patient table, hover actions, and empty state.
+  See DECISIONS.md D-019.
 
 ## Master prompt phases
 

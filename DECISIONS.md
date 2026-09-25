@@ -119,3 +119,12 @@ shows `stock / (2 × minStock)`, capped at 100%. Items at the reorder point show
 
 Recharts writes colors into SVG attributes, where `var(--…)` doesn't resolve, so the dashboard chart
 uses the token hex values directly and picks grid and tooltip colors from `isLight`.
+
+### D-019: Patients table placeholders follow Prompt 6
+
+Prompt 6 fills several columns with display placeholders rather than patient data: gender alternates by
+row index, the bed is `Room 30{i+1}-B`, and every diagnosis reads "Chronic Respiratory Failure with
+associated symptoms…". We built it as specified, with TODOs pointing at the services that will supply real
+values (Clinical Records for diagnosis, Scheduling for bed). The Out-Patient chip is kept as designed even
+though WAH2.0 is inpatient-only. The "Discharged" filter compares status as a plain string, because the
+Prompt 2 mock statuses don't include Discharged; with mock data it shows the empty state.
