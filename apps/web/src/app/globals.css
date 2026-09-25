@@ -1,0 +1,64 @@
+@import "tailwindcss";
+@config "../../tailwind.config.ts";
+
+/* lets us write light:bg-... for the few places light mode needs its own style */
+@custom-variant light (&:where(.light, .light *));
+
+/* Dark is the default feel, so :root holds the dark values and .light overrides.
+   None of these are pure black or pure white — everything leans indigo/lavender. */
+:root {
+  --color-background: #0f0d24;
+  --color-foreground: #ede9fe;
+  --color-card-bg: #17143a;
+  --color-text-muted: #a5a1c9;
+  --color-text-secondary: #7c78a6;
+  --color-glass-bg: rgba(30, 27, 75, 0.55);
+  --color-glass-border: rgba(168, 85, 247, 0.18);
+
+  --color-wah-purple: #6d28d9;
+  --color-wah-neon: #a855f7;
+  --color-wah-lavender: #e9d5ff;
+
+  color-scheme: dark;
+}
+
+.light {
+  --color-background: #f7f3ff;
+  --color-foreground: #1e1b4b;
+  --color-card-bg: #fdfbff;
+  --color-text-muted: #6b6592;
+  --color-text-secondary: #9892b8;
+  --color-glass-bg: rgba(253, 251, 255, 0.72);
+  --color-glass-border: rgba(109, 40, 217, 0.14);
+
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
+}
+
+.glass {
+  background: var(--color-glass-bg);
+  border: 1px solid var(--color-glass-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.purple-shadow {
+  box-shadow: 0 0 20px rgba(109, 40, 217, 0.15);
+}
+
+.hide-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}

@@ -1,0 +1,16 @@
+{
+  "name": "wahter",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WAHter (WAH2.0) — inpatient hospital information system for Philippine Level 2–3 LGU hospitals. UNICA-HIJA.",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "services/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace apps/web",
+    "build:web": "npm run build --workspace apps/web",
+    "lint:web": "npm run lint --workspace apps/web"
+  }
+}
