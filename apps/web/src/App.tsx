@@ -18,6 +18,7 @@ import { Bell, Construction, LogOut, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DataProvider } from "@/context/DataContext";
 import { DashboardView } from "@/components/DashboardView";
+import { LaboratoryView } from "@/components/LaboratoryView";
 import { PatientsView } from "@/components/PatientsView";
 import { PharmacyView } from "@/components/PharmacyView";
 import { PrescriptionView } from "@/components/PrescriptionView";
@@ -45,7 +46,14 @@ const ROLE_CHIP: Record<StaffRole, string> = {
 };
 
 // tabs with a real view; everything else falls through to PlaceholderView
-const BUILT_TABS: TabId[] = ["dashboard", "patients", "prescription", "pharmacy", "profile"];
+const BUILT_TABS: TabId[] = [
+  "dashboard",
+  "patients",
+  "prescription",
+  "pharmacy",
+  "lab",
+  "profile",
+];
 
 // Login only asks for a name, so fill the badge with something sensible.
 // Signup passes the real department and license through instead.
@@ -248,6 +256,7 @@ export function App() {
                 {activeTab === "patients" && <PatientsView />}
                 {activeTab === "prescription" && <PrescriptionView />}
                 {activeTab === "pharmacy" && <PharmacyView />}
+                {activeTab === "lab" && <LaboratoryView />}
                 {activeTab === "profile" && (
                   <ProfileView
                     profile={{

@@ -31,6 +31,9 @@ a build, tests, a commit, and an update to this file.
 - [x] **Prompt 8: Pharmacy Tab** (2026-09-25)
   PharmacyView: three stat cards, prescription worklist with local DISPENSE, drug inventory bars.
   See DECISIONS.md D-022.
+- [x] **Prompt 9: Lab Tab** (2026-09-25)
+  LaboratoryView: stat cards, Queue/Results worklist with local PROCESS, testing slots, lab inventory,
+  calibration card. See DECISIONS.md D-023.
 
 ## Master prompt phases
 

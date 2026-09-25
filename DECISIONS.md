@@ -153,3 +153,12 @@ bar width follows Prompt 8 (`stock / minStock × 50%`, capped at 100%), so the h
 reorder point. DISPENSE flips the worklist item to Dispensed locally; TODO(Phase 5) marks where the real
 dispense call (and step-up for controlled drugs, §13) goes. `StatCard.trend` is now optional because the
 "Expired Soon" card has none.
+
+### D-023: Lab worklist Queue/Results tabs filter, PROCESS advances locally
+
+Prompt 9 shows a Queue | Results toggle without saying what each holds. Queue lists tests that aren't
+Completed; Results lists Completed ones (each has its own empty state). PROCESS moves a test one step:
+Pending → In-Progress → Completed. This is a local copy of the mock data until Orders & Diagnostics
+owns results (TODO(Phase 5)). Testing slots (5 of 8 in use) and the 70% lab-inventory bars are fixed
+values, as the prompt specifies. Each lab card also shows how long ago the test was requested, since
+the mock data carries it.
