@@ -143,3 +143,13 @@ patients so they match the patient dropdown. Save as Template is not wired yet.
 On tablet-width screens the topbar title ("E-Prescribing") and the display name wrapped onto two lines.
 The title and demo chip are now `whitespace-nowrap`, and the display name hides below the `md`
 breakpoint; the role chip still shows who's logged in.
+
+### D-022: Pharmacy tab shows stock bars despite "dispensing only" scope
+
+Master prompt §1 and §3.4 put pharmacy stock tracking out of scope, but Prompt 8 (and master §7.8's
+Pharmacy design) include a Drug Inventory panel and a "Low Stock" card. We built the panel from the
+existing mock inventory, display only. Nothing decrements stock when a medication is dispensed. The
+bar width follows Prompt 8 (`stock / minStock × 50%`, capped at 100%), so the halfway mark is the
+reorder point. DISPENSE flips the worklist item to Dispensed locally; TODO(Phase 5) marks where the real
+dispense call (and step-up for controlled drugs, §13) goes. `StatCard.trend` is now optional because the
+"Expired Soon" card has none.

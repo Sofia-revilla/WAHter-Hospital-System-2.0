@@ -9,7 +9,8 @@ interface StatCardProps {
   value: string;
   sub: string;
   icon: LucideIcon;
-  trend: string;
+  // optional: some cards (Pharmacy's "Expired Soon") have no trend badge
+  trend?: string;
 }
 
 export function StatCard({ title, value, sub, icon: Icon, trend }: StatCardProps) {
@@ -29,14 +30,16 @@ export function StatCard({ title, value, sub, icon: Icon, trend }: StatCardProps
         <div className="rounded-xl bg-wah-purple/20 p-2.5 text-wah-neon">
           <Icon size={20} />
         </div>
-        <span
-          className={cn(
-            "rounded-full bg-wah-neon/10 px-2 py-0.5",
-            "text-[10px] font-bold uppercase text-wah-neon",
-          )}
-        >
-          {trend}
-        </span>
+        {trend && (
+          <span
+            className={cn(
+              "rounded-full bg-wah-neon/10 px-2 py-0.5",
+              "text-[10px] font-bold uppercase text-wah-neon",
+            )}
+          >
+            {trend}
+          </span>
+        )}
       </div>
 
       <p className="relative mt-4 text-sm text-text-secondary">{title}</p>

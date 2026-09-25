@@ -28,6 +28,9 @@ a build, tests, a commit, and an update to this file.
 - [x] **Prompt 7: Prescription Tab** (2026-09-25)
   PrescriptionView: compose form with patient select, drug type-ahead, dosing fields, sig, and a
   working (local-only) E-Sign & Send into Recent Prescriptions. See DECISIONS.md D-020, D-021.
+- [x] **Prompt 8: Pharmacy Tab** (2026-09-25)
+  PharmacyView: three stat cards, prescription worklist with local DISPENSE, drug inventory bars.
+  See DECISIONS.md D-022.
 
 ## Master prompt phases
 

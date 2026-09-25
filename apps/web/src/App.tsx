@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { DataProvider } from "@/context/DataContext";
 import { DashboardView } from "@/components/DashboardView";
 import { PatientsView } from "@/components/PatientsView";
+import { PharmacyView } from "@/components/PharmacyView";
 import { PrescriptionView } from "@/components/PrescriptionView";
 import { LoginScreen, type LoginHandler } from "@/components/LoginScreen";
 import { ProfileView } from "@/components/ProfileView";
@@ -44,7 +45,7 @@ const ROLE_CHIP: Record<StaffRole, string> = {
 };
 
 // tabs with a real view; everything else falls through to PlaceholderView
-const BUILT_TABS: TabId[] = ["dashboard", "patients", "prescription", "profile"];
+const BUILT_TABS: TabId[] = ["dashboard", "patients", "prescription", "pharmacy", "profile"];
 
 // Login only asks for a name, so fill the badge with something sensible.
 // Signup passes the real department and license through instead.
@@ -246,6 +247,7 @@ export function App() {
                 {activeTab === "dashboard" && <DashboardView isLight={isLight} />}
                 {activeTab === "patients" && <PatientsView />}
                 {activeTab === "prescription" && <PrescriptionView />}
+                {activeTab === "pharmacy" && <PharmacyView />}
                 {activeTab === "profile" && (
                   <ProfileView
                     profile={{
