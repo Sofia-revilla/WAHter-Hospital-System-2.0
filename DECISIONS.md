@@ -198,3 +198,20 @@ state. Expiry is the hardcoded "05/2026" from the prompt.
 The Automated Ordering card keeps Prompt 12's exact wording ("AI detected low levels…"). The paper and
 master prompt exclude machine learning, so the team may want to reword this to "The system detected…"
 before the defense.
+
+### D-028: Architecture tab is a simulation that names Supabase and Redis
+
+Prompt 13 (and master prompt §7.8) describe status cards for Next.js, NestJS, Supabase, Redis and Docker,
+an RBAC sandbox, a JSONB viewer and a Redis cache panel. The real target stack (master §2, paper TABLE IX)
+is Nginx → Kong → NestJS services, RabbitMQ and one PostgreSQL instance. There's no Supabase and no Redis
+("No MongoDB, no Redis"). We built the tab exactly as Prompt 13 specifies, since it's a demo-only
+simulation: every request, token, cache hit and log line is generated in the browser. The file header
+and TODO(Phase 9c) say so, and the demo tokens are harmless placeholder strings. Before the defense, the
+team may want the cards to show the real containers (Kong, RabbitMQ, PostgreSQL, the 8 services) so the
+screen matches the paper.
+
+Details we filled in: Mary Johnson's second vitals entry and respiratory rates (the prompt gave only the
+first reading's BP/HR/temp), the NURSE warn message, the cache-hit increment (+0.2%, capped at 99.9%),
+and flush resetting memory to "0.00 MB". The Send button is disabled while a request is in flight, and
+pending timers are cleared if you leave the tab. With every tab now built, the temporary PlaceholderView
+and BUILT_TABS were removed from App.tsx.

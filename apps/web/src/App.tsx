@@ -1,22 +1,21 @@
 // WAHter — App.tsx
 // Main application file: login gate, the app shell (sidebar + topbar), theme
-// switching, and tab routing. Tabs not listed in BUILT_TABS land in later
-// prompts and render a placeholder until then.
+// switching, and tab routing to the ten tab views.
 // Built by UNICA-HIJA | v2.41
 //
 // File layout (Ctrl+F to jump):
 //   1. Helpers
 //   2. Topbar
-//   3. Tab views
-//   4. Root App
+//   3. Root App (each tab's view lives in its own file under components/)
 
 "use client";
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react"; // not 'framer-motion' — package renamed in v11
-import { Bell, Construction, LogOut, Moon, Sun } from "lucide-react";
+import { Bell, LogOut, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DataProvider } from "@/context/DataContext";
+import { ArchitectureStatusView } from "@/components/ArchitectureStatusView";
 import { BedManagementView } from "@/components/BedManagementView";
 import { BillingView } from "@/components/BillingView";
 import { DashboardView } from "@/components/DashboardView";
@@ -47,19 +46,6 @@ const ROLE_CHIP: Record<StaffRole, string> = {
   Nurse: "bg-wah-neon/15 text-wah-neon",
   IT: "bg-rose-500/15 text-rose-400",
 };
-
-// tabs with a real view; everything else falls through to PlaceholderView
-const BUILT_TABS: TabId[] = [
-  "dashboard",
-  "patients",
-  "prescription",
-  "pharmacy",
-  "lab",
-  "rooms",
-  "billing",
-  "inventory",
-  "profile",
-];
 
 // Login only asks for a name, so fill the badge with something sensible.
 // Signup passes the real department and license through instead.
@@ -163,40 +149,7 @@ function Topbar({
   );
 }
 
-// ─── 3. TAB VIEWS ───
-
-interface PlaceholderViewProps {
-  tab: TabId;
-}
-
-function PlaceholderView({ tab }: PlaceholderViewProps) {
-  const { icon: Icon, label, description } = TABS[tab];
-
-  return (
-    <div
-      className={cn(
-        "glass flex min-h-[420px] flex-col items-center justify-center gap-4",
-        "rounded-[2rem] p-8 text-center",
-      )}
-    >
-      <div className="rounded-2xl bg-wah-purple/15 p-4 text-wah-neon">
-        <Icon size={32} />
-      </div>
-      <h2 className="text-2xl font-black">{label}</h2>
-      <p className="max-w-md text-text-muted">{description}</p>
-      <span
-        className={cn(
-          "mt-2 flex items-center gap-2 rounded-full bg-amber-400/10 px-3 py-1",
-          "text-[10px] font-black uppercase tracking-widest text-amber-500",
-        )}
-      >
-        <Construction size={12} /> Screen coming in a later build prompt
-      </span>
-    </div>
-  );
-}
-
-// ─── 4. ROOT APP ───
+// ─── 3. ROOT APP ───
 
 export function App() {
   const [userRole, setUserRole] = useState<StaffRole | null>(null);
@@ -266,6 +219,7 @@ export function App() {
                 {activeTab === "rooms" && <BedManagementView />}
                 {activeTab === "billing" && <BillingView />}
                 {activeTab === "inventory" && <InventoryView />}
+                {activeTab === "architecture" && <ArchitectureStatusView />}
                 {activeTab === "profile" && (
                   <ProfileView
                     profile={{
@@ -282,7 +236,6 @@ export function App() {
                     }}
                   />
                 )}
-                {!BUILT_TABS.includes(activeTab) && <PlaceholderView tab={activeTab} />}
               </motion.div>
             </AnimatePresence>
           </main>

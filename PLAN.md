@@ -43,6 +43,9 @@ a build, tests, a commit, and an update to this file.
 - [x] **Prompt 12: Inventory Tab** (2026-09-25)
   InventoryView (IT Admin): module vision, stat cards, filterable inventory table, expiry watch,
   automated ordering card. See DECISIONS.md D-027.
+- [x] **Prompt 13: Architecture Tab** (2026-09-25)
+  ArchitectureStatusView (IT Admin): service cards, RBAC request sandbox, JSONB viewer, cache panel,
+  live log feed, all simulated. Every tab now has a view. See DECISIONS.md D-028.
 
 ## Master prompt phases
 
