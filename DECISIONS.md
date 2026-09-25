@@ -215,3 +215,15 @@ first reading's BP/HR/temp), the NURSE warn message, the cache-hit increment (+0
 and flush resetting memory to "0.00 MB". The Send button is disabled while a request is in flight, and
 pending timers are cleared if you leave the tab. With every tab now built, the temporary PlaceholderView
 and BUILT_TABS were removed from App.tsx.
+
+### D-029: ProfileView rebuilt to Prompt 14's props, plus an onSave callback
+
+Prompt 14 defines `ProfileView` with props `{ name, role, department, license, isLight }`. We added an
+optional `onSave`, because otherwise an edited name, department or license would only exist inside the
+tab and vanish from the topbar and on remount. App passes its setters. The role field stays read-only in
+edit mode: role changes are a System Admin action (step-up protected per master §13), not self-service.
+`isLight` is used for the off state of the duty toggle, because `glass-bg` is near-white in light mode
+and the track disappeared. Bio and on-duty status are local component state, as Prompt 14 specifies, so
+they reset when you leave the tab. Activity numbers (12 / 8 / 07:00 AM) are hardcoded until
+Phase 9a. `formatDisplayName` moved from App.tsx to `src/lib/staff.ts` so ProfileView can use it without
+importing App.

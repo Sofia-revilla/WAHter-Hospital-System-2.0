@@ -14,6 +14,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react"; // not 'framer-motion' — package renamed in v11
 import { Bell, LogOut, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatDisplayName } from "@/lib/staff";
 import { DataProvider } from "@/context/DataContext";
 import { ArchitectureStatusView } from "@/components/ArchitectureStatusView";
 import { BedManagementView } from "@/components/BedManagementView";
@@ -31,15 +32,6 @@ import { TABS, type TabId } from "@/navigation";
 import { ROLE_LABELS, type StaffRole } from "@/types";
 
 // ─── 1. HELPERS ───
-
-// Applies the Dr./RN prefix the ward staff expect to see on screen. Checks the
-// raw name first so someone who typed "Dr. Reyes" doesn't become "Dr. Dr. Reyes".
-export function formatDisplayName(rawName: string, role: StaffRole) {
-  const name = rawName.trim();
-  if (role === "Doctor" && !name.toLowerCase().startsWith("dr.")) return `Dr. ${name}`;
-  if (role === "Nurse" && !name.toLowerCase().startsWith("rn ")) return `RN ${name}`;
-  return name;
-}
 
 const ROLE_CHIP: Record<StaffRole, string> = {
   Doctor: "bg-wah-purple/20 text-wah-neon",
@@ -222,13 +214,11 @@ export function App() {
                 {activeTab === "architecture" && <ArchitectureStatusView />}
                 {activeTab === "profile" && (
                   <ProfileView
-                    profile={{
-                      name: userName,
-                      role: userRole,
-                      department: userDept,
-                      license: userLicense,
-                    }}
-                    displayName={displayName}
+                    name={userName}
+                    role={userRole}
+                    department={userDept}
+                    license={userLicense}
+                    isLight={isLight}
                     onSave={(updated) => {
                       setUserName(updated.name);
                       setUserDept(updated.department);

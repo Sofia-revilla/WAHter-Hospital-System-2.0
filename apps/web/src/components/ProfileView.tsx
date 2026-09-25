@@ -1,209 +1,266 @@
 "use client";
 
 import { useState } from "react";
-import { BadgeCheck, Building2, IdCard, Pencil, Save, X } from "lucide-react";
+import { Pencil, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatDisplayName } from "@/lib/staff";
 import { ROLE_LABELS, type StaffProfile, type StaffRole } from "@/types";
 
-// role band colors mirror the login cards: doctor purple, nurse neon, IT rose
-const ROLE_BAND: Record<StaffRole, string> = {
-  Doctor: "from-wah-purple to-indigo-700",
-  Nurse: "from-wah-neon to-wah-purple",
-  IT: "from-rose-500 to-rose-700",
+const DEFAULT_BIOS: Record<StaffRole, string> = {
+  Doctor:
+    "Experienced medical professional specializing in internal medicine with over 10 years of clinical practice at WAHter Hospital. Dedicated to patient-centered care and evidence-based treatment.",
+  Nurse:
+    "Certified registered nurse with expertise in acute care and patient monitoring. Committed to compassionate and efficient patient care within the WAHter hospital network.",
+  IT: "Lead systems administrator and IT infrastructure analyst managing healthcare security policies.",
 };
 
+// full class strings so Tailwind's scanner picks every one of them up
+const ROLE_STYLES: Record<StaffRole, { band: string; avatar: string; badge: string }> = {
+  Doctor: {
+    band: "bg-wah-purple",
+    avatar: "bg-gradient-to-br from-wah-purple to-indigo-700",
+    badge: "bg-wah-purple/10 text-wah-purple",
+  },
+  Nurse: {
+    band: "bg-wah-neon",
+    avatar: "bg-gradient-to-br from-wah-neon to-wah-purple",
+    badge: "bg-wah-neon/10 text-wah-neon",
+  },
+  IT: {
+    band: "bg-rose-500",
+    avatar: "bg-gradient-to-br from-rose-500 to-rose-700",
+    badge: "bg-rose-500/10 text-rose-500",
+  },
+};
+
+const ACTIVITY = [
+  { label: "Patients Today", value: "12" },
+  { label: "Prescriptions", value: "8" },
+  { label: "On Duty Since", value: "07:00 AM" },
+];
+
+// Initials skip the "Dr."/"RN" title so "Dr. Jonathan Smith" gives "JS", not "DJS".
 function initialsOf(name: string) {
-  const parts = name.replace(/^(dr\.|rn)\s+/i, "").trim().split(/\s+/);
-  return parts
-    .slice(0, 2)
+  return name
+    .replace(/^(dr\.?|rn)\s+/i, "")
+    .trim()
+    .split(/\s+/)
     .map((part) => part[0]?.toUpperCase() ?? "")
     .join("");
 }
 
+type EditableField = "name" | "department" | "license";
+
+const FIELDS: { key: EditableField | "role"; label: string }[] = [
+  { key: "name", label: "Full Name" },
+  { key: "department", label: "Department" },
+  { key: "license", label: "License / Employee ID" },
+  { key: "role", label: "Role" },
+];
+
 interface ProfileViewProps {
-  profile: StaffProfile;
-  displayName: string;
-  onSave: (profile: StaffProfile) => void;
+  name: string;
+  role: StaffRole;
+  department: string;
+  license: string;
+  isLight: boolean;
+  // Not in the Prompt 14 prop list, but without it an edit would only live
+  // inside this tab and vanish from the topbar. App passes its setters here.
+  onSave?: (profile: StaffProfile) => void;
 }
 
-export function ProfileView({ profile, displayName, onSave }: ProfileViewProps) {
+export function ProfileView({
+  name,
+  role,
+  department,
+  license,
+  isLight,
+  onSave,
+}: ProfileViewProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [draft, setDraft] = useState<StaffProfile>(profile);
-  const [bio, setBio] = useState("");
+  const [bio, setBio] = useState(DEFAULT_BIOS[role]);
   const [isOnDuty, setIsOnDuty] = useState(true);
+  const [draft, setDraft] = useState({ name, department, license });
 
-  function startEditing() {
-    // re-sync in case the profile changed while we weren't editing
-    setDraft(profile);
-    setIsEditing(true);
+  const style = ROLE_STYLES[role];
+  const shown = isEditing ? draft : { name, department, license };
+
+  function toggleEditing() {
+    if (isEditing) {
+      onSave?.({
+        name: draft.name.trim() || name,
+        role,
+        department: draft.department.trim(),
+        license: draft.license.trim(),
+      });
+    } else {
+      // start from what's currently saved, not a stale draft from last time
+      setDraft({ name, department, license });
+    }
+    setIsEditing((current) => !current);
   }
-
-  function saveChanges() {
-    onSave(draft);
-    setIsEditing(false);
-  }
-
-  const fieldClass = cn(
-    "w-full rounded-2xl border-2 border-glass-border bg-glass-bg px-4 py-3",
-    "text-sm text-foreground outline-none transition-colors",
-    "focus:border-wah-purple disabled:opacity-70",
-  );
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
-      {/* digital badge */}
-      <div className="glass overflow-hidden rounded-[2rem] purple-shadow">
-        <div className={cn("h-24 bg-gradient-to-r", ROLE_BAND[profile.role])} />
-        <div className="-mt-12 flex flex-col items-center px-6 pb-6 text-center">
-          <div
-            className={cn(
-              "flex h-24 w-24 items-center justify-center rounded-full",
-              "border-4 border-card-bg bg-wah-purple text-2xl font-black text-white",
-            )}
-          >
-            {initialsOf(profile.name)}
-          </div>
-          <h2 className="mt-3 text-xl font-bold">{displayName}</h2>
-          <span
-            className={cn(
-              "mt-2 rounded-full bg-wah-purple/15 px-3 py-1",
-              "text-[10px] font-black uppercase tracking-wider text-wah-neon",
-            )}
-          >
-            {ROLE_LABELS[profile.role]}
-          </span>
-
-          <dl className="mt-6 w-full space-y-3 text-left text-sm">
-            <div className="flex items-center gap-3">
-              <Building2 size={16} className="text-wah-neon" />
-              <dd>{profile.department}</dd>
-            </div>
-            <div className="flex items-center gap-3">
-              <IdCard size={16} className="text-wah-neon" />
-              <dd className="font-mono">{profile.license}</dd>
-            </div>
-          </dl>
-
-          <button
-            type="button"
-            onClick={() => setIsOnDuty((current) => !current)}
-            aria-label={isOnDuty ? "Set status to off duty" : "Set status to on duty"}
-            className={cn(
-              "mt-6 flex w-full items-center justify-between rounded-2xl px-4 py-3",
-              "text-sm font-semibold transition-colors",
-              isOnDuty ? "bg-emerald-500/15 text-emerald-400" : "bg-slate-500/15 text-text-muted",
-            )}
-          >
-            {isOnDuty ? "On Duty" : "Off Duty"}
-            <span
-              className={cn(
-                "h-3 w-3 rounded-full",
-                isOnDuty ? "bg-emerald-400" : "bg-slate-400",
-              )}
-            />
-          </button>
-
-          <p className="mt-6 flex items-center gap-1 font-mono text-[10px] uppercase text-text-secondary">
-            <BadgeCheck size={12} /> WAHter · Hospital Staff
-          </p>
+    <div className="space-y-8">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold text-wah-purple">Staff Profile</p>
+          <h2 className="text-3xl font-bold tracking-tight">
+            {role === "IT" ? "Administrator Profile" : "Clinician Profile"}
+          </h2>
         </div>
+        <button
+          type="button"
+          onClick={toggleEditing}
+          className={cn(
+            "flex items-center gap-2 rounded-xl border-2 border-wah-purple px-5 py-2.5",
+            "text-sm font-bold transition-colors",
+            isEditing ? "bg-wah-purple text-white" : "text-wah-purple hover:bg-wah-purple/10",
+          )}
+        >
+          {isEditing ? <Save size={16} /> : <Pencil size={16} />}
+          {isEditing ? "Save Changes" : "Edit Profile"}
+        </button>
       </div>
 
-      <div className="glass rounded-[2rem] p-8">
-        <div className="mb-6 flex items-center justify-between">
-          <h3 className="text-lg font-bold">Staff Details</h3>
-          {isEditing ? (
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setIsEditing(false)}
-                aria-label="Cancel editing"
-                className="rounded-xl p-2 text-text-muted hover:text-foreground"
-              >
-                <X size={18} />
-              </button>
-              <button
-                type="button"
-                onClick={saveChanges}
+      <div className="grid gap-8 lg:grid-cols-3">
+        <section className="glass overflow-hidden rounded-[2rem] lg:col-span-1">
+          <div className={cn("h-16", style.band)} />
+          <div
+            className={cn(
+              "relative z-10 mx-auto -mt-12 flex h-24 w-24 items-center justify-center rounded-full",
+              "border-4 border-card-bg text-3xl font-black text-white",
+              style.avatar,
+            )}
+          >
+            {initialsOf(name)}
+          </div>
+
+          <div className="space-y-2 p-6 text-center">
+            <p className="text-xl font-black">{formatDisplayName(name, role)}</p>
+            <span
+              className={cn(
+                "inline-block rounded-full px-3 py-1 text-[10px] font-black uppercase",
+                style.badge,
+              )}
+            >
+              {ROLE_LABELS[role]}
+            </span>
+            <p className="text-sm text-text-muted">{department}</p>
+            <p className="font-mono text-xs text-text-muted">{license}</p>
+          </div>
+
+          <div className="mx-6 flex items-center justify-between border-t border-glass-border py-5">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-text-muted">
+                On-Duty Status
+              </p>
+              <p
                 className={cn(
-                  "flex items-center gap-2 rounded-xl bg-wah-purple px-4 py-2",
-                  "text-sm font-bold text-white",
+                  "text-sm font-semibold",
+                  isOnDuty ? "text-green-500" : "text-text-muted",
                 )}
               >
-                <Save size={16} /> Save
-              </button>
+                {isOnDuty ? "On Duty" : "Off Duty"}
+              </p>
             </div>
-          ) : (
             <button
               type="button"
-              onClick={startEditing}
-              className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-bold text-wah-neon hover:bg-wah-purple/10"
+              role="switch"
+              aria-checked={isOnDuty}
+              aria-label="On-duty status"
+              onClick={() => setIsOnDuty((current) => !current)}
+              className={cn(
+                "relative h-6 w-12 shrink-0 rounded-full transition-colors",
+                isOnDuty && "bg-green-500",
+                // glass-bg is near-white in light mode, so the off track needs a real grey
+                !isOnDuty &&
+                  (isLight
+                    ? "border border-slate-300 bg-slate-200"
+                    : "border border-glass-border bg-glass-bg"),
+              )}
             >
-              <Pencil size={16} /> Edit
+              <span
+                className={cn(
+                  "absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow",
+                  "transition-transform",
+                  isOnDuty && "translate-x-6",
+                )}
+              />
             </button>
-          )}
-        </div>
+          </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="space-y-2 text-xs font-semibold uppercase text-text-muted">
-            Full Name
-            <input
-              className={fieldClass}
-              disabled={!isEditing}
-              value={isEditing ? draft.name : profile.name}
-              onChange={(event) => setDraft({ ...draft, name: event.target.value })}
-            />
-          </label>
-          <label className="space-y-2 text-xs font-semibold uppercase text-text-muted">
-            Department
-            <input
-              className={fieldClass}
-              disabled={!isEditing}
-              value={isEditing ? draft.department : profile.department}
-              onChange={(event) => setDraft({ ...draft, department: event.target.value })}
-            />
-          </label>
-          <label className="space-y-2 text-xs font-semibold uppercase text-text-muted">
-            License / Employee ID
-            <input
-              className={cn(fieldClass, "font-mono")}
-              disabled={!isEditing}
-              value={isEditing ? draft.license : profile.license}
-              onChange={(event) => setDraft({ ...draft, license: event.target.value })}
-            />
-          </label>
-          <label className="space-y-2 text-xs font-semibold uppercase text-text-muted">
-            Role
-            {/* role changes go through the System Admin (step-up protected), so it's read-only here */}
-            <input className={fieldClass} disabled value={ROLE_LABELS[profile.role]} />
-          </label>
-        </div>
+          <div className="border-t border-glass-border px-6 py-4 text-center">
+            <p className="text-sm font-black">
+              WAH<span className="text-wah-accent">ter</span>
+            </p>
+            <p className="font-mono text-[9px] uppercase tracking-widest text-text-muted">
+              Hospital Management System
+            </p>
+          </div>
+        </section>
 
-        {isEditing && (
-          <label className="mt-4 block space-y-2 text-xs font-semibold uppercase text-text-muted">
-            Bio
-            <textarea
-              className={cn(fieldClass, "min-h-28 resize-y normal-case")}
-              value={bio}
-              onChange={(event) => setBio(event.target.value)}
-              placeholder="Specialization, shift preferences, anything the team should know"
-            />
-          </label>
-        )}
+        <section className="glass rounded-[2rem] p-8 lg:col-span-2">
+          <h3 className="mb-6 text-lg font-bold">Profile Details</h3>
 
-        {/* TODO(Phase 9a): pull these from the Clinical Records + Orders services */}
-        <div className="mt-8 grid grid-cols-3 gap-4">
-          {[
-            { label: "Patients Today", value: "12" },
-            { label: "Prescriptions", value: "8" },
-            { label: "On Duty Since", value: "07:00" },
-          ].map((stat) => (
-            <div key={stat.label} className="rounded-2xl bg-glass-bg p-4 text-center">
-              <p className="text-2xl font-black text-wah-neon">{stat.value}</p>
-              <p className="mt-1 text-[10px] font-bold uppercase text-text-muted">{stat.label}</p>
-            </div>
-          ))}
-        </div>
+          <div className="grid gap-6 sm:grid-cols-2">
+            {FIELDS.map((field) => (
+              <div
+                key={field.key}
+                className={cn("space-y-2", !isEditing && "border-b border-glass-border pb-3")}
+              >
+                <p className="text-[10px] uppercase tracking-widest text-text-muted">
+                  {field.label}
+                </p>
+                {field.key === "role" ? (
+                  // role changes belong to the System Admin (step-up protected), never self-service
+                  <p className="font-semibold text-foreground">{ROLE_LABELS[role]}</p>
+                ) : isEditing ? (
+                  <input
+                    value={draft[field.key]}
+                    onChange={(event) =>
+                      setDraft((current) => ({ ...current, [field.key]: event.target.value }))
+                    }
+                    aria-label={field.label}
+                    className={cn(
+                      "w-full rounded-xl border border-glass-border bg-glass-bg p-3 text-sm",
+                      "text-foreground outline-none focus:ring-1 focus:ring-wah-purple",
+                    )}
+                  />
+                ) : (
+                  <p className="font-semibold text-foreground">{shown[field.key]}</p>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-8 space-y-2">
+            <p className="text-[10px] uppercase tracking-widest text-text-muted">Biography</p>
+            {isEditing ? (
+              <textarea
+                value={bio}
+                onChange={(event) => setBio(event.target.value)}
+                aria-label="Biography"
+                className={cn(
+                  "h-32 w-full resize-none rounded-2xl border border-glass-border bg-glass-bg p-4",
+                  "text-sm text-foreground outline-none focus:ring-1 focus:ring-wah-purple",
+                )}
+              />
+            ) : (
+              <p className="text-sm leading-relaxed text-text-secondary">{bio}</p>
+            )}
+          </div>
+
+          {/* TODO(Phase 9a): real counts from Clinical Records and Orders & Diagnostics */}
+          <div className="mt-8 grid grid-cols-3 gap-4 border-t border-glass-border pt-6">
+            {ACTIVITY.map((item) => (
+              <div key={item.label} className="text-center">
+                <p className="text-2xl font-black text-wah-purple">{item.value}</p>
+                <p className="mt-1 text-[10px] uppercase text-text-muted">{item.label}</p>
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
     </div>
   );

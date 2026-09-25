@@ -46,6 +46,9 @@ a build, tests, a commit, and an update to this file.
 - [x] **Prompt 13: Architecture Tab** (2026-09-25)
   ArchitectureStatusView (IT Admin): service cards, RBAC request sandbox, JSONB viewer, cache panel,
   live log feed, all simulated. Every tab now has a view. See DECISIONS.md D-028.
+- [x] **Prompt 14: Profile Tab** (2026-09-25)
+  ProfileView rebuilt: digital badge, on-duty switch, editable details and bio, activity summary.
+  See DECISIONS.md D-029.
 
 ## Master prompt phases
 
