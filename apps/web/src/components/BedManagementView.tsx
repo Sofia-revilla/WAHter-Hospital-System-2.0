@@ -7,8 +7,8 @@ import { useData } from "@/context/DataContext";
 import type { Ward } from "@/types";
 import { StatCard } from "./StatCard";
 
-// Prompt 10's fixed figures. Note the mock wards add up to 70 beds / 24 free,
-// not 23 — they'll agree once both come from the Scheduling service (Phase 4).
+// Fixed numbers from the UI design. Heads up: the mock wards add up to 70 beds
+// and 24 free, not 23. They'll match once both come from Scheduling (Phase 4).
 const STAT_CARDS = [
   { title: "Total Beds", value: "70", sub: "Hospital Capacity", icon: Bed },
   { title: "Available", value: "23", sub: "Ready for Admission", icon: Plus, trend: "Open" },

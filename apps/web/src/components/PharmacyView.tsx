@@ -165,7 +165,7 @@ export function PharmacyView() {
             </ul>
           )}
 
-          {/* TODO(Prompt: Inventory tab): link to the full inventory screen */}
+          {/* TODO: link to the Inventory tab (needs a tab setter passed down from App) */}
           <button
             type="button"
             className={cn(

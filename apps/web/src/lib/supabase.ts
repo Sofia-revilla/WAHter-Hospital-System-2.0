@@ -2,7 +2,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 // Supabase projects created after mid-2025 hand out a "publishable" key instead
 // of the old anon key, so we accept either. No keys at all is a normal state
-// for local dev — callers get null and fall back to mock data.
+// for local dev. Callers get null and fall back to mock data.
 //
 // TODO(Phase 8): the master plan routes every call through Kong. Once the
 // gateway is up, DataContext should read from there and this file can go.

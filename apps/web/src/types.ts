@@ -36,7 +36,7 @@ export interface LabTest {
   test: string;
   priority: "Urgent" | "Routine";
   status: "Pending" | "In-Progress" | "Completed";
-  // display string ("10m ago"), not a timestamp — fine until the lab worklist is live
+  // display string ("10m ago"), not a timestamp. Fine until the lab worklist is live
   time: string;
 }
 
@@ -62,7 +62,7 @@ export interface AdmissionTrendPoint {
 }
 
 // Only the three portals from the login screen exist in the prototype.
-// The IT role is stored as "IT" (per the app-state spec) but shown as "IT Admin".
+// The IT role is stored as "IT" but shown as "IT Admin" on screen.
 export type StaffRole = "Doctor" | "Nurse" | "IT";
 
 export const ROLE_LABELS: Record<StaffRole, string> = {

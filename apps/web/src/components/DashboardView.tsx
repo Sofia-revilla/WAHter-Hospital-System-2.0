@@ -151,7 +151,7 @@ export function DashboardView({ isLight }: DashboardViewProps) {
                 <h3 className="text-lg font-bold">Inventory Status</h3>
                 <p className="text-xs text-text-muted">Stock Watchlist</p>
               </div>
-              {/* TODO(Prompt: Inventory tab): jump to the full inventory view */}
+              {/* TODO: switch to the Inventory tab (needs a tab setter passed down from App) */}
               <button
                 type="button"
                 className="text-xs font-black uppercase tracking-widest text-wah-neon hover:underline"

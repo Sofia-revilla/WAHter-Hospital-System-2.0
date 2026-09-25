@@ -11,7 +11,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "motion/react"; // not 'framer-motion' — package renamed in v11
+import { AnimatePresence, motion } from "motion/react"; // not 'framer-motion', the package got renamed in v11
 import { Bell, LayoutDashboard, LogOut, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDisplayName } from "@/lib/staff";
@@ -41,8 +41,8 @@ const ROLE_CHIP: Record<StaffRole, string> = {
   IT: "bg-rose-500/15 text-rose-400",
 };
 
-// Login only asks for a name, so fill the badge with something sensible.
-// Signup passes the real department and license through instead.
+// Plain login only asks for a name, so we fill the badge with a default.
+// Signup passes the real department and license instead.
 const DEFAULT_DEPARTMENT: Record<StaffRole, string> = {
   Doctor: "Internal Medicine",
   Nurse: "Nursing Service",
@@ -161,7 +161,7 @@ export function App() {
   const [isLight, setIsLight] = useState(false);
 
   // The class goes on <html>, not a wrapper div, so the body background and
-  // native scrollbars switch too — a wrapper left a dark strip on overscroll.
+  // native scrollbars switch too. With a wrapper we got a dark strip on overscroll.
   useEffect(() => {
     document.documentElement.classList.toggle("light", isLight);
   }, [isLight]);
@@ -233,7 +233,7 @@ export function App() {
           />
         );
       default: {
-        // TypeScript says this can't happen; the widening keeps the fallback honest if it does
+        // TS says every tab is covered, but keep a fallback in case a new tab id sneaks in
         const unknownTab: string = activeTab;
         return <PlaceholderView title={unknownTab} />;
       }

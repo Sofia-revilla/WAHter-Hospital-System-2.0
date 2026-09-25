@@ -3,7 +3,7 @@
 // sandbox, a JSONB record viewer, a cache panel, and a live log feed.
 // Everything here is simulated for the prototype demo: no real requests,
 // no real cache. TODO(Phase 9c): replace with live /health data from each
-// service and the Audit Log's transaction feed (see DECISIONS.md D-028).
+// service and the Audit Log transaction feed (see DECISIONS.md D-028).
 
 "use client";
 

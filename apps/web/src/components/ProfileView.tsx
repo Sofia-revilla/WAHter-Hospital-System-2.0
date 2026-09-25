@@ -64,8 +64,8 @@ interface ProfileViewProps {
   department: string;
   license: string;
   isLight: boolean;
-  // Not in the Prompt 14 prop list, but without it an edit would only live
-  // inside this tab and vanish from the topbar. App passes its setters here.
+  // Not in the original design, but without it an edit only lived inside this
+  // tab and the topbar kept showing the old name. App passes its setters here.
   onSave?: (profile: StaffProfile) => void;
 }
 

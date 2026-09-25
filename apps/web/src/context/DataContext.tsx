@@ -13,7 +13,7 @@ interface DataContextValue {
   labTests: LabTest[];
   wards: Ward[];
   isLoading: boolean;
-  // which tables actually came from Supabase — handy for the demo, since a
+  // which tables actually came from Supabase. Handy during demos, since a
   // half-seeded project can give us real patients but mock wards
   sources: Record<"patients" | "inventory" | "labTests" | "wards", DataSource>;
 }
@@ -81,7 +81,7 @@ export function DataProvider({ children }: DataProviderProps) {
     }
 
     load().catch(() => {
-      // network failure — the mock data is already in state, just stop loading
+      // network failure: the mock data is already in state, so just stop loading
       if (!cancelled) setIsLoading(false);
     });
 

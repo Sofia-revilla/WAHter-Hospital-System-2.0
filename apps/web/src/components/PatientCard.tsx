@@ -5,8 +5,8 @@ import { User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Patient } from "@/types";
 
-// The design shows MEWS "out of 10" even though the full scale runs to 14 —
-// kept as designed for the prototype since mewsScore is random 0–9 anyway.
+// The design shows MEWS "out of 10" even though the real scale goes up to 14.
+// Left it as designed for now since mewsScore is just random 0-9 in the mock.
 const MEWS_DISPLAY_MAX = 10;
 
 function statusDotClass(status: Patient["status"]) {

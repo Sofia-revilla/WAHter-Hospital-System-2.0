@@ -14,7 +14,7 @@ const config: Config = {
         "wah-accent": "#a855f7",
         "wah-deep": "#1e1b4b",
 
-        // theme-aware colors — the actual values swap in globals.css
+        // theme-aware colors, the actual values swap in globals.css
         background: "var(--color-background)",
         foreground: "var(--color-foreground)",
         "card-bg": "var(--color-card-bg)",

@@ -44,8 +44,8 @@ export function BillingView() {
   const queue = patients.slice(0, QUEUE_SIZE);
 
   // TODO(Phase 6): real balances from the Billing service's invoices.
-  // Generated once per visit to the tab (lazy useState), not per render —
-  // otherwise every hover re-render reshuffled the amounts.
+  // Generated once when the tab opens (lazy useState), not on every render.
+  // Before this, hovering a row re-rendered and reshuffled all the amounts.
   const [balances] = useState(() => queue.map(() => randomBalance()));
 
   return (

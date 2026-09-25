@@ -1,4 +1,4 @@
-// Mock data for the prototype. Every name here is fictional — no real patients.
+// Mock data for the prototype. Every name here is made up, no real patients.
 // DataContext serves these whenever Supabase isn't configured or comes back empty.
 //
 // TODO(Phase 10): replace with the seed script once the services own this data.

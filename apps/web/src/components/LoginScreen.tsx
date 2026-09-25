@@ -32,7 +32,7 @@ export type LoginHandler = (
   demo?: boolean,
 ) => void;
 
-// 800ms delay — shorter feels buggy, longer breaks the illusion of authentication
+// 800ms delay. Shorter feels buggy, longer and it stops feeling like a real login
 const FAKE_AUTH_DELAY_MS = 800;
 
 const LICENSE_PATTERN = /^MED-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
@@ -223,8 +223,8 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
     }, FAKE_AUTH_DELAY_MS);
   }
 
-  // Not reachable from the UI yet — we're not using the verify flow in the
-  // prototype, but keeping it built in case the adviser wants to see OTP in the demo.
+  // Not reachable from the UI yet. We're not using the verify flow in the
+  // prototype, but we kept it built in case the adviser wants to see OTP in the demo.
   function handleVerify(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (otp.length !== 6) {

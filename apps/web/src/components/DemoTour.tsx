@@ -27,7 +27,7 @@ export function DemoTour({
     <AnimatePresence>
       {isOpen && step && (
         <>
-          {/* backdrop — clicking outside the card dismisses the tour */}
+          {/* backdrop: clicking outside the card closes the tour */}
           <motion.div
             key="demo-backdrop"
             initial={{ opacity: 0 }}

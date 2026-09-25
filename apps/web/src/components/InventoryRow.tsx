@@ -58,7 +58,7 @@ export function InventoryRow({ item }: InventoryRowProps) {
         </span>
       </td>
       <td className="py-4 text-right">
-        {/* TODO(Prompt: Inventory tab): open this item's history panel */}
+        {/* TODO: open the item history panel once the Inventory tab has one */}
         <button
           type="button"
           aria-label={`View history for ${item.name}`}
