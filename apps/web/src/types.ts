@@ -57,13 +57,6 @@ export interface RevenuePoint {
   revenue: number;
 }
 
-// Admissions vs discharges for one period on the dashboard chart
-// (paper user story 39: daily admission and discharge reports).
-export interface PatientFlowPoint {
-  label: string;
-  admissions: number;
-  discharges: number;
-}
 
 // Only the three portals from the login screen exist in the prototype.
 // The IT role is stored as "IT" but shown as "IT Admin" on screen.

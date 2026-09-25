@@ -370,3 +370,13 @@ The pre-change build is tagged `prompt-build-v1` (also still on `main`) so it ca
   the page reloads. There's a show/hide toggle. Try Demo stays password-free because it's the guided
   tour. The real version is the Identity service (argon2 + JWT, Phase 1).
 - **Sign-out confirmation**: a small confirm dialog (Escape or backdrop = cancel) before logging out.
+
+### D-040: Dashboard keeps the risk chart, only restyled
+- The user wanted the earlier dashboard info and colors back, keeping just the new chart shape.
+  So the Admissions vs Discharges chart from D-039 is gone and the **Patient Risk by Department**
+  chart (Low / Medium / High MEWS per department, green / orange / red like MewsChip) is back.
+  It now uses the new look: grouped slim bars with rounded tops, a dot legend by the title, and a
+  dark tooltip pill. No range chips, because the risk counts have no time axis.
+- Ward occupancy bars are green / orange / red again (under 70%, 70-89%, 90%+).
+- `PatientFlowChart`, `PATIENT_FLOW` and `PatientFlowPoint` were removed since nothing uses them. The
+  Nurse tour chips no longer mention revenue or admission trends.

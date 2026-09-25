@@ -113,9 +113,9 @@ export const TAB_FEATURES: Record<TabId, string[]> = {
   dashboard: [
     "Acknowledge MEWS alerts",
     "Live bed occupancy stats",
-    "Revenue & billing overview",
+    "Patient risk by department",
     "Patient risk feed",
-    "Admission trend charts",
+    "Ward occupancy bars",
   ],
   patients: [
     "Search & filter patients",

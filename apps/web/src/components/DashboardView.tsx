@@ -6,7 +6,7 @@ import { useData } from "@/context/DataContext";
 import { wardLabel } from "@/lib/beds";
 import { MewsAlertsPanel } from "./MewsAlertsPanel";
 import { PatientCard } from "./PatientCard";
-import { PatientFlowChart } from "./PatientFlowChart";
+import { PatientRiskChart } from "./PatientRiskChart";
 import { StatCard } from "./StatCard";
 
 function twoDigits(count: number) {
@@ -76,7 +76,7 @@ export function DashboardView({ isLight, staffName }: DashboardViewProps) {
         <div>
           <p className="text-sm font-semibold text-wah-purple">{today}</p>
           <h2 className="text-2xl font-bold tracking-tight">Hospital Operations Center</h2>
-          <p className="text-sm text-text-muted">Ward census, patient flow, and pending work.</p>
+          <p className="text-sm text-text-muted">Ward census, patient risk, and pending work.</p>
         </div>
         <div className="glass flex items-center gap-2 rounded-lg px-3 py-2">
           <span className="relative flex h-2.5 w-2.5">
@@ -97,7 +97,7 @@ export function DashboardView({ isLight, staffName }: DashboardViewProps) {
         {/* min-w-0: grid items default to min-width:auto, so a wide child could
             push the whole column wider than the screen on tablets */}
         <div className="min-w-0 space-y-6 xl:col-span-8">
-          <PatientFlowChart isLight={isLight} />
+          <PatientRiskChart isLight={isLight} />
 
           {/* Replaced the old inventory watchlist: pharmacy is dispensing-only in the
               paper, and no service owns stock. Bed occupancy is in scope (UC-04, story 9). */}
@@ -122,8 +122,7 @@ export function DashboardView({ isLight, staffName }: DashboardViewProps) {
                       <div
                         className={cn(
                           "h-full rounded-full",
-                          // one calm purple; only a nearly full ward stands out
-                          percent >= 90 ? "bg-rose-400" : "bg-wah-purple/70",
+                          percent >= 90 ? "bg-rose-500" : percent >= 70 ? "bg-orange-400" : "bg-emerald-500",
                         )}
                         style={{ width: `${percent}%` }}
                       />
