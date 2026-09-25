@@ -7,8 +7,9 @@
 /* short laptop screens (768px panels, browser chrome eats the rest) */
 @custom-variant short (@media (max-height: 760px));
 
-/* Dark is the default feel, so :root holds the dark values and .light overrides.
-   None of these are pure black or pure white — everything leans indigo/lavender. */
+/* :root holds the dark values and .light overrides them. Light is the default
+   (layout.tsx puts .light on <html>), dark is one click away in the topbar.
+   None of these are pure black or pure white, everything leans indigo/lavender. */
 :root {
   --color-background: #0f0d24;
   --color-foreground: #ede9fe;

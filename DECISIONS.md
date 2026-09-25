@@ -264,3 +264,9 @@ render wrong, although empty or missing tables safely fall back to mock data.
 The team asked for the version to read just "v2" (WAH2.0). The login screen's bottom strip now says
 "Secure Access • v2" and the App.tsx header says v2. docs/MASTER_PROMPT.md still says v2.41 because it's
 kept as a verbatim copy of the original spec.
+
+### D-033: Light mode is now the default
+
+The master prompt made dark mode the default. The team asked for light mode instead, so `isLight`
+starts as `true` and `layout.tsx` puts `.light` on `<html>` in the server HTML (no dark flash on load).
+Dark mode is still one click away in the topbar.

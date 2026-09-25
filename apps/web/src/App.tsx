@@ -158,7 +158,8 @@ export function App() {
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [demoStep, setDemoStep] = useState(0);
   const [activeTab, setActiveTab] = useState<TabId>("dashboard");
-  const [isLight, setIsLight] = useState(false);
+  // light mode is the default look; the toggle in the topbar switches to dark
+  const [isLight, setIsLight] = useState(true);
 
   // The class goes on <html>, not a wrapper div, so the body background and
   // native scrollbars switch too. With a wrapper we got a dark strip on overscroll.
