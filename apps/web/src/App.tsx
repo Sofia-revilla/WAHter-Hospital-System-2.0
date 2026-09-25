@@ -202,9 +202,9 @@ export function App() {
   function renderTab() {
     switch (activeTab) {
       case "dashboard":
-        return <DashboardView isLight={isLight} />;
+        return <DashboardView isLight={isLight} staffName={displayName} />;
       case "patients":
-        return <PatientsView />;
+        return <PatientsView staffName={displayName} />;
       case "prescription":
         return <PrescriptionView />;
       case "pharmacy":

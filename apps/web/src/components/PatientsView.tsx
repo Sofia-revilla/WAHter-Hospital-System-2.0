@@ -4,7 +4,10 @@ import { useMemo, useState } from "react";
 import { Activity, FileSpreadsheet, Plus, Search, Settings, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useData } from "@/context/DataContext";
+import { riskLevelFor } from "@/lib/mews";
 import type { Patient } from "@/types";
+import { MewsChip } from "./MewsChip";
+import { VitalsDialog } from "./VitalsDialog";
 
 const FILTERS = ["All", "In-Patient", "Out-Patient", "ER", "Discharged"] as const;
 type PatientFilter = (typeof FILTERS)[number];
@@ -41,8 +44,16 @@ function matchesSearch(patient: Patient, query: string) {
   );
 }
 
-export function PatientsView() {
+interface PatientsViewProps {
+  // shown as "recorded by" on any vitals charted from this tab
+  staffName: string;
+}
+
+export function PatientsView({ staffName }: PatientsViewProps) {
   const { patients } = useData();
+  const [chartingPatientId, setChartingPatientId] = useState<string | null>(null);
+  // looked up fresh so the dialog sees the updated MEWS right after saving
+  const chartingPatient = patients.find((patient) => patient.id === chartingPatientId) ?? null;
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<PatientFilter>("All");
 
@@ -140,7 +151,7 @@ export function PatientsView() {
         </div>
 
         <div className="mt-8 overflow-x-auto">
-          <table className="w-full min-w-[820px] text-left">
+          <table className="w-full min-w-[900px] text-left">
             <thead>
               <tr
                 className={cn(
@@ -153,13 +164,14 @@ export function PatientsView() {
                 <th className="pb-4">Ward / Bed</th>
                 <th className="pb-4">Primary Diagnosis</th>
                 <th className="pb-4">Status</th>
+                <th className="pb-4">MEWS</th>
                 <th className="pb-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {visiblePatients.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-16 text-center">
+                  <td colSpan={7} className="py-16 text-center">
                     <Search size={32} className="mx-auto opacity-30" />
                     <p className="mt-3 font-semibold">No patients found</p>
                     <p className="text-sm text-text-muted">Try a different name, ID, or department</p>
@@ -213,6 +225,9 @@ export function PatientsView() {
                         {patient.status}
                       </span>
                     </td>
+                    <td className="py-4 pr-4">
+                      <MewsChip risk={riskLevelFor(patient.mewsScore)} score={patient.mewsScore} />
+                    </td>
                     <td className="py-4">
                       {/* focus-within too, so keyboard users can reach the hidden buttons */}
                       <div
@@ -221,14 +236,16 @@ export function PatientsView() {
                           "group-hover:opacity-100 group-focus-within:opacity-100",
                         )}
                       >
-                        {/* TODO(Phase 9a): vitals + MEWS entry and patient settings */}
                         <button
                           type="button"
-                          aria-label={`Open vitals for ${patient.name}`}
+                          onClick={() => setChartingPatientId(patient.id)}
+                          aria-label={`Chart vitals for ${patient.name}`}
+                          title="Chart vitals (MEWS)"
                           className="glass rounded-lg p-2 text-text-muted hover:text-wah-neon"
                         >
                           <Activity size={16} />
                         </button>
+                        {/* TODO(Phase 9a): patient record, diagnosis, and discharge actions */}
                         <button
                           type="button"
                           aria-label={`Settings for ${patient.name}`}
@@ -245,6 +262,12 @@ export function PatientsView() {
           </table>
         </div>
       </section>
+
+      <VitalsDialog
+        patient={chartingPatient}
+        recordedBy={staffName}
+        onClose={() => setChartingPatientId(null)}
+      />
     </div>
   );
 }

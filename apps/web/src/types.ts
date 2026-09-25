@@ -1,6 +1,8 @@
 // Shapes shared by constants.ts, DataContext, and the tab views.
 // Kept deliberately flat so a Supabase row maps onto them without a transform.
 
+import type { RiskLevel, VitalSigns } from "./lib/mews";
+
 export type PatientStatus = "Critical" | "Stable" | "Recovering" | "Observation";
 
 export type Department = "Internal Medicine" | "ICU" | "Surgical Suite" | "ER" | "Pediatrics";
@@ -76,4 +78,34 @@ export interface StaffProfile {
   role: StaffRole;
   department: string;
   license: string;
+}
+
+// One charted set of vitals (UC-05.1) with the MEWS computed from it (UC-05.2).
+export interface VitalsRecord {
+  id: string;
+  patientId: string;
+  recordedAt: string;
+  recordedBy: string;
+  vitals: VitalSigns;
+  mewsScore: number;
+  risk: RiskLevel;
+  // true when the nurse confirmed an out-of-range reading instead of fixing it
+  hadImplausibleReading: boolean;
+}
+
+// Raised automatically on a Medium or High MEWS (UC-08). Never edited after
+// acknowledgment, only closed.
+export interface MewsAlert {
+  id: string;
+  vitalsId: string;
+  patientId: string;
+  patientName: string;
+  mewsScore: number;
+  risk: "Medium" | "High";
+  raisedAt: string;
+  acknowledgedAt?: string;
+  acknowledgedBy?: string;
+  note?: string;
+  // "false alarm / data correction needed" from UC-08 extension 4a
+  isFalseAlarm?: boolean;
 }

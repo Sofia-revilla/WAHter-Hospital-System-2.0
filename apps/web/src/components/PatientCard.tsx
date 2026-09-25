@@ -3,11 +3,10 @@
 import { motion } from "motion/react";
 import { User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { riskLevelFor, type RiskLevel } from "@/lib/mews";
+import { MAX_MEWS_SCORE } from "@/lib/mewsBands";
 import type { Patient } from "@/types";
-
-// The design shows MEWS "out of 10" even though the real scale goes up to 14.
-// Left it as designed for now since mewsScore is just random 0-9 in the mock.
-const MEWS_DISPLAY_MAX = 10;
+import { MewsChip } from "./MewsChip";
 
 function statusDotClass(status: Patient["status"]) {
   if (status === "Critical") return "bg-rose-500 animate-pulse";
@@ -15,19 +14,19 @@ function statusDotClass(status: Patient["status"]) {
   return "bg-orange-400";
 }
 
-function mewsColor(score: number) {
-  if (score > 5) return { text: "text-rose-500", bar: "bg-rose-500" };
-  if (score > 3) return { text: "text-orange-400", bar: "bg-orange-400" };
-  return { text: "text-wah-purple", bar: "bg-wah-purple" };
-}
+const RISK_BAR: Record<RiskLevel, string> = {
+  Low: "bg-emerald-500",
+  Medium: "bg-orange-400",
+  High: "bg-rose-500",
+};
 
 interface PatientCardProps {
   patient: Patient;
 }
 
 export function PatientCard({ patient }: PatientCardProps) {
-  const mews = mewsColor(patient.mewsScore);
-  const mewsPercent = Math.min(patient.mewsScore / MEWS_DISPLAY_MAX, 1) * 100;
+  const risk = riskLevelFor(patient.mewsScore);
+  const mewsPercent = Math.min(patient.mewsScore / MAX_MEWS_SCORE, 1) * 100;
 
   return (
     <div className="rounded-2xl bg-card-bg p-4 transition-shadow hover:ring-2 hover:ring-wah-purple/20">
@@ -70,16 +69,14 @@ export function PatientCard({ patient }: PatientCardProps) {
       <div className="mt-4">
         <div className="flex items-center justify-between text-xs">
           <span className="font-semibold uppercase tracking-wider text-text-muted">MEWS Score</span>
-          <span className={cn("font-mono font-bold", mews.text)}>
-            {patient.mewsScore}/{MEWS_DISPLAY_MAX}
-          </span>
+          <MewsChip risk={risk} score={patient.mewsScore} />
         </div>
         <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-glass-bg">
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: `${mewsPercent}%` }}
             transition={{ duration: 0.8, ease: "easeOut" }}
-            className={cn("h-full rounded-full", mews.bar)}
+            className={cn("h-full rounded-full", RISK_BAR[risk])}
           />
         </div>
       </div>

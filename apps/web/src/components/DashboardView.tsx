@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { useData } from "@/context/DataContext";
 import { REVENUE_DATA } from "@/constants";
 import { InventoryRow } from "./InventoryRow";
+import { MewsAlertsPanel } from "./MewsAlertsPanel";
 import { PatientCard } from "./PatientCard";
 import { StatCard } from "./StatCard";
 
@@ -27,7 +28,6 @@ const AXIS_GREY = "#8b87b0";
 const STAT_CARDS = [
   { title: "Total Patients", value: "1,248", sub: "Admitted Active", icon: Users, trend: "+12%" },
   { title: "Bed Occupancy", value: "84%", sub: "West Ward Full", icon: Bed, trend: "Stable" },
-  { title: "MEWS Alerts", value: "03", sub: "Requires Attention", icon: Activity, trend: "Critical" },
   {
     title: "Daily Revenue",
     value: "₱ 242,500",
@@ -43,10 +43,28 @@ function formatPeso(value: number) {
 
 interface DashboardViewProps {
   isLight: boolean;
+  // who acknowledges MEWS alerts from this dashboard
+  staffName: string;
 }
 
-export function DashboardView({ isLight }: DashboardViewProps) {
-  const { patients, inventory } = useData();
+export function DashboardView({ isLight, staffName }: DashboardViewProps) {
+  const { patients, inventory, mewsAlerts } = useData();
+  const activeAlerts = mewsAlerts.filter((alert) => !alert.acknowledgedAt);
+  const highAlerts = activeAlerts.filter((alert) => alert.risk === "High").length;
+
+  // MEWS count is live from the alerts list; the other three are still design figures
+  const statCards = [
+    STAT_CARDS[0],
+    STAT_CARDS[1],
+    {
+      title: "MEWS Alerts",
+      value: String(activeAlerts.length).padStart(2, "0"),
+      sub: activeAlerts.length > 0 ? "Requires Attention" : "All Acknowledged",
+      icon: Activity,
+      trend: highAlerts > 0 ? "Critical" : undefined,
+    },
+    STAT_CARDS[2],
+  ];
   // TODO(Phase 6): drive the chart from the Billing service; for now the
   // range picker only changes the label, the data is always REVENUE_DATA
   const [range, setRange] = useState("this-week");
@@ -71,7 +89,7 @@ export function DashboardView({ isLight }: DashboardViewProps) {
       </div>
 
       <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-        {STAT_CARDS.map((card) => (
+        {statCards.map((card) => (
           <StatCard key={card.title} {...card} />
         ))}
       </div>
@@ -184,6 +202,8 @@ export function DashboardView({ isLight }: DashboardViewProps) {
         </div>
 
         <aside className="min-w-0 space-y-4 xl:col-span-4">
+          <MewsAlertsPanel staffName={staffName} />
+
           <div className="glass flex items-center justify-between rounded-full py-2 pl-5 pr-2">
             <span className="text-sm font-bold">Active Cases</span>
             <span
