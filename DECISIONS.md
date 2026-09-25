@@ -292,3 +292,28 @@ Dispensing, Dispensed and For Review, counted live from the worklist. The right 
 Checks list built from UC-10's steps and business rules, plus master §13's second approval for
 controlled drugs. The heading changed from "Medication & Inventory" to "Medication Dispensing". The
 demo tour's pharmacy copy dropped its "stock" wording to match.
+
+### D-036: Paper-alignment pass (branch `paper-alignment`)
+
+The team asked to follow the paper and diagrams over the build prompts for role and tab behavior.
+The pre-change build is tagged `prompt-build-v1` (also still on `main`) so it can be restored.
+
+- **Role gating** (`lib/staff.ts`): one permission map based on the use case actors. Dispense
+  (UC-10), lab Process (UC-11), and SOA/Reconcile (UC-12/13) belong to roles without portals yet, so
+  doctors and nurses see those screens read-only. Admit/Manage beds is Nurse only (UC-04); ordering
+  diagnostics is Doctor only (UC-11 step 1); charting vitals is Doctor + Nurse (UC-05).
+- **MEWS** (`lib/mews.ts`, `lib/mewsBands.ts`): six manual vitals, bands in one constants file (Subbe
+  2001 bands, SpO2 band added; placeholders to verify with CDH). Readings outside plausible ranges
+  must be confirmed, not blocked (paper scope g). Medium or High raises an alert (UC-08, following the
+  paper over the master prompt's High-only `mews.high`). Alerts are acknowledged with an optional note
+  or a false-alarm flag; acknowledged alerts are never edited. Escalation is a TODO. Two seeded vitals
+  sets give the dashboard real alerts on first load.
+- **Lab**: removed testing slots, lab inventory and calibration (not in the paper). Stats count from
+  the worklist. Doctor gets Order Test; others see UC-11's result release rules.
+- **IT Admin**: tabs reduced to Architecture, Staff & Access, Inventory, Profile. The paper's IT portal
+  excludes clinical modules and patient data. Architecture now shows the TABLE IX stack, the RBAC
+  sandbox uses real use case actors, a service-schema table replaces the patient JSONB viewer, and an
+  event-bus panel (with a Notifications outage toggle) replaces the Redis panel to show fault
+  isolation. New Staff & Access tab covers UC-16 (accounts, step-up note for role changes, append-only
+  audit log with search, CSV export and meta-audit).
+- Master prompt §7.4's nav table and §7.8 designs are superseded where they conflict with the above.
