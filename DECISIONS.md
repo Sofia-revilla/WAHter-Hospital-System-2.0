@@ -38,3 +38,28 @@ Prompt 1 lists `framer-motion` but says to import from `motion/react`. That impo
 Prompt 1 says to "apply a class to the root element". We toggle `.light` on `document.documentElement`
 instead of App's wrapper div, so the body background and the browser's own scrollbars switch too. Dark values
 live on `:root` because dark is the default feel.
+
+### D-006: Mock patients use a seeded random generator
+
+Prompt 2 asks for randomly generated patients (`generateRandomPatient`). Plain `Math.random()` and
+`Date.now()` produce different values during the server render and in the browser, which breaks
+React hydration. `constants.ts` uses a seeded PRNG (mulberry32, seed 88) and anchors admission dates to
+the start of today. The roster still looks random but is identical on both sides. Seed 88 was picked
+because it gives 3 children out of 12 (target ~22%); several other seeds gave none.
+
+### D-007: Prompt 2 mock names are English, not Filipino
+
+Master prompt §9 asks for "realistic Filipino names" in the seed script. Prompt 2 specifies English
+names (James Smith, Liam, Emma…). We followed Prompt 2 for the frontend mock; the Phase 10 seed script
+will still use Filipino names. Gender is random per Prompt 2, so a name and gender won't always match.
+
+### D-008: DiceBear avatars are an external request
+
+Prompt 2's `avatar` field points at api.dicebear.com with the patient name as the seed. That sends a
+(fictional) name to a third party, which would break Data Privacy Act rules with real patients. Kept for
+the mock, with a TODO(Phase 8) to generate avatars locally or seed them by patient ID instead.
+
+### D-009: ADMISSION_TRENDS includes an `opd` series
+
+Prompt 2 includes outpatient counts. WAH2.0 is inpatient-only (OPD belongs to WAH4C), so the `opd`
+field is treated as context data only and noted as such in `constants.ts`.

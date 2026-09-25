@@ -9,6 +9,9 @@ a build, tests, a commit, and an update to this file.
   Next.js 15 / React 19 / Tailwind 4 app in `apps/web`, WAH theme tokens, dark/light
   toggle, `cn()`, optional Supabase client, `DataContext` with mock fallback,
   `constants.ts`, `ProfileView`. Root npm workspace set up. See DECISIONS.md D-001 to D-005.
+- [x] **Prompt 2: Mock Data** (2026-09-25)
+  12 generated patients (seeded), 5 inventory items, 4 lab tests, 5 wards, revenue and admission
+  trend series, reshaped types. See DECISIONS.md D-006 to D-009.
 
 ## Master prompt phases
 

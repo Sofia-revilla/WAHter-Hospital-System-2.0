@@ -1,31 +1,21 @@
 // Shapes shared by constants.ts, DataContext, and the tab views.
 // Kept deliberately flat so a Supabase row maps onto them without a transform.
 
-export type PatientStatus = "Critical" | "Stable" | "Recovering" | "Discharged";
+export type PatientStatus = "Critical" | "Stable" | "Recovering" | "Observation";
 
-export type Department =
-  | "ER"
-  | "ICU"
-  | "Medical Ward"
-  | "Surgical Ward"
-  | "Pediatrics"
-  | "OB-Gyne";
+export type Department = "Internal Medicine" | "ICU" | "Surgical Suite" | "ER" | "Pediatrics";
 
 export interface Patient {
   id: string;
   name: string;
   age: number;
-  gender: "M" | "F";
+  gender: "Male" | "Female";
   department: Department;
-  ward: string;
-  bed: string;
-  diagnosis: string;
-  // ICD-10 code for the primary diagnosis, e.g. "J18.9"
-  icd10: string;
   status: PatientStatus;
-  // MEWS aggregate, 0–14. The dashboard shows it as "x/10" per the design.
-  mews: number;
+  // random in the prototype, not derived from vitals (see generateRandomPatient)
+  mewsScore: number;
   admittedAt: string;
+  avatar: string;
 }
 
 export type StockStatus = "Good" | "Low" | "Critical";
@@ -33,40 +23,40 @@ export type StockStatus = "Good" | "Low" | "Critical";
 export interface InventoryItem {
   id: string;
   name: string;
-  category: "Medication" | "Equipment" | "Surgical" | "Laboratory";
-  quantity: number;
-  capacity: number;
+  category: "Medication" | "Supply";
+  stock: number;
+  minStock: number;
   unit: string;
   status: StockStatus;
-  expiry: string | null;
 }
 
 export interface LabTest {
   id: string;
-  patientId: string;
-  patientName: string;
+  patient: string;
   test: string;
-  kind: "Laboratory" | "Radiology";
-  priority: "Routine" | "Urgent";
-  status: "Pending" | "In Progress" | "Completed";
-  requestedAt: string;
+  priority: "Urgent" | "Routine";
+  status: "Pending" | "In-Progress" | "Completed";
+  // display string ("10m ago"), not a timestamp — fine until the lab worklist is live
+  time: string;
 }
 
 export interface Ward {
   id: string;
   name: string;
-  floor: string;
-  totalBeds: number;
+  type: "Male" | "Female" | "Specialized" | "Children";
+  capacity: number;
   occupied: number;
+  // hex accent for the ward card and bed grid
+  color: string;
 }
 
 export interface RevenuePoint {
-  day: string;
+  name: string;
   revenue: number;
 }
 
 export interface AdmissionTrendPoint {
-  month: string;
-  admissions: number;
-  discharges: number;
+  name: string;
+  opd: number;
+  ipd: number;
 }
