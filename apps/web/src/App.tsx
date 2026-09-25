@@ -28,6 +28,7 @@ import { PharmacyView } from "@/components/PharmacyView";
 import { PrescriptionView } from "@/components/PrescriptionView";
 import { LoginScreen, type LoginHandler } from "@/components/LoginScreen";
 import { ProfileView } from "@/components/ProfileView";
+import { StaffAccessView } from "@/components/StaffAccessView";
 import { Sidebar } from "@/components/Sidebar";
 import { TABS, type TabId } from "@/navigation";
 import { DEMO_STEPS } from "@/demoTour";
@@ -219,6 +220,8 @@ export function App() {
         return <InventoryView />;
       case "architecture":
         return <ArchitectureStatusView />;
+      case "staff":
+        return <StaffAccessView adminName={displayName} />;
       case "profile":
         return (
           <ProfileView

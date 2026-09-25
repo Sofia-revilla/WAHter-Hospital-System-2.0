@@ -109,3 +109,37 @@ export interface MewsAlert {
   // "false alarm / data correction needed" from UC-08 extension 4a
   isFalseAlarm?: boolean;
 }
+
+// Every role from the paper's user classes (TABLE XIII), including the ones
+// that don't have a portal in the prototype yet.
+export type HospitalRole =
+  | "Physician"
+  | "Nurse"
+  | "Laboratory Staff"
+  | "Radiology Staff"
+  | "Pharmacist"
+  | "Billing Staff"
+  | "Patient Registrar"
+  | "Hospital Administrator"
+  | "System Administrator";
+
+export interface StaffAccount {
+  id: string;
+  name: string;
+  role: HospitalRole;
+  department: string;
+  status: "Active" | "Deactivated";
+  lastLogin: string;
+}
+
+export type AuditAction = "LOGIN" | "VIEW" | "CREATE" | "UPDATE" | "EXPORT" | "AUDIT_QUERY";
+
+export interface AuditEntry {
+  id: string;
+  time: string;
+  actor: string;
+  role: HospitalRole;
+  action: AuditAction;
+  // what was touched, by ID only (never clinical details)
+  resource: string;
+}

@@ -5,6 +5,8 @@
 
 import type {
   AdmissionTrendPoint,
+  AuditEntry,
+  StaffAccount,
   Department,
   InventoryItem,
   LabTest,
@@ -258,4 +260,36 @@ export const WARDS: Ward[] = [
   },
   { id: "W-004", name: "Pediatrics Ward", type: "Children", capacity: 15, occupied: 5, color: "#3b82f6" },
   { id: "W-005", name: "Isolation Ward", type: "Specialized", capacity: 5, occupied: 2, color: "#10b981" },
+];
+
+// ─── STAFF & AUDIT (System Administrator) ───
+
+// Staff names are made up too. One account per role in the paper, even
+// for roles whose portals come in later phases.
+export const STAFF_ACCOUNTS: StaffAccount[] = [
+  { id: "EMP-0001", name: "Dr. Andrea Mendoza", role: "Physician", department: "Internal Medicine", status: "Active", lastLogin: "Today 07:02" },
+  { id: "EMP-0002", name: "RN Carlo Bautista", role: "Nurse", department: "Medical Ward", status: "Active", lastLogin: "Today 06:55" },
+  { id: "EMP-0003", name: "Liza Ramos", role: "Laboratory Staff", department: "Laboratory", status: "Active", lastLogin: "Today 07:30" },
+  { id: "EMP-0004", name: "Paolo Santos", role: "Radiology Staff", department: "Radiology", status: "Active", lastLogin: "Yesterday 16:12" },
+  { id: "EMP-0005", name: "Grace Villanueva", role: "Pharmacist", department: "Pharmacy", status: "Active", lastLogin: "Today 07:45" },
+  { id: "EMP-0006", name: "Mark Aquino", role: "Billing Staff", department: "Billing", status: "Active", lastLogin: "Today 08:10" },
+  { id: "EMP-0007", name: "Joy Pascual", role: "Patient Registrar", department: "Admitting", status: "Active", lastLogin: "Today 06:40" },
+  { id: "EMP-0008", name: "Dr. Ramon Castillo", role: "Hospital Administrator", department: "Administration", status: "Active", lastLogin: "Yesterday 17:05" },
+  { id: "EMP-0009", name: "Alex Reyes", role: "System Administrator", department: "IT Department", status: "Active", lastLogin: "Today 07:00" },
+  { id: "EMP-0010", name: "RN Nina Garcia", role: "Nurse", department: "ICU", status: "Deactivated", lastLogin: "12 days ago" },
+];
+
+export const AUDIT_LOG: AuditEntry[] = [
+  { id: "AU-1012", time: "08:14", actor: "Mark Aquino", role: "Billing Staff", action: "VIEW", resource: "Invoice INV-2026-0412" },
+  { id: "AU-1011", time: "08:02", actor: "Dr. Andrea Mendoza", role: "Physician", action: "CREATE", resource: "Lab order LAB-5501" },
+  { id: "AU-1010", time: "07:58", actor: "RN Carlo Bautista", role: "Nurse", action: "CREATE", resource: "Vitals for WAH-2026-00001" },
+  { id: "AU-1009", time: "07:51", actor: "Grace Villanueva", role: "Pharmacist", action: "UPDATE", resource: "Dispense RX-7722" },
+  { id: "AU-1008", time: "07:45", actor: "Grace Villanueva", role: "Pharmacist", action: "LOGIN", resource: "Session" },
+  { id: "AU-1007", time: "07:30", actor: "Liza Ramos", role: "Laboratory Staff", action: "LOGIN", resource: "Session" },
+  { id: "AU-1006", time: "07:12", actor: "Joy Pascual", role: "Patient Registrar", action: "CREATE", resource: "Patient WAH-2026-00012" },
+  { id: "AU-1005", time: "07:02", actor: "Dr. Andrea Mendoza", role: "Physician", action: "LOGIN", resource: "Session" },
+  { id: "AU-1004", time: "07:00", actor: "Alex Reyes", role: "System Administrator", action: "LOGIN", resource: "Session" },
+  { id: "AU-1003", time: "06:55", actor: "RN Carlo Bautista", role: "Nurse", action: "LOGIN", resource: "Session" },
+  { id: "AU-1002", time: "06:41", actor: "Joy Pascual", role: "Patient Registrar", action: "VIEW", resource: "Patient WAH-2026-00007" },
+  { id: "AU-1001", time: "06:40", actor: "Joy Pascual", role: "Patient Registrar", action: "LOGIN", resource: "Session" },
 ];

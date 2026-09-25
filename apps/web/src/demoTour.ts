@@ -15,12 +15,12 @@ export const DEMO_STEPS: Record<StaffRole, DemoStep[]> = {
     {
       tab: "dashboard",
       title: "Hospital Dashboard",
-      desc: "Your real-time command center: census, bed occupancy, MEWS alerts, and the day's revenue, with a live feed of the patients under your care.",
+      desc: "Your real-time command center: census, bed occupancy, and the day's revenue, plus MEWS alerts you can acknowledge and a live feed of your patients' risk levels.",
     },
     {
       tab: "patients",
       title: "Patient Directory",
-      desc: "Full master list of admitted patients. Search by name, patient ID, or department and filter by status to find who you need in seconds.",
+      desc: "Full master list of admitted patients. Search by name, ID, or department, check each patient's MEWS, and chart vitals when you're at the bedside.",
     },
     {
       tab: "prescription",
@@ -30,12 +30,12 @@ export const DEMO_STEPS: Record<StaffRole, DemoStep[]> = {
     {
       tab: "pharmacy",
       title: "Pharmacy Queue",
-      desc: "Track all prescriptions pending dispensing, so you know when your orders have actually reached the patient.",
+      desc: "Track your prescriptions through the pharmacy queue, so you know when an order has actually been dispensed.",
     },
     {
       tab: "lab",
       title: "Laboratory",
-      desc: "View lab test requests you've ordered and follow them from the queue to released results, with urgent tests flagged in red.",
+      desc: "Order lab tests and radiology procedures, then follow them from the queue to released results, with urgent ones flagged in red.",
     },
     {
       tab: "rooms",
@@ -52,32 +52,32 @@ export const DEMO_STEPS: Record<StaffRole, DemoStep[]> = {
     {
       tab: "dashboard",
       title: "Ward Overview",
-      desc: "Start your shift here: occupancy, MEWS alerts that need a bedside check, and a live feed of admitted patients sorted into cards you can scan quickly.",
+      desc: "Start your shift here: acknowledge MEWS alerts that need a bedside check, and scan the live feed of admitted patients with their risk levels.",
     },
     {
       tab: "patients",
       title: "Patient Directory",
-      desc: "Find any admitted patient by name, ID, or department and see their ward, bed, and current status before you do your rounds.",
+      desc: "Find any admitted patient and chart their vital signs. MEWS is calculated as you type, and a Medium or High score sends an alert right away.",
     },
     {
       tab: "pharmacy",
       title: "Medication Queue",
-      desc: "See which prescriptions are pending, dispensed, or under review, so you know what's ready to administer on your ward.",
+      desc: "See which prescriptions are pending, dispensed, or under review, so you know what's ready to administer on your ward. Dispensing itself is done by the pharmacist.",
     },
     {
       tab: "rooms",
       title: "Bed Management",
-      desc: "Check free beds ward by ward, prepare for incoming admissions, and spot near-empty wards when you need to move a patient.",
+      desc: "Check free beds ward by ward, admit incoming patients, and spot near-empty wards when you need to move someone.",
     },
     {
       tab: "lab",
       title: "Laboratory",
-      desc: "Follow specimens you've collected from the queue to released results, with urgent tests highlighted.",
+      desc: "Follow tests from the queue to released results, with urgent ones highlighted. Results are released by lab and radiology staff.",
     },
     {
       tab: "billing",
       title: "Billing Queue",
-      desc: "See which patients still have pending balances, which helps when you coordinate discharges with the billing office.",
+      desc: "A read-only view of pending balances, handy when you coordinate discharges with the billing office.",
     },
     {
       tab: "profile",
@@ -89,37 +89,12 @@ export const DEMO_STEPS: Record<StaffRole, DemoStep[]> = {
     {
       tab: "architecture",
       title: "System Architecture",
-      desc: "Monitor the stack at a glance: service status, a role-based access sandbox to test JWT guards, the JSONB record viewer, cache controls, and live container logs.",
+      desc: "See the stack at a glance: service status, a sandbox to test role-based access through the gateway, each service's database schema, and the event bus.",
     },
     {
-      tab: "dashboard",
-      title: "Hospital Dashboard",
-      desc: "The same operations view clinicians see, so you can confirm data is flowing correctly across the system.",
-    },
-    {
-      tab: "patients",
-      title: "Patient Directory",
-      desc: "Check that patient records, search, and filters behave correctly. Useful when staff report something missing.",
-    },
-    {
-      tab: "pharmacy",
-      title: "Pharmacy Module",
-      desc: "Check that the dispensing queue and review flags work as expected for the pharmacy team.",
-    },
-    {
-      tab: "lab",
-      title: "Laboratory Module",
-      desc: "Watch the lab worklist and testing slots, and catch integration issues before results reach the doctors.",
-    },
-    {
-      tab: "rooms",
-      title: "Bed Management",
-      desc: "Review ward and bed configuration as it appears to staff. Facility structure changes start from here.",
-    },
-    {
-      tab: "billing",
-      title: "Billing & Claims",
-      desc: "Confirm the billing queue and PhilHealth eClaims readiness indicators are reporting correctly.",
+      tab: "staff",
+      title: "Staff & Access",
+      desc: "Manage staff accounts and roles, and search or export the audit log. The IT portal never shows patient clinical data.",
     },
     {
       tab: "inventory",
@@ -136,15 +111,15 @@ export const DEMO_STEPS: Record<StaffRole, DemoStep[]> = {
 
 export const TAB_FEATURES: Record<TabId, string[]> = {
   dashboard: [
+    "Acknowledge MEWS alerts",
     "Live bed occupancy stats",
     "Revenue & billing overview",
-    "Active patient count",
-    "Staff on duty tracker",
+    "Patient risk feed",
     "Admission trend charts",
   ],
   patients: [
     "Search & filter patients",
-    "View full patient records",
+    "Chart vitals with MEWS",
     "Diagnosis & room details",
     "Assigned doctor info",
     "Patient history timeline",
@@ -164,7 +139,7 @@ export const TAB_FEATURES: Record<TabId, string[]> = {
     "Send back to prescriber",
   ],
   lab: [
-    "View test requests",
+    "Order lab & radiology tests",
     "Pending & completed results",
     "Patient-linked diagnostics",
     "Result timestamps",
@@ -190,6 +165,13 @@ export const TAB_FEATURES: Record<TabId, string[]> = {
     "Reorder alerts",
     "Department stock view",
     "Supply request log",
+  ],
+  staff: [
+    "Staff accounts & roles",
+    "Second approval for role changes",
+    "Searchable audit log",
+    "Audit CSV export",
+    "Searches are logged too",
   ],
   architecture: [
     "Tech stack overview",
@@ -217,5 +199,6 @@ export const TAB_EMOJI: Record<TabId, string> = {
   billing: "💰",
   inventory: "📦",
   architecture: "🖥️",
+  staff: "🛡️",
   profile: "👤",
 };

@@ -10,6 +10,7 @@ import {
   Package,
   Pill,
   Receipt,
+  ShieldCheck,
   User,
   Users,
   type LucideIcon,
@@ -26,6 +27,7 @@ export type TabId =
   | "billing"
   | "inventory"
   | "architecture"
+  | "staff"
   | "profile";
 
 interface TabConfig {
@@ -79,7 +81,12 @@ export const TABS: Record<TabId, TabConfig> = {
   architecture: {
     label: "Architecture",
     icon: Database,
-    description: "Service health, logs, and the auth sandbox.",
+    description: "Service health, the event bus, and the access sandbox.",
+  },
+  staff: {
+    label: "Staff & Access",
+    icon: ShieldCheck,
+    description: "Staff accounts, roles, and the audit log.",
   },
   profile: {
     label: "Profile",
@@ -91,15 +98,7 @@ export const TABS: Record<TabId, TabConfig> = {
 export const ROLE_TABS: Record<StaffRole, TabId[]> = {
   Doctor: ["dashboard", "patients", "prescription", "pharmacy", "lab", "rooms", "billing", "profile"],
   Nurse: ["dashboard", "patients", "pharmacy", "rooms", "lab", "billing", "profile"],
-  IT: [
-    "architecture",
-    "dashboard",
-    "patients",
-    "pharmacy",
-    "lab",
-    "rooms",
-    "billing",
-    "inventory",
-    "profile",
-  ],
+  // The paper's IT portal has no clinical modules and no patient data
+  // (RA 10173), so IT gets system screens only.
+  IT: ["architecture", "staff", "inventory", "profile"],
 };

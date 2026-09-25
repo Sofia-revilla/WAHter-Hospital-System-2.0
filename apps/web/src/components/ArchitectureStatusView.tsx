@@ -1,19 +1,19 @@
 // WAHter — ArchitectureStatusView.tsx
-// IT Admin's architecture monitor: service status cards, an RBAC request
-// sandbox, a JSONB record viewer, a cache panel, and a live log feed.
-// Everything here is simulated for the prototype demo: no real requests,
-// no real cache. TODO(Phase 9c): replace with live /health data from each
-// service and the Audit Log transaction feed (see DECISIONS.md D-028).
+// IT Admin's architecture monitor, matching the paper's stack (TABLE IX):
+// Nginx → Kong → 8 NestJS services, RabbitMQ, PostgreSQL schema-per-service,
+// Docker Compose. No patient data on this screen (IT portal, RA 10173).
+// Everything is simulated in the browser for the prototype demo.
+// TODO(Phase 9c): replace with live /health checks and the Audit Log's
+// transaction feed once the services are running.
 
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Power, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type SandboxRole = "GUEST" | "NURSE" | "DOCTOR";
-type SandboxTab = "interceptor" | "jsonb";
-type PatientId = "WAH-2026-00001" | "WAH-2026-00002";
-type FetchSource = "None" | "Database (Supabase PostgreSQL JSONB)" | "Cache (Redis Node)";
+type SandboxTab = "rbac" | "schemas";
 type LogType = "info" | "warn" | "success" | "err";
 
 interface LogEntry {
@@ -23,42 +23,20 @@ interface LogEntry {
   message: string;
 }
 
-interface CacheMetrics {
-  hitRate: number;
-  keysCount: number;
-  memory: string;
-}
-
 // ─── SIMULATION DATA ───
 
 const MAX_LOGS = 10;
 const REQUEST_DELAY_MS = 800;
-const FLUSH_DELAY_MS = 1200;
-const CACHE_HIT_CHANCE = 0.4;
 
 const INITIAL_LOGS: LogEntry[] = [
-  {
-    id: 1,
-    time: "04:28:18",
-    type: "info",
-    message: "Hospital Compose environment initialized on subnet 172.24.0.0/16",
-  },
-  {
-    id: 2,
-    time: "04:28:19",
-    type: "success",
-    message: "NestJS controller bindings parsed: POST /api/auth, GET /api/patients",
-  },
-  {
-    id: 3,
-    time: "04:28:20",
-    type: "success",
-    message: "Database connected. SSL handshake completed with Supabase cluster.",
-  },
+  { id: 1, time: "04:28:15", type: "info", message: "docker compose up: 13 containers on network wah-net" },
+  { id: 2, time: "04:28:17", type: "success", message: "postgres: 8 service schemas ready, one DB user each" },
+  { id: 3, time: "04:28:18", type: "success", message: "rabbitmq: topic exchange wah.events declared (with DLQ)" },
+  { id: 4, time: "04:28:20", type: "success", message: "kong: DB-less config loaded, 8 routes under /api/*" },
 ];
 
-// Demo tokens only. The payload segments decode to harmless role/name claims
-// and the "signatures" are placeholder strings, not real keys.
+// Demo tokens only. The payload part decodes to a harmless name/role claim
+// and the "signature" is a placeholder string, not a real key.
 const ROLE_TOKENS: Record<SandboxRole, string> = {
   GUEST:
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiR3Vlc3QgT3BlcmF0b3IiLCJyb2xlIjoiR3Vlc3QifQ.none",
@@ -68,55 +46,94 @@ const ROLE_TOKENS: Record<SandboxRole, string> = {
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiSm9uYXRoYW4gU21pdGgiLCJyb2xlIjoiRG9jdG9yIiwiZGVwdCI6IkNhcmRpbyJ9.validated_signed_rsa",
 };
 
-const PATIENT_NAMES: Record<PatientId, string> = {
-  "WAH-2026-00001": "James Smith",
-  "WAH-2026-00002": "Mary Johnson",
-};
+interface SandboxEndpoint {
+  id: string;
+  label: string;
+  path: string;
+  service: string;
+  schema: string;
+  allowed: SandboxRole[];
+  useCase: string;
+}
 
-const VITALS_DATA: Record<PatientId, object> = {
-  "WAH-2026-00001": {
-    patientId: "WAH-2026-00001",
-    name: "James Smith",
-    clinicalData: {
-      vitalsHistory: [
-        { stamp: "2026-05-19T06:00:00Z", bp: "120/80", hr: 72, temp: 36.8, rr: 16 },
-        { stamp: "2026-05-20T04:00:00Z", bp: "118/76", hr: 70, temp: 36.6, rr: 14 },
-      ],
-      pastHistory: ["Type-2 Diabetes", "Hypertension"],
-      allergies: ["Penicillin"],
-      unstructuredDoctorNotes:
-        "Patient stable. MEWS score reflects consistent recovery. Scheduled discharge protocol phase 2.",
-    },
+// The allowed roles mirror the paper's use case actors
+const ENDPOINTS: SandboxEndpoint[] = [
+  {
+    id: "vitals",
+    label: "Chart vital signs",
+    path: "POST /api/clinical-records/vitals",
+    service: "clinical-records",
+    schema: "clinical",
+    allowed: ["NURSE", "DOCTOR"],
+    useCase: "UC-05",
   },
-  "WAH-2026-00002": {
-    patientId: "WAH-2026-00002",
-    name: "Mary Johnson",
-    clinicalData: {
-      vitalsHistory: [
-        { stamp: "2026-05-19T06:00:00Z", bp: "142/95", hr: 98, temp: 38.5, rr: 22 },
-        { stamp: "2026-05-20T04:00:00Z", bp: "138/92", hr: 96, temp: 38.2, rr: 20 },
-      ],
-      pastHistory: ["Chronic Renal Insufficiency", "Asthma"],
-      allergies: ["Sulfonamides", "Aspirin"],
-      unstructuredDoctorNotes:
-        "Persistent hyperpyrexia despite antipyretics. Started IV cephalosporins with renal dose adjustment; reassess in 24 hours.",
-    },
+  {
+    id: "prescribe",
+    label: "Prescribe medication",
+    path: "POST /api/orders-diagnostics/medication-orders",
+    service: "orders-diagnostics",
+    schema: "orders",
+    allowed: ["DOCTOR"],
+    useCase: "UC-09",
   },
-};
+  {
+    id: "soa",
+    label: "Generate statement of account",
+    path: "POST /api/billing/soa",
+    service: "billing",
+    schema: "billing",
+    allowed: [],
+    useCase: "UC-12, Billing Staff only",
+  },
+];
+
+// One row per Functional Service Area (paper TABLE IV), each with its own
+// schema and DB user and no cross-schema foreign keys
+const SERVICE_SCHEMAS = [
+  { service: "identity", schema: "identity", owns: "users, roles, patients (MPI)", publishes: "patient.registered" },
+  {
+    service: "clinical-records",
+    schema: "clinical",
+    owns: "encounters, diagnoses, vitals, notes",
+    publishes: "vitals.recorded, mews.alert, encounter.discharged",
+  },
+  {
+    service: "scheduling",
+    schema: "scheduling",
+    owns: "wards, rooms, beds, admissions",
+    publishes: "encounter.admitted, bed.assigned",
+  },
+  {
+    service: "orders-diagnostics",
+    schema: "orders",
+    owns: "orders, prescriptions, dispenses, results",
+    publishes: "order.created, medication.dispensed, result.released",
+  },
+  {
+    service: "billing",
+    schema: "billing",
+    owns: "charges, invoices, payments",
+    publishes: "charge.posted, invoice.updated, claim.package.ready",
+  },
+  {
+    service: "interoperability",
+    schema: "interop",
+    owns: "claims, claim_forms, fhir_exchanges, referrals",
+    publishes: "claim.status.changed",
+  },
+  { service: "notifications", schema: "notifications", owns: "alerts, deliveries", publishes: "(consumes events)" },
+  { service: "audit-log", schema: "audit", owns: "audit_entries (append-only)", publishes: "(consumes audit.event)" },
+];
 
 const LOG_BADGE: Record<LogType, string> = {
-  info: "bg-blue-500/15 text-blue-400",
-  warn: "bg-amber-500/15 text-amber-500",
-  success: "bg-emerald-500/15 text-emerald-500",
+  info: "bg-blue-500/15 text-blue-500",
+  warn: "bg-amber-500/15 text-amber-600",
+  success: "bg-emerald-500/15 text-emerald-600",
   err: "bg-red-500/15 text-red-500",
 };
 
 function currentTime() {
   return new Date().toLocaleTimeString("en-GB", { hour12: false });
-}
-
-function parseMegabytes(memory: string) {
-  return Number.parseFloat(memory) || 0;
 }
 
 // ─── SERVICE CARDS ───
@@ -126,6 +143,7 @@ interface ServiceCardProps {
   labelClass: string;
   borderClass: string;
   status: string;
+  isDown?: boolean;
   name: string;
   sub: string;
   footer: string;
@@ -136,6 +154,7 @@ function ServiceCard({
   labelClass,
   borderClass,
   status,
+  isDown,
   name,
   sub,
   footer,
@@ -153,8 +172,8 @@ function ServiceCard({
         </span>
         <span
           className={cn(
-            "rounded-full bg-emerald-500/10 px-2 py-0.5",
-            "text-[9px] font-black uppercase text-emerald-500",
+            "rounded-full px-2 py-0.5 text-[9px] font-black uppercase",
+            isDown ? "bg-amber-500/10 text-amber-600" : "bg-emerald-500/10 text-emerald-600",
           )}
         >
           {status}
@@ -180,21 +199,21 @@ function ServiceCard({
 
 export function ArchitectureStatusView() {
   const [selectedRole, setSelectedRole] = useState<SandboxRole>("GUEST");
-  const [activeTab, setActiveTab] = useState<SandboxTab>("interceptor");
-  const [isFlushingCache, setIsFlushingCache] = useState(false);
+  const [endpointId, setEndpointId] = useState(ENDPOINTS[0].id);
+  const [activeTab, setActiveTab] = useState<SandboxTab>("rbac");
   const [isRequesting, setIsRequesting] = useState(false);
-  const [cacheMetrics, setCacheMetrics] = useState<CacheMetrics>({
-    hitRate: 98.4,
-    keysCount: 18,
-    memory: "1.25 MB",
-  });
-  const [selectedPatientId, setSelectedPatientId] = useState<PatientId>("WAH-2026-00001");
-  const [dbFetchSource, setDbFetchSource] = useState<FetchSource>("None");
+  const [lastRoute, setLastRoute] = useState<string | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>(INITIAL_LOGS);
+
+  // event bus simulation
+  const [isNotificationsUp, setIsNotificationsUp] = useState(true);
+  const [published, setPublished] = useState(128);
+  const [delivered, setDelivered] = useState(128);
+  const [waiting, setWaiting] = useState(0);
 
   const nextLogId = useRef(INITIAL_LOGS.length + 1);
   const logListRef = useRef<HTMLUListElement>(null);
-  // pending setTimeouts, cleared on unmount so switching tabs mid-request
+  // pending setTimeouts, cleared on unmount so leaving the tab mid-request
   // doesn't set state on an unmounted component
   const timers = useRef<number[]>([]);
 
@@ -208,6 +227,8 @@ export function ArchitectureStatusView() {
     logListRef.current?.scrollTo({ top: logListRef.current.scrollHeight, behavior: "smooth" });
   }, [logs]);
 
+  const endpoint = ENDPOINTS.find((candidate) => candidate.id === endpointId) ?? ENDPOINTS[0];
+
   function addLog(type: LogType, message: string) {
     const entry: LogEntry = { id: nextLogId.current++, time: currentTime(), type, message };
     setLogs((current) => [...current, entry].slice(-MAX_LOGS));
@@ -219,73 +240,64 @@ export function ArchitectureStatusView() {
 
   function selectRole(role: SandboxRole) {
     setSelectedRole(role);
-    addLog("info", `Simulated client login swapped to: Role [${role}]`);
+    addLog("info", `Sandbox token swapped to role [${role}]`);
   }
 
-  function triggerMockApiRequest() {
+  function sendRequest() {
     const role = selectedRole;
-    const patientId = selectedPatientId;
-    const token = ROLE_TOKENS[role];
+    const target = endpoint;
 
     setIsRequesting(true);
-    addLog("info", `Securing path [GET /api/patients/${patientId}/clinical-data]`);
-    addLog("info", `Header attached: Authorization: Bearer ${token.slice(0, 24)}…`);
+    setLastRoute(null);
+    addLog("info", `nginx → kong: ${target.path}`);
 
     later(() => {
       setIsRequesting(false);
 
       if (role === "GUEST") {
-        setDbFetchSource("None");
-        addLog("err", "HTTP 401 Unauthorized - No valid session token supplied");
+        addLog("err", "kong: 401 Unauthorized, no valid JWT on the request");
+        setLastRoute("Stopped at Kong (401)");
         return;
       }
 
-      if (role === "NURSE") {
-        setDbFetchSource("None");
-        addLog("warn", "RBAC guard rejected scope [clinical-data:read] for role [NURSE]");
-        addLog("err", "HTTP 403 Forbidden - Role [NURSE] lacks permission for this resource");
+      addLog("info", `kong: JWT ok, routed to ${target.service}`);
+      if (!target.allowed.includes(role)) {
+        addLog("warn", `${target.service}: role guard rejected [${role}] (${target.useCase})`);
+        addLog("err", "HTTP 403 Forbidden");
+        setLastRoute(`Kong → ${target.service} (403 at the role guard)`);
         return;
       }
 
-      const isCacheHit = cacheMetrics.keysCount > 0 && Math.random() < CACHE_HIT_CHANCE;
-
-      if (isCacheHit) {
-        setDbFetchSource("Cache (Redis Node)");
-        setCacheMetrics((current) => ({
-          ...current,
-          hitRate: Math.min(current.hitRate + 0.2, 99.9),
-        }));
-        addLog("success", `Redis Cache HIT for key [patient:clinical:${patientId}]`);
-      } else {
-        setDbFetchSource("Database (Supabase PostgreSQL JSONB)");
-        setCacheMetrics((current) =>
-          current.keysCount === 0
-            ? { hitRate: 15.2, keysCount: 1, memory: "0.15 MB" }
-            : {
-                ...current,
-                keysCount: current.keysCount + 1,
-                memory: `${(parseMegabytes(current.memory) + 0.08).toFixed(2)} MB`,
-              },
-        );
-        addLog("success", "Redis Cache MISS. Directed query to SQL and cached the JSONB row");
-      }
-
-      addLog(
-        "success",
-        `HTTP 200 OK - Return structured clinical payload for ${PATIENT_NAMES[patientId]}`,
-      );
+      addLog("success", `${target.service}: wrote to schema "${target.schema}", 201 Created`);
+      setLastRoute(`Kong → ${target.service} → PostgreSQL (${target.schema} schema)`);
     }, REQUEST_DELAY_MS);
   }
 
-  function flushCache() {
-    setIsFlushingCache(true);
-    addLog("warn", "FLUSHALL issued to Redis node — evicting session keys");
+  function publishTestEvent() {
+    setPublished((count) => count + 1);
+    if (isNotificationsUp) {
+      setDelivered((count) => count + 1);
+      addLog("success", "wah.events: vitals.recorded → notifications, audit-log (delivered)");
+    } else {
+      setWaiting((count) => count + 1);
+      addLog("warn", "notifications is down: vitals.recorded is waiting in its queue");
+      addLog("success", "clinical-records kept working, vitals were still saved (fault isolation)");
+    }
+  }
 
-    later(() => {
-      setCacheMetrics({ hitRate: 0, keysCount: 0, memory: "0.00 MB" });
-      setIsFlushingCache(false);
-      addLog("success", "Redis cache buffer flushed. 0 keys remaining");
-    }, FLUSH_DELAY_MS);
+  function toggleNotifications() {
+    if (isNotificationsUp) {
+      setIsNotificationsUp(false);
+      addLog("warn", "docker: notifications container stopped (simulated failure)");
+      return;
+    }
+    setIsNotificationsUp(true);
+    addLog("info", "docker: notifications container started");
+    if (waiting > 0) {
+      addLog("success", `notifications: caught up on ${waiting} queued event(s)`);
+      setDelivered((count) => count + waiting);
+      setWaiting(0);
+    }
   }
 
   const services: ServiceCardProps[] = [
@@ -294,36 +306,55 @@ export function ArchitectureStatusView() {
       labelClass: "text-[#a855f7]",
       borderClass: "border-l-foreground",
       status: "Online",
-      name: "Next.js Framework",
-      sub: "Type-Safe Client Container",
-      footer: "Port: 3000 • SSR & Hydration Status: OK",
+      name: "Next.js",
+      sub: "Role-based portals",
+      footer: "Port 3000 • talks to the gateway only",
     },
     {
-      label: "REST Gateway",
+      label: "Reverse Proxy",
+      labelClass: "text-slate-500",
+      borderClass: "border-l-slate-400",
+      status: "Online",
+      name: "Nginx",
+      sub: "Single entry point",
+      footer: "Port 80 • forwards /api to Kong",
+    },
+    {
+      label: "API Gateway",
       labelClass: "text-wah-neon",
       borderClass: "border-l-wah-purple",
       status: "Active",
-      name: "NestJS Controller",
-      sub: "Guard Interceptors Enabled",
-      footer: "Port: 3001 • JWT Strategy: Verified",
+      name: "Kong (DB-less)",
+      sub: "JWT check, rate limits, CORS",
+      footer: "Port 8000 • 8 routes",
     },
     {
-      label: "PostgreSQL Engine",
-      labelClass: "text-amber-500",
+      label: "Microservices",
+      labelClass: "text-rose-500",
+      borderClass: "border-l-rose-500",
+      status: isNotificationsUp ? "8 / 8 up" : "7 / 8 up",
+      isDown: !isNotificationsUp,
+      name: "NestJS × 8 FSAs",
+      sub: "One container per service",
+      footer: isNotificationsUp ? "All /health checks OK" : "notifications /health failing",
+    },
+    {
+      label: "Event Bus",
+      labelClass: "text-orange-500",
+      borderClass: "border-l-orange-500",
+      status: "Running",
+      name: "RabbitMQ",
+      sub: "Topic exchange wah.events",
+      footer: `Queued: ${waiting} • DLQ: 0`,
+    },
+    {
+      label: "Database",
+      labelClass: "text-amber-600",
       borderClass: "border-l-amber-500",
       status: "Connected",
-      name: "Supabase Database",
-      sub: "Hybrid Tables + JSONB",
-      footer: "Pool: 12/20 • DB Engine: v15.4",
-    },
-    {
-      label: "Cache Cluster",
-      labelClass: "text-red-500",
-      borderClass: "border-l-red-500",
-      status: "Ready",
-      name: "Redis Node",
-      sub: `Hit Matrix: ${cacheMetrics.hitRate.toFixed(1)}%`,
-      footer: `Keys: ${cacheMetrics.keysCount} • Mem: ${cacheMetrics.memory}`,
+      name: "PostgreSQL",
+      sub: "Schema per service",
+      footer: "8 schemas • 8 DB users",
     },
     {
       label: "Orchestrator",
@@ -331,8 +362,8 @@ export function ArchitectureStatusView() {
       borderClass: "border-l-blue-500",
       status: "Running",
       name: "Docker Compose",
-      sub: "4 Container Pods Active",
-      footer: "Subnet: 172.24.0.0/16 • CPU: 2.1%",
+      sub: "Local deployment",
+      footer: isNotificationsUp ? "13 / 13 containers" : "12 / 13 containers",
     },
   ];
 
@@ -359,7 +390,7 @@ export function ArchitectureStatusView() {
         <h2 className="text-3xl font-bold tracking-tight">Infrastructure Stack Panel</h2>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
         {services.map((service) => (
           <ServiceCard key={service.name} {...service} />
         ))}
@@ -372,24 +403,24 @@ export function ArchitectureStatusView() {
               <button
                 type="button"
                 role="tab"
-                aria-selected={activeTab === "interceptor"}
-                onClick={() => setActiveTab("interceptor")}
-                className={sandboxTab("interceptor")}
+                aria-selected={activeTab === "rbac"}
+                onClick={() => setActiveTab("rbac")}
+                className={sandboxTab("rbac")}
               >
-                JWT &amp; RBAC Interceptors Tester
+                JWT &amp; RBAC Tester
               </button>
               <button
                 type="button"
                 role="tab"
-                aria-selected={activeTab === "jsonb"}
-                onClick={() => setActiveTab("jsonb")}
-                className={sandboxTab("jsonb")}
+                aria-selected={activeTab === "schemas"}
+                onClick={() => setActiveTab("schemas")}
+                className={sandboxTab("schemas")}
               >
-                PostgreSQL JSONB Column Viewer
+                Service Schemas
               </button>
             </div>
 
-            {activeTab === "interceptor" ? (
+            {activeTab === "rbac" ? (
               <div className="space-y-6">
                 <p className="text-xs font-black uppercase tracking-widest text-[#d8b4fe]">
                   Role-Based Access Sandbox
@@ -398,7 +429,7 @@ export function ArchitectureStatusView() {
                 <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-2">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-text-muted">
-                      Simulated User JWT Token Role
+                      Simulated user token role
                     </p>
                     <div className="flex gap-2">
                       {(["GUEST", "NURSE", "DOCTOR"] as const).map((role) => (
@@ -417,25 +448,28 @@ export function ArchitectureStatusView() {
 
                   <label className="block space-y-2">
                     <span className="text-[10px] font-bold uppercase tracking-widest text-text-muted">
-                      Target Directory Patient ID
+                      Endpoint
                     </span>
                     <select
-                      value={selectedPatientId}
-                      onChange={(event) => setSelectedPatientId(event.target.value as PatientId)}
+                      value={endpointId}
+                      onChange={(event) => setEndpointId(event.target.value)}
                       className={cn(
                         "w-full rounded-xl border border-glass-border bg-glass-bg px-3 py-2",
                         "text-sm text-foreground outline-none focus:border-wah-purple",
                       )}
                     >
-                      <option value="WAH-2026-00001">James Smith (WAH-2026-00001)</option>
-                      <option value="WAH-2026-00002">Mary Johnson (WAH-2026-00002)</option>
+                      {ENDPOINTS.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.label} ({option.useCase})
+                        </option>
+                      ))}
                     </select>
                   </label>
                 </div>
 
                 <div className="rounded-xl border border-slate-800 bg-slate-950 p-3">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-wah-neon">
-                    Generated Bearer JWT Signature Token:
+                    Bearer token sent with the request:
                   </p>
                   <p className="mt-2 break-all font-mono text-[10px] text-slate-300">
                     {ROLE_TOKENS[selectedRole]}
@@ -445,7 +479,7 @@ export function ArchitectureStatusView() {
                 <div className="flex flex-wrap items-center gap-4">
                   <button
                     type="button"
-                    onClick={triggerMockApiRequest}
+                    onClick={sendRequest}
                     disabled={isRequesting}
                     className={cn(
                       "rounded-xl bg-wah-purple px-8 py-3.5 text-sm font-bold text-white shadow-lg",
@@ -453,101 +487,112 @@ export function ArchitectureStatusView() {
                       "disabled:cursor-wait disabled:opacity-70 disabled:hover:scale-100",
                     )}
                   >
-                    Send Restricted API Request (<code>GET /clinical-data</code>)
+                    Send <code>{endpoint.path}</code>
                   </button>
-                  {dbFetchSource !== "None" && (
+                  {lastRoute && (
                     <span
                       className={cn(
                         "rounded-full bg-wah-neon/10 px-3 py-1.5",
                         "font-mono text-[10px] font-bold uppercase text-wah-neon",
                       )}
                     >
-                      Fetch Path Source: {dbFetchSource}
+                      Route: {lastRoute}
                     </span>
                   )}
                 </div>
               </div>
             ) : (
-              <div className="space-y-6">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-widest text-[#d8b4fe]">
-                    PostgreSQL Hybrid Relational + JSONB Schema
-                  </p>
-                  <p className="mt-2 text-sm text-text-muted">
-                    Core identity fields (patient ID, name) live in ordinary relational columns so they
-                    can be indexed and joined. Semi-structured clinical detail such as vitals history,
-                    allergies and free-text notes sits in a single JSONB column on the same row, which
-                    keeps the schema stable while the clinical data grows.
-                  </p>
-                </div>
-
-                <div className="flex gap-2">
-                  {(Object.keys(PATIENT_NAMES) as PatientId[]).map((patientId) => (
-                    <button
-                      key={patientId}
-                      type="button"
-                      aria-pressed={selectedPatientId === patientId}
-                      onClick={() => setSelectedPatientId(patientId)}
-                      className={cn(
-                        "rounded-xl border px-4 py-2 text-xs font-bold transition-colors",
-                        selectedPatientId === patientId
-                          ? "border-amber-400/40 bg-amber-400/10 text-amber-500"
-                          : "border-glass-border text-text-muted hover:text-foreground",
-                      )}
-                    >
-                      {PATIENT_NAMES[patientId]}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-yellow-400">
-                    SQL DB Record Row Mapping:
-                  </p>
-                  <pre className="mt-3 overflow-x-auto font-mono text-[11px] leading-relaxed text-slate-300">
-                    {JSON.stringify(VITALS_DATA[selectedPatientId], null, 2)}
-                  </pre>
+              <div className="space-y-4">
+                <p className="text-sm text-text-muted">
+                  One PostgreSQL instance, one schema and one database user per service. Services
+                  never query each other&apos;s schema; they share data through events on the bus.
+                </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[640px] text-left text-sm">
+                    <thead>
+                      <tr
+                        className={cn(
+                          "border-b border-glass-border",
+                          "text-[10px] font-bold uppercase tracking-widest text-text-muted",
+                        )}
+                      >
+                        <th className="pb-3">Service</th>
+                        <th className="pb-3">Schema</th>
+                        <th className="pb-3">Owns</th>
+                        <th className="pb-3">Publishes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {SERVICE_SCHEMAS.map((row) => (
+                        <tr key={row.service} className="border-b border-glass-border/50">
+                          <td className="py-2.5 pr-4 font-semibold">{row.service}</td>
+                          <td className="py-2.5 pr-4 font-mono text-xs text-wah-neon">{row.schema}</td>
+                          <td className="py-2.5 pr-4 text-xs text-text-muted">{row.owns}</td>
+                          <td className="py-2.5 font-mono text-[11px] text-text-muted">
+                            {row.publishes}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}
           </section>
 
-          <section className="glass rounded-[2rem] border-l-4 border-l-red-500/50 p-8">
+          <section className="glass rounded-[2rem] border-l-4 border-l-orange-500/50 p-8">
             <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
               <div className="space-y-4">
-                <h3 className="text-lg font-bold">Redis Caching (IOREDIS Service Layer)</h3>
+                <h3 className="text-lg font-bold">Event Bus (RabbitMQ)</h3>
+                <p className="max-w-md text-sm text-text-muted">
+                  Stop the Notifications service and publish an event: vitals still save, and the
+                  event waits in the queue until the service comes back.
+                </p>
                 <div className="grid grid-cols-3 gap-4 font-mono text-[10px] uppercase text-text-muted">
                   <p>
-                    Keys in session: <span className="text-foreground">{cacheMetrics.keysCount}</span>
+                    Published: <span className="text-foreground">{published}</span>
                   </p>
                   <p>
-                    Cache hit ratio:{" "}
-                    <span className="text-foreground">{cacheMetrics.hitRate.toFixed(1)}%</span>
+                    Delivered: <span className="text-foreground">{delivered}</span>
                   </p>
                   <p>
-                    Allocated memory: <span className="text-foreground">{cacheMetrics.memory}</span>
+                    Waiting: <span className="text-foreground">{waiting}</span>
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={flushCache}
-                disabled={isFlushingCache}
-                className={cn(
-                  "shrink-0 rounded-xl border border-red-500/20 bg-red-500/10 px-5 py-3",
-                  "text-xs font-black uppercase tracking-widest text-red-500",
-                  "transition-colors hover:bg-red-500/20 disabled:cursor-wait disabled:opacity-70",
-                )}
-              >
-                {isFlushingCache ? "Flushing Ex…" : "Flush Redis Cache Buffer"}
-              </button>
+              <div className="flex shrink-0 flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={publishTestEvent}
+                  className={cn(
+                    "flex items-center justify-center gap-2 rounded-xl bg-wah-purple px-5 py-3",
+                    "text-xs font-black uppercase tracking-widest text-white hover:bg-wah-neon",
+                  )}
+                >
+                  <Send size={14} /> Publish vitals.recorded
+                </button>
+                <button
+                  type="button"
+                  onClick={toggleNotifications}
+                  className={cn(
+                    "flex items-center justify-center gap-2 rounded-xl border px-5 py-3",
+                    "text-xs font-black uppercase tracking-widest transition-colors",
+                    isNotificationsUp
+                      ? "border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500/20"
+                      : "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20",
+                  )}
+                >
+                  <Power size={14} />
+                  {isNotificationsUp ? "Stop Notifications" : "Start Notifications"}
+                </button>
+              </div>
             </div>
           </section>
         </div>
 
         <section className="glass min-w-0 rounded-[2rem] p-8 xl:col-span-4">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-bold">Docker Compose Node Logs</h3>
+            <h3 className="text-lg font-bold">Docker Compose Logs</h3>
             <span className="relative flex h-2.5 w-2.5">
               <span
                 className={cn(
