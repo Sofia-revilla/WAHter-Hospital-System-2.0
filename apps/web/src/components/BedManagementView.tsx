@@ -5,7 +5,7 @@ import { motion } from "motion/react";
 import { Activity, Bed, History, Network, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { can } from "@/lib/staff";
-import { bedLabel } from "@/lib/beds";
+import { bedLabel, wardLabel } from "@/lib/beds";
 import { useData } from "@/context/DataContext";
 import type { StaffRole, Ward } from "@/types";
 import { AdmitDialog, type AdmitPreset } from "./AdmitDialog";
@@ -127,12 +127,19 @@ export function BedManagementView({ role, staffName }: BedManagementViewProps) {
   // admitting and moving patients between beds is the registrar's or nurse's job (UC-04)
   const canManageBeds = can(role, "admitPatient");
   const [admitPreset, setAdmitPreset] = useState<AdmitPreset | null>(null);
+  // "all", "free" (only wards with a free bed), or a single ward id
+  const [wardFilter, setWardFilter] = useState("all");
 
   const occupiedByWard = new Map(wards.map((ward) => [ward.id, occupiedBeds(ward.id)]));
   const totalBeds = wards.reduce((sum, ward) => sum + ward.capacity, 0);
   const takenBeds = [...occupiedByWard.values()].reduce((sum, beds) => sum + beds.length, 0);
   const freeCount = (ward: Ward) => ward.capacity - (occupiedByWard.get(ward.id)?.length ?? 0);
   const nearEmptyWards = wards.filter((ward) => freeCount(ward) > NEAR_EMPTY_THRESHOLD);
+  const visibleWards = wards.filter((ward) => {
+    if (wardFilter === "all") return true;
+    if (wardFilter === "free") return freeCount(ward) > 0;
+    return ward.id === wardFilter;
+  });
 
   function occupantNamesFor(wardId: string) {
     const names = new Map<number, string>();
@@ -198,21 +205,42 @@ export function BedManagementView({ role, staffName }: BedManagementViewProps) {
                   : "Hover a bed to see its number."}
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-4 text-xs text-text-muted">
-              <span className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full bg-wah-purple" /> Occupied
-              </span>
-              <span className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full bg-wah-neon" /> Admitted today
-              </span>
-              <span className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full border border-glass-border bg-glass-bg" /> Available
-              </span>
-            </div>
+            <select
+              value={wardFilter}
+              onChange={(event) => setWardFilter(event.target.value)}
+              aria-label="Show ward"
+              className={cn(
+                "rounded-lg border border-glass-border bg-glass-bg px-3 py-2 text-sm",
+                "text-foreground outline-none focus:ring-1 focus:ring-wah-purple",
+              )}
+            >
+              <option value="all">All wards</option>
+              <option value="free">Only wards with free beds</option>
+              {wards.map((ward) => (
+                <option key={ward.id} value={ward.id}>
+                  {wardLabel(ward)} · {freeCount(ward)} free
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-text-muted">
+            <span className="flex items-center gap-2">
+              <span className="h-3 w-3 rounded-full bg-wah-purple" /> Occupied
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="h-3 w-3 rounded-full bg-wah-neon" /> Admitted today
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="h-3 w-3 rounded-full border border-glass-border bg-glass-bg" /> Available
+            </span>
           </div>
 
           <div className="mt-6 grid gap-6 lg:grid-cols-2">
-            {wards.map((ward) => (
+            {visibleWards.length === 0 && (
+              <p className="text-sm text-text-muted">No ward has a free bed right now.</p>
+            )}
+            {visibleWards.map((ward) => (
               <WardCard
                 key={ward.id}
                 ward={ward}

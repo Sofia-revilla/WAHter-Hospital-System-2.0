@@ -1,32 +1,13 @@
 "use client";
 
 import { Activity, Bed, FlaskConical, Plus, Users } from "lucide-react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Legend,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import { cn } from "@/lib/utils";
 import { useData } from "@/context/DataContext";
 import { wardLabel } from "@/lib/beds";
-import { riskLevelFor, type RiskLevel } from "@/lib/mews";
 import { MewsAlertsPanel } from "./MewsAlertsPanel";
 import { PatientCard } from "./PatientCard";
+import { PatientFlowChart } from "./PatientFlowChart";
 import { StatCard } from "./StatCard";
-
-// Recharts writes these straight into SVG attributes, where var(--…) doesn't
-// resolve, so the chart gets literal hex values. Same shades as MewsChip.
-const RISK_COLORS: Record<RiskLevel, string> = {
-  Low: "#10b981",
-  Medium: "#fb923c",
-  High: "#f43f5e",
-};
-const AXIS_GREY = "#8b87b0";
 
 function twoDigits(count: number) {
   return String(count).padStart(2, "0");
@@ -82,16 +63,6 @@ export function DashboardView({ isLight, staffName }: DashboardViewProps) {
     },
   ];
 
-  // MEWS risk per department, the paper's early-warning view (objective 4)
-  const departments = [...new Set(patients.map((patient) => patient.department))];
-  const riskByDepartment = departments.map((department) => {
-    const counts = { Low: 0, Medium: 0, High: 0 };
-    patients
-      .filter((patient) => patient.department === department)
-      .forEach((patient) => counts[riskLevelFor(patient.mewsScore)]++);
-    return { department, ...counts };
-  });
-
   const today = new Date().toLocaleDateString("en-PH", {
     weekday: "long",
     month: "long",
@@ -105,7 +76,7 @@ export function DashboardView({ isLight, staffName }: DashboardViewProps) {
         <div>
           <p className="text-sm font-semibold text-wah-purple">{today}</p>
           <h2 className="text-2xl font-bold tracking-tight">Hospital Operations Center</h2>
-          <p className="text-sm text-text-muted">Ward census, patient risk, and pending work.</p>
+          <p className="text-sm text-text-muted">Ward census, patient flow, and pending work.</p>
         </div>
         <div className="glass flex items-center gap-2 rounded-lg px-3 py-2">
           <span className="relative flex h-2.5 w-2.5">
@@ -126,65 +97,7 @@ export function DashboardView({ isLight, staffName }: DashboardViewProps) {
         {/* min-w-0: grid items default to min-width:auto, so a wide child could
             push the whole column wider than the screen on tablets */}
         <div className="min-w-0 space-y-6 xl:col-span-8">
-          <section className="glass rounded-xl p-5">
-            <div className="mb-4">
-              <h3 className="font-bold">Patient Risk by Department</h3>
-              <p className="text-xs text-text-muted">Latest MEWS for each admitted patient</p>
-            </div>
-
-            <div className="h-[280px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={riskByDepartment} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid
-                    strokeDasharray="4 4"
-                    vertical={false}
-                    stroke={isLight ? "rgba(109,40,217,0.12)" : "rgba(168,85,247,0.18)"}
-                  />
-                  <XAxis
-                    dataKey="department"
-                    stroke={AXIS_GREY}
-                    axisLine={false}
-                    tickLine={false}
-                    fontSize={12}
-                  />
-                  <YAxis
-                    stroke={AXIS_GREY}
-                    axisLine={false}
-                    tickLine={false}
-                    fontSize={12}
-                    allowDecimals={false}
-                  />
-                  <Tooltip
-                    cursor={{ fill: isLight ? "rgba(109,40,217,0.06)" : "rgba(168,85,247,0.08)" }}
-                    contentStyle={{
-                      background: isLight ? "#fdfbff" : "#17143a",
-                      border: `1px solid ${isLight ? "rgba(109,40,217,0.14)" : "rgba(168,85,247,0.25)"}`,
-                      borderRadius: 8,
-                      color: isLight ? "#1e1b4b" : "#ede9fe",
-                    }}
-                  />
-                  {/* itemSorter null keeps Low → Medium → High instead of alphabetical */}
-                  <Legend
-                    iconType="circle"
-                    iconSize={8}
-                    itemSorter={null}
-                    wrapperStyle={{ fontSize: 12 }}
-                  />
-                  {(["Low", "Medium", "High"] as const).map((risk) => (
-                    <Bar
-                      key={risk}
-                      dataKey={risk}
-                      stackId="risk"
-                      fill={RISK_COLORS[risk]}
-                      // rounded on every segment so the stack reads as separate blocks
-                      radius={[6, 6, 6, 6]}
-                      maxBarSize={48}
-                    />
-                  ))}
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </section>
+          <PatientFlowChart isLight={isLight} />
 
           {/* Replaced the old inventory watchlist: pharmacy is dispensing-only in the
               paper, and no service owns stock. Bed occupancy is in scope (UC-04, story 9). */}
@@ -209,7 +122,8 @@ export function DashboardView({ isLight, staffName }: DashboardViewProps) {
                       <div
                         className={cn(
                           "h-full rounded-full",
-                          percent >= 90 ? "bg-rose-500" : percent >= 70 ? "bg-orange-400" : "bg-emerald-500",
+                          // one calm purple; only a nearly full ward stands out
+                          percent >= 90 ? "bg-rose-400" : "bg-wah-purple/70",
                         )}
                         style={{ width: `${percent}%` }}
                       />

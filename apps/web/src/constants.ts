@@ -4,13 +4,13 @@
 // TODO(Phase 10): replace with the seed script once the services own this data.
 
 import type {
-  AdmissionTrendPoint,
   AuditEntry,
   StaffAccount,
   Department,
   InventoryItem,
   LabTest,
   Patient,
+  PatientFlowPoint,
   PatientStatus,
   RevenuePoint,
   Ward,
@@ -55,6 +55,7 @@ function startOfToday() {
 
 // ─── CHARTS ───
 
+// Only for the future Billing Staff / Hospital Admin portals (not on clinical screens)
 export const REVENUE_DATA: RevenuePoint[] = [
   { name: "Mon", revenue: 45000 },
   { name: "Tue", revenue: 52000 },
@@ -65,13 +66,40 @@ export const REVENUE_DATA: RevenuePoint[] = [
   { name: "Sun", revenue: 38000 },
 ];
 
-// opd is shown for context only; WAH2.0 itself is inpatient-only (OPD is WAH4C)
-export const ADMISSION_TRENDS: AdmissionTrendPoint[] = [
-  { name: "Week 1", opd: 120, ipd: 45 },
-  { name: "Week 2", opd: 150, ipd: 52 },
-  { name: "Week 3", opd: 180, ipd: 60 },
-  { name: "Week 4", opd: 165, ipd: 55 },
-];
+// Inpatient flow for the dashboard chart. Made-up but plausible numbers for a
+// Level 2 hospital (~70 beds); WAH2.0 is inpatient-only, so no OPD series.
+// TODO(Phase 7b): pull from the Interoperability service's AHSR report data.
+export const PATIENT_FLOW: Record<"7D" | "1M" | "1Y", PatientFlowPoint[]> = {
+  "7D": [
+    { label: "Mon", admissions: 9, discharges: 7 },
+    { label: "Tue", admissions: 12, discharges: 10 },
+    { label: "Wed", admissions: 8, discharges: 11 },
+    { label: "Thu", admissions: 14, discharges: 9 },
+    { label: "Fri", admissions: 11, discharges: 12 },
+    { label: "Sat", admissions: 7, discharges: 8 },
+    { label: "Sun", admissions: 6, discharges: 5 },
+  ],
+  "1M": [
+    { label: "Week 1", admissions: 58, discharges: 52 },
+    { label: "Week 2", admissions: 64, discharges: 61 },
+    { label: "Week 3", admissions: 71, discharges: 66 },
+    { label: "Week 4", admissions: 67, discharges: 70 },
+  ],
+  "1Y": [
+    { label: "Jan", admissions: 262, discharges: 251 },
+    { label: "Feb", admissions: 238, discharges: 241 },
+    { label: "Mar", admissions: 271, discharges: 260 },
+    { label: "Apr", admissions: 249, discharges: 255 },
+    { label: "May", admissions: 283, discharges: 270 },
+    { label: "Jun", admissions: 301, discharges: 288 },
+    { label: "Jul", admissions: 318, discharges: 305 },
+    { label: "Aug", admissions: 296, discharges: 302 },
+    { label: "Sep", admissions: 274, discharges: 269 },
+    { label: "Oct", admissions: 259, discharges: 263 },
+    { label: "Nov", admissions: 246, discharges: 240 },
+    { label: "Dec", admissions: 231, discharges: 244 },
+  ],
+};
 
 // ─── PATIENTS ───
 

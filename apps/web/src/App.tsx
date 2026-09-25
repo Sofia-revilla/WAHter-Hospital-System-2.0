@@ -20,6 +20,7 @@ import { ArchitectureStatusView } from "@/components/ArchitectureStatusView";
 import { BedManagementView } from "@/components/BedManagementView";
 import { BillingView } from "@/components/BillingView";
 import { DashboardView } from "@/components/DashboardView";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DemoTour } from "@/components/DemoTour";
 import { InventoryView } from "@/components/InventoryView";
 import { LaboratoryView } from "@/components/LaboratoryView";
@@ -139,7 +140,7 @@ function Topbar({
         <button
           type="button"
           onClick={onLogout}
-          aria-label="Log out"
+          aria-label="Sign out"
           className="rounded-lg p-2 text-text-muted transition-colors hover:text-foreground"
         >
           <LogOut size={18} />
@@ -182,6 +183,7 @@ export function App() {
   // light mode is the default look; the toggle in the topbar switches to dark
   const [isLight, setIsLight] = useState(true);
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
+  const [isConfirmingSignOut, setIsConfirmingSignOut] = useState(false);
 
   // The class goes on <html>, not a wrapper div, so the body background and
   // native scrollbars switch too. With a wrapper we got a dark strip on overscroll.
@@ -305,7 +307,7 @@ export function App() {
             role={role}
             onOpenAlerts={() => setActiveTab("dashboard")}
             onOpenProfile={() => setActiveTab("profile")}
-            onLogout={() => setUserRole(null)}
+            onLogout={() => setIsConfirmingSignOut(true)}
           />
 
           <main className="flex-1 overflow-y-auto p-6">
@@ -322,6 +324,19 @@ export function App() {
             </AnimatePresence>
           </main>
         </div>
+
+        <ConfirmDialog
+          isOpen={isConfirmingSignOut}
+          icon={LogOut}
+          title="Sign out of WAHter?"
+          message="You'll need your password to get back in. Anything you haven't saved on this screen will be lost."
+          confirmLabel="Sign out"
+          onCancel={() => setIsConfirmingSignOut(false)}
+          onConfirm={() => {
+            setIsConfirmingSignOut(false);
+            setUserRole(null);
+          }}
+        />
 
         <DemoTour
           isOpen={isDemoMode}

@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useRef, useState, type FormEvent, type ReactNode } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion } from "motion/react";
 import {
@@ -13,7 +13,10 @@ import {
   ArrowLeft,
   Building2,
   Database,
+  Eye,
+  EyeOff,
   IdCard,
+  KeyRound,
   Mail,
   ShieldCheck,
   Stethoscope,
@@ -37,6 +40,16 @@ export type LoginHandler = (
 const FAKE_AUTH_DELAY_MS = 800;
 
 const LICENSE_PATTERN = /^MED-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
+const MIN_PASSWORD_LENGTH = 8;
+
+// Prototype-only passwords per portal, shown on the form so anyone can demo
+// it. Not secrets: there's no real account behind them yet.
+// TODO(Phase 1): replace with the Identity service (argon2 hashes + JWT via Kong).
+const PROTOTYPE_PASSWORDS: Record<StaffRole, string> = {
+  Doctor: "doctor2026",
+  Nurse: "nurse2026",
+  IT: "admin2026",
+};
 
 // Full class strings (not built with template literals) so Tailwind's scanner
 // can see every one of them.
@@ -187,13 +200,26 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   const [name, setName] = useState("");
   const [department, setDepartment] = useState("");
   const [license, setLicense] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  // accounts made with "Create account" during this visit, so they can log
+  // back in with their own password until the page reloads
+  const sessionAccounts = useRef(new Map<string, string>());
   const [otp, setOtp] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   function goTo(nextMode: LoginMode) {
     setError(null);
+    setPassword("");
+    setConfirmPassword("");
+    setIsPasswordVisible(false);
     setMode(nextMode);
+  }
+
+  function accountKey(forRole: StaffRole, forName: string) {
+    return `${forRole}:${forName.trim().toLowerCase()}`;
   }
 
   function chooseRole(selected: StaffRole) {
@@ -207,9 +233,31 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
       setError("Please enter your full name.");
       return;
     }
-    if (mode === "signup" && !LICENSE_PATTERN.test(license)) {
-      setError("License / Employee ID must look like MED-XXXX-XXXX.");
+    if (!password) {
+      setError("Please enter your password.");
       return;
+    }
+    if (mode === "signup") {
+      if (!LICENSE_PATTERN.test(license)) {
+        setError("License / Employee ID must look like MED-XXXX-XXXX.");
+        return;
+      }
+      if (password.length < MIN_PASSWORD_LENGTH) {
+        setError(`Password needs at least ${MIN_PASSWORD_LENGTH} characters.`);
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError("The two passwords don't match.");
+        return;
+      }
+      sessionAccounts.current.set(accountKey(role, name), password);
+    } else {
+      const expected = sessionAccounts.current.get(accountKey(role, name)) ?? PROTOTYPE_PASSWORDS[role];
+      if (password !== expected) {
+        setError("Incorrect password for this portal.");
+        setPassword("");
+        return;
+      }
     }
 
     setError(null);
@@ -444,6 +492,45 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                             className={cn(inputClass, "pl-12 font-mono")}
                           />
                         </Field>
+                      )}
+
+                      <Field label="Password" icon={KeyRound}>
+                        <input
+                          type={isPasswordVisible ? "text" : "password"}
+                          value={password}
+                          onChange={(event) => setPassword(event.target.value)}
+                          placeholder={mode === "signup" ? "At least 8 characters" : "Enter your password"}
+                          autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                          className={cn(inputClass, "pl-12 pr-12")}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setIsPasswordVisible((current) => !current)}
+                          aria-label={isPasswordVisible ? "Hide password" : "Show password"}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary hover:text-foreground"
+                        >
+                          {isPasswordVisible ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                      </Field>
+
+                      {mode === "signup" && (
+                        <Field label="Confirm Password" icon={KeyRound}>
+                          <input
+                            type={isPasswordVisible ? "text" : "password"}
+                            value={confirmPassword}
+                            onChange={(event) => setConfirmPassword(event.target.value)}
+                            placeholder="Type it again"
+                            autoComplete="new-password"
+                            className={cn(inputClass, "pl-12")}
+                          />
+                        </Field>
+                      )}
+
+                      {mode === "login" && (
+                        <p className="text-xs text-text-muted">
+                          Prototype sign-in: the {ROLE_LABELS[role]} password is{" "}
+                          <code className="rounded bg-glass-bg px-1 font-mono">{PROTOTYPE_PASSWORDS[role]}</code>
+                        </p>
                       )}
 
                       {error && <p className="text-sm font-semibold text-rose-500">{error}</p>}

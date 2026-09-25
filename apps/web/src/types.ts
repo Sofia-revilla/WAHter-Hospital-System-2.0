@@ -57,10 +57,12 @@ export interface RevenuePoint {
   revenue: number;
 }
 
-export interface AdmissionTrendPoint {
-  name: string;
-  opd: number;
-  ipd: number;
+// Admissions vs discharges for one period on the dashboard chart
+// (paper user story 39: daily admission and discharge reports).
+export interface PatientFlowPoint {
+  label: string;
+  admissions: number;
+  discharges: number;
 }
 
 // Only the three portals from the login screen exist in the prototype.

@@ -353,3 +353,20 @@ The pre-change build is tagged `prompt-build-v1` (also still on `main`) so it ca
   icon + label, value with a small chip, caption. The topbar has an avatar/name/role profile block that
   opens Profile. The expanded sidebar has a "Main Menu" label and a tinted active row; the collapsed
   rail keeps its solid purple pill.
+
+### D-039: Patient flow chart, ward filter, login passwords, sign-out confirmation
+
+- **Dashboard chart** restyled after the team's reference (grouped slim bars with rounded tops, dot
+  legend by the title, range chips, dark tooltip pill). The reference compared in- vs out-patients,
+  but WAH2.0 is inpatient-only, so it shows **Admissions vs Discharges** (user story 39) for 7D / 1M /
+  1Y. Colors come from the tokens (wah-deep, flipped to lavender in dark mode, and wah-neon) instead
+  of the harsher red/orange/green risk stack. Ward occupancy bars are a single purple, turning soft
+  rose only at 90%+. `ADMISSION_TRENDS` (which had an OPD series) was replaced by `PATIENT_FLOW`.
+- **Bed board ward filter**: a dropdown for all wards, only wards with free beds, or one ward, each
+  option listing its free beds.
+- **Login passwords.** Each portal has a prototype password shown on the form (doctor2026,
+  nurse2026, admin2026). These aren't secrets and there's no account behind them. Signup requires a
+  password of at least 8 characters plus confirmation, and that account can log back in with it until
+  the page reloads. There's a show/hide toggle. Try Demo stays password-free because it's the guided
+  tour. The real version is the Identity service (argon2 + JWT, Phase 1).
+- **Sign-out confirmation**: a small confirm dialog (Escape or backdrop = cancel) before logging out.
