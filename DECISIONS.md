@@ -88,6 +88,7 @@ Prompt 4 defines `userRole: 'Doctor' | 'Nurse' | 'IT' | null`, while the nav tab
 Prompt 4 expects `public/wah-logo.png`, but the new repo has no brand assets and we're not copying from
 the old UNICA-HIJA-UNI-WAH4E repo. We generated a simple placeholder (purple gradient circle with a white
 pulse line). Replace the file with the official logo; no code change needed.
+**Update (2026-09-25):** replaced with the official WAH logo supplied by the team (resized to 256×256).
 
 ### D-014: Sidebar fits short screens without scrolling
 
@@ -245,7 +246,7 @@ Code: `App.tsx` now routes through a `renderTab()` switch with a `PlaceholderVie
 / Module under construction in Phase 2"). Every current TabId has a view, so the fallback only appears if
 a tab is added to navigation.ts before its screen. `DataProvider` now wraps the login screen too; both
 branches render it at the root, so React keeps one provider mounted across login. The logo at
-`public/wah-logo.png` is still the placeholder from D-013.
+`public/wah-logo.png` is now the official WAH logo (see D-013).
 
 Deploy (step 6) was not done automatically:
 - Prompt 16 says to push to **UNICA-HIJA-UNI-WAH4E**, but the team moved this rebuild to its own
