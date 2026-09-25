@@ -12,7 +12,7 @@
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react"; // not 'framer-motion' — package renamed in v11
-import { Bell, LogOut, Moon, Sun } from "lucide-react";
+import { Bell, LayoutDashboard, LogOut, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDisplayName } from "@/lib/staff";
 import { DataProvider } from "@/context/DataContext";
@@ -128,6 +128,26 @@ function Topbar({
   );
 }
 
+// Fallback for a tab id with no view. Every TabId is handled today, so this
+// only shows if a tab gets added to navigation.ts before its screen exists.
+interface PlaceholderViewProps {
+  title: string;
+}
+
+function PlaceholderView({ title }: PlaceholderViewProps) {
+  return (
+    <div className="flex min-h-[600px] flex-col items-center justify-center gap-6 text-center">
+      <div className="glass rounded-full p-10 shadow-[0_0_60px_rgba(109,40,217,0.35)]">
+        <LayoutDashboard className="size-20 text-wah-neon" />
+      </div>
+      <div>
+        <h2 className="text-2xl font-black">{title} Module</h2>
+        <p className="mt-1 text-text-muted">Module under construction in Phase 2</p>
+      </div>
+    </div>
+  );
+}
+
 // ─── 3. ROOT APP ───
 
 export function App() {
@@ -157,12 +177,19 @@ export function App() {
     setActiveTab(role === "IT" ? "architecture" : "dashboard");
   };
 
+  // DataProvider wraps the login screen too, so the Supabase fetch starts
+  // while staff are still picking a portal
   if (!userRole) {
-    return <LoginScreen onLogin={handleLogin} />;
+    return (
+      <DataProvider>
+        <LoginScreen onLogin={handleLogin} />
+      </DataProvider>
+    );
   }
 
-  const displayName = formatDisplayName(userName, userRole);
-  const demoSteps = DEMO_STEPS[userRole];
+  const role = userRole;
+  const displayName = formatDisplayName(userName, role);
+  const demoSteps = DEMO_STEPS[role];
 
   // the tour drives the page behind it: every step change also switches tabs
   function goToDemoStep(step: number) {
@@ -170,10 +197,53 @@ export function App() {
     setActiveTab(demoSteps[step].tab);
   }
 
+  function renderTab() {
+    switch (activeTab) {
+      case "dashboard":
+        return <DashboardView isLight={isLight} />;
+      case "patients":
+        return <PatientsView />;
+      case "prescription":
+        return <PrescriptionView />;
+      case "pharmacy":
+        return <PharmacyView />;
+      case "lab":
+        return <LaboratoryView />;
+      case "rooms":
+        return <BedManagementView />;
+      case "billing":
+        return <BillingView />;
+      case "inventory":
+        return <InventoryView />;
+      case "architecture":
+        return <ArchitectureStatusView />;
+      case "profile":
+        return (
+          <ProfileView
+            name={userName}
+            role={role}
+            department={userDept}
+            license={userLicense}
+            isLight={isLight}
+            onSave={(updated) => {
+              setUserName(updated.name);
+              setUserDept(updated.department);
+              setUserLicense(updated.license);
+            }}
+          />
+        );
+      default: {
+        // TypeScript says this can't happen; the widening keeps the fallback honest if it does
+        const unknownTab: string = activeTab;
+        return <PlaceholderView title={unknownTab} />;
+      }
+    }
+  }
+
   return (
     <DataProvider>
       <div className="min-h-screen bg-background text-foreground">
-        <Sidebar role={userRole} activeTab={activeTab} onSelect={setActiveTab} />
+        <Sidebar role={role} activeTab={activeTab} onSelect={setActiveTab} />
 
         {/* h-screen + overflow on <main> keeps the topbar pinned while only the tab content scrolls */}
         <div className="ml-20 flex h-screen flex-col">
@@ -182,7 +252,7 @@ export function App() {
             isLight={isLight}
             onToggleTheme={() => setIsLight((current) => !current)}
             displayName={displayName}
-            role={userRole}
+            role={role}
             onLogout={() => setUserRole(null)}
           />
 
@@ -195,29 +265,7 @@ export function App() {
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.25 }}
               >
-                {activeTab === "dashboard" && <DashboardView isLight={isLight} />}
-                {activeTab === "patients" && <PatientsView />}
-                {activeTab === "prescription" && <PrescriptionView />}
-                {activeTab === "pharmacy" && <PharmacyView />}
-                {activeTab === "lab" && <LaboratoryView />}
-                {activeTab === "rooms" && <BedManagementView />}
-                {activeTab === "billing" && <BillingView />}
-                {activeTab === "inventory" && <InventoryView />}
-                {activeTab === "architecture" && <ArchitectureStatusView />}
-                {activeTab === "profile" && (
-                  <ProfileView
-                    name={userName}
-                    role={userRole}
-                    department={userDept}
-                    license={userLicense}
-                    isLight={isLight}
-                    onSave={(updated) => {
-                      setUserName(updated.name);
-                      setUserDept(updated.department);
-                      setUserLicense(updated.license);
-                    }}
-                  />
-                )}
+                {renderTab()}
               </motion.div>
             </AnimatePresence>
           </main>

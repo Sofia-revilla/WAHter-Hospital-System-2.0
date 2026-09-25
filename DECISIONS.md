@@ -238,3 +238,22 @@ against `TabId` so a typo in a step's tab fails the build. The tour replaces the
 chip in the topbar. The card uses `bg-white` as Prompt 15 specifies, the one deliberate exception to
 master §7.2's "no pure white" rule, because the amber tour card is meant to stand apart from the app
 theme. It has `role="dialog"`, and each progress dot has an aria-label.
+
+### D-031: Prompt 16 wiring done; deploy steps paused for the team
+
+Code: `App.tsx` now routes through a `renderTab()` switch with a `PlaceholderView` fallback ("{title} Module
+/ Module under construction in Phase 2"). Every current TabId has a view, so the fallback only appears if
+a tab is added to navigation.ts before its screen. `DataProvider` now wraps the login screen too; both
+branches render it at the root, so React keeps one provider mounted across login. The logo at
+`public/wah-logo.png` is still the placeholder from D-013.
+
+Deploy (step 6) was not done automatically:
+- Prompt 16 says to push to **UNICA-HIJA-UNI-WAH4E**, but the team moved this rebuild to its own
+  folder and repo (WAHter-Hospital-System-2.0) with instructions not to touch the original.
+- Connecting Vercel and adding env vars happen in the team's Vercel dashboard.
+- Master prompt §0/§2 keep this build local-only for now.
+If deployed on Vercel from this monorepo, set the project's **Root Directory to `apps/web`**. The
+Supabase URL and publishable key go in Vercel's env settings only, never in the repo. `.env.example`
+lists the variable names. Note that DataContext expects Supabase tables named `patients`, `inventory`,
+`lab_tests`, `wards` with camelCase columns matching `types.ts`. Tables with a different shape would
+render wrong, although empty or missing tables safely fall back to mock data.

@@ -52,6 +52,9 @@ a build, tests, a commit, and an update to this file.
 - [x] **Prompt 15: Demo Guided Tour** (2026-09-25)
   DemoTour modal with per-role steps (Doctor 7, Nurse 7, IT 9), feature chips, clickable progress
   dots, Back/Next/Finish that also switch tabs. See DECISIONS.md D-030.
+- [~] **Prompt 16: Final Wiring & Deploy** (2026-09-25)
+  Wiring done (renderTab switch, PlaceholderView fallback, DataProvider around login). Push to GitHub
+  and Vercel deploy waiting on the team. See DECISIONS.md D-031.
 
 ## Master prompt phases
 
