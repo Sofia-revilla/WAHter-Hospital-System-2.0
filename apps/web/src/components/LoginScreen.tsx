@@ -6,6 +6,7 @@
 "use client";
 
 import { useState, type FormEvent, type ReactNode } from "react";
+import Image from "next/image";
 import { AnimatePresence, motion } from "motion/react";
 import {
   Activity,
@@ -267,8 +268,20 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
             className="pointer-events-none absolute -bottom-24 -right-24 text-white/5"
           />
 
-          <div className="relative flex h-20 w-20 rotate-3 items-center justify-center rounded-3xl bg-white/20 backdrop-blur">
-            <Activity size={40} className="text-white" />
+          <div
+            className={cn(
+              "relative flex h-20 w-20 rotate-3 items-center justify-center",
+              "rounded-3xl bg-white/20 backdrop-blur",
+            )}
+          >
+            <Image
+              src="/wah-logo.png"
+              alt="WAH logo"
+              width={64}
+              height={64}
+              priority
+              className="h-16 w-16 rounded-full shadow-lg"
+            />
           </div>
 
           <h1 className="relative mt-8 text-5xl font-black text-white">
