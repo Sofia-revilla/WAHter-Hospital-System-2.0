@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { SERVICE_LABELS } from "@/lib/api";
 import { useData } from "@/context/DataContext";
 import { LoadingScreen } from "./LoadingScreen";
 
@@ -13,8 +12,8 @@ interface WorkspaceLoaderProps {
   roleLabel: string;
 }
 
-// Covers the portal until its first data load finishes. Only the services
-// this role actually reads from are listed (a pharmacist never waits on beds).
+// Covers the portal until its first data load finishes. The bar fills as
+// the services this role reads from answer (a pharmacist never waits on beds).
 export function WorkspaceLoader({ roleLabel }: WorkspaceLoaderProps) {
   const { isLoading, loadSteps } = useData();
   const [hasMinTimePassed, setHasMinTimePassed] = useState(false);
@@ -32,9 +31,8 @@ export function WorkspaceLoader({ roleLabel }: WorkspaceLoaderProps) {
   return (
     <LoadingScreen
       title={`Preparing the ${roleLabel} portal`}
-      subtitle={loadSteps.length > 0 ? "Connecting to the hospital services" : "Loading your workspace"}
+      subtitle="Loading your workspace"
       progress={progress}
-      steps={loadSteps.map((step) => ({ label: SERVICE_LABELS[step.service], state: step.state }))}
     />
   );
 }

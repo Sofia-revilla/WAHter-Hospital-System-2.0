@@ -1,26 +1,18 @@
 "use client";
 
 import Image from "next/image";
-import { Check, CloudOff, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
-
-export interface LoadingStep {
-  label: string;
-  state: "loading" | "ready" | "offline";
-}
 
 interface LoadingScreenProps {
   title: string;
   subtitle?: string;
   // 0–100; leave out for an indeterminate bar
   progress?: number;
-  steps?: LoadingStep[];
 }
 
-// Full-screen loader for app start and the first data load after sign-in.
-// It lists each service as it answers, so a slow or stopped service shows up
-// here by name instead of as a blank screen.
-export function LoadingScreen({ title, subtitle, progress, steps }: LoadingScreenProps) {
+// Full-screen loader for app start and the first data load after sign-in:
+// the logo, a line of text, and a progress bar. A service that's down shows
+// up afterwards as the offline notice on its tabs.
+export function LoadingScreen({ title, subtitle, progress }: LoadingScreenProps) {
   return (
     <div
       role="status"
@@ -57,37 +49,6 @@ export function LoadingScreen({ title, subtitle, progress, steps }: LoadingScree
             />
           )}
         </div>
-
-        {steps && steps.length > 0 && (
-          <ul className="mt-6 space-y-2 text-left">
-            {steps.map((step) => (
-              <li
-                key={step.label}
-                className={cn(
-                  "flex items-center justify-between rounded-lg px-3 py-2 text-xs",
-                  "border border-glass-border bg-card-bg",
-                )}
-              >
-                <span className="font-semibold">{step.label}</span>
-                {step.state === "loading" && (
-                  <span className="flex items-center gap-1.5 text-text-muted">
-                    <Loader2 size={14} className="animate-spin" /> Connecting
-                  </span>
-                )}
-                {step.state === "ready" && (
-                  <span className="flex items-center gap-1.5 text-emerald-600">
-                    <Check size={14} /> Ready
-                  </span>
-                )}
-                {step.state === "offline" && (
-                  <span className="flex items-center gap-1.5 text-amber-600">
-                    <CloudOff size={14} /> Offline
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
 
         <p className="mt-8 text-[10px] font-bold uppercase tracking-widest text-text-muted">
           UNICA-HIJA · Hospital Management System

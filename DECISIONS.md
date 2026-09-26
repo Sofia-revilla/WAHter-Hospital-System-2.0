@@ -482,6 +482,7 @@ The pre-change build is tagged `prompt-build-v1` (also still on `main`) so it ca
   out clears both. An expired refresh token sends you back to login.
 - **Loading screen:** shown while the saved session is checked on start, and over the portal
   until its first data load finishes. It lists each service the portal needs as it answers
-  (Connecting → Ready / Offline). It stays at least 700 ms so it never just flashes.
+  as a progress bar (no per-service list; we tried one and it was too busy). It stays at least
+  700 ms so it never just flashes.
 - The seed and schema files were edited in place instead of adding migrations, since nothing is
   deployed with a database yet. Anyone who ran the earlier stack needs `docker compose down -v`.
