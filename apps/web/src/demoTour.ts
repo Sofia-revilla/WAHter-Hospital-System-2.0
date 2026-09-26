@@ -75,11 +75,6 @@ export const DEMO_STEPS: Record<StaffRole, DemoStep[]> = {
       desc: "Follow tests from the queue to released results, with urgent ones highlighted. Results are released by lab and radiology staff.",
     },
     {
-      tab: "billing",
-      title: "Billing Queue",
-      desc: "A read-only view of pending balances, handy when you coordinate discharges with the billing office.",
-    },
-    {
       tab: "profile",
       title: "Your Profile",
       desc: "Keep your nursing profile current: department, employee ID, biography, and your on-duty status for the shift.",
@@ -95,11 +90,6 @@ export const DEMO_STEPS: Record<StaffRole, DemoStep[]> = {
       tab: "staff",
       title: "Staff & Access",
       desc: "Manage staff accounts and roles, and search or export the audit log. The IT portal never shows patient clinical data.",
-    },
-    {
-      tab: "inventory",
-      title: "Inventory Management",
-      desc: "Oversee medical supply levels, expiry watch, and reorder drafts across departments.",
     },
     {
       tab: "profile",
@@ -152,20 +142,6 @@ export const TAB_FEATURES: Record<TabId, string[]> = {
     "Admission coordination",
     "Transfer management",
   ],
-  billing: [
-    "Patient invoice list",
-    "Payment status tracking",
-    "Billing history",
-    "Linked to patient records",
-    "Finance coordination",
-  ],
-  inventory: [
-    "Medical supply levels",
-    "Expiry date tracking",
-    "Reorder alerts",
-    "Department stock view",
-    "Supply request log",
-  ],
   staff: [
     "Staff accounts & roles",
     "Second approval for role changes",
@@ -196,8 +172,6 @@ export const TAB_EMOJI: Record<TabId, string> = {
   pharmacy: "💊",
   lab: "🧪",
   rooms: "🛏️",
-  billing: "💰",
-  inventory: "📦",
   architecture: "🖥️",
   staff: "🛡️",
   profile: "👤",

@@ -18,11 +18,9 @@ import { formatDisplayName } from "@/lib/staff";
 import { DataProvider } from "@/context/DataContext";
 import { ArchitectureStatusView } from "@/components/ArchitectureStatusView";
 import { BedManagementView } from "@/components/BedManagementView";
-import { BillingView } from "@/components/BillingView";
 import { DashboardView } from "@/components/DashboardView";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DemoTour } from "@/components/DemoTour";
-import { InventoryView } from "@/components/InventoryView";
 import { LaboratoryView } from "@/components/LaboratoryView";
 import { PatientsView } from "@/components/PatientsView";
 import { PharmacyView } from "@/components/PharmacyView";
@@ -249,10 +247,6 @@ export function App() {
         return <LaboratoryView role={role} />;
       case "rooms":
         return <BedManagementView role={role} staffName={displayName} />;
-      case "billing":
-        return <BillingView role={role} />;
-      case "inventory":
-        return <InventoryView />;
       case "architecture":
         return <ArchitectureStatusView />;
       case "staff":

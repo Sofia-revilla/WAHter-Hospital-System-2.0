@@ -4,10 +4,8 @@
 import {
   Bed,
   Database,
-  DollarSign,
   FlaskConical,
   LayoutDashboard,
-  Package,
   Pill,
   Receipt,
   ShieldCheck,
@@ -24,8 +22,6 @@ export type TabId =
   | "pharmacy"
   | "lab"
   | "rooms"
-  | "billing"
-  | "inventory"
   | "architecture"
   | "staff"
   | "profile";
@@ -41,7 +37,7 @@ export const TABS: Record<TabId, TabConfig> = {
   dashboard: {
     label: "Dashboard",
     icon: LayoutDashboard,
-    description: "Census, bed occupancy, MEWS alerts, and revenue at a glance.",
+    description: "Census, bed occupancy, MEWS alerts, and patient risk at a glance.",
   },
   patients: {
     label: "Patients",
@@ -68,16 +64,6 @@ export const TABS: Record<TabId, TabConfig> = {
     icon: Bed,
     description: "Ward occupancy, bed assignment, and smart referral.",
   },
-  billing: {
-    label: "Billing",
-    icon: DollarSign,
-    description: "Patient charges, statements of account, and PhilHealth claims.",
-  },
-  inventory: {
-    label: "Inventory",
-    icon: Package,
-    description: "Medicine and supply levels, expiry watch.",
-  },
   architecture: {
     label: "Architecture",
     icon: Database,
@@ -96,9 +82,12 @@ export const TABS: Record<TabId, TabConfig> = {
 };
 
 export const ROLE_TABS: Record<StaffRole, TabId[]> = {
-  Doctor: ["dashboard", "patients", "prescription", "pharmacy", "lab", "rooms", "billing", "profile"],
-  Nurse: ["dashboard", "patients", "pharmacy", "rooms", "lab", "billing", "profile"],
+  // Billing is for Billing Staff and the Hospital Admin (UC-12/13), so the
+  // clinical portals don't get it
+  Doctor: ["dashboard", "patients", "prescription", "pharmacy", "lab", "rooms", "profile"],
+  Nurse: ["dashboard", "patients", "pharmacy", "rooms", "lab", "profile"],
   // The paper's IT portal has no clinical modules and no patient data
-  // (RA 10173), so IT gets system screens only.
-  IT: ["architecture", "staff", "inventory", "profile"],
+  // (RA 10173), so IT gets system screens only. No inventory tab either:
+  // no FSA or use case covers stock management.
+  IT: ["architecture", "staff", "profile"],
 };

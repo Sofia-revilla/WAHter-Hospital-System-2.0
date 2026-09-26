@@ -380,3 +380,13 @@ The pre-change build is tagged `prompt-build-v1` (also still on `main`) so it ca
 - Ward occupancy bars are green / orange / red again (under 70%, 70-89%, 90%+).
 - `PatientFlowChart`, `PATIENT_FLOW` and `PatientFlowPoint` were removed since nothing uses them. The
   Nurse tour chips no longer mention revenue or admission trends.
+
+### D-041: No Billing tab for clinicians, no Inventory tab for IT
+- **Billing** was removed from the Doctor and Nurse portals. The paper gives UC-12/13 (charges and
+  eClaims) to Billing Staff, and revenue belongs to Billing Staff and the Hospital Admin. Those
+  portals aren't built yet, so `BillingView` was deleted. It can be brought back from git history
+  when they are. The `manageBilling` permission and `REVENUE_DATA` stay for that later portal.
+- **Inventory** was removed from the IT portal. No FSA or use case covers stock management, and
+  pharmacy is dispensing-only. `InventoryView` was deleted. The `INVENTORY` list stays because
+  E-Prescribing uses it for drug name suggestions.
+- The tours lost those steps: Nurse 6 steps, IT 3 steps.
