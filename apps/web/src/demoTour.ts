@@ -15,7 +15,7 @@ export const DEMO_STEPS: Record<StaffRole, DemoStep[]> = {
     {
       tab: "dashboard",
       title: "Hospital Dashboard",
-      desc: "Your real-time command center: census, bed occupancy, and the day's revenue, plus MEWS alerts you can acknowledge and a live feed of your patients' risk levels.",
+      desc: "Your real-time command center: census, bed occupancy, and patient risk by department, plus MEWS alerts you can acknowledge and a live feed of your patients' risk levels.",
     },
     {
       tab: "patients",
