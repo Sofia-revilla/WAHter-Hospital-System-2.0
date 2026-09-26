@@ -22,7 +22,8 @@ interface DashboardViewProps {
 // Clinical dashboard for doctors and nurses. Revenue lives with Billing Staff
 // and the Hospital Administrator (paper user classes), so it isn't here.
 export function DashboardView({ isLight, staffName }: DashboardViewProps) {
-  const { patients, wards, occupiedBeds, mewsAlerts, labTests } = useData();
+  const { patients, wards, occupiedBeds, mewsAlerts, labTests, offlineServices } = useData();
+  const offlineCount = offlineServices.length;
 
   const activeAlerts = mewsAlerts.filter((alert) => !alert.acknowledgedAt);
   const highAlerts = activeAlerts.filter((alert) => alert.risk === "High").length;
@@ -80,10 +81,24 @@ export function DashboardView({ isLight, staffName }: DashboardViewProps) {
         </div>
         <div className="glass flex items-center gap-2 rounded-lg px-3 py-2">
           <span className="relative flex h-2.5 w-2.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-wah-neon opacity-75" />
-            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-wah-neon" />
+            <span
+              className={cn(
+                "absolute inline-flex h-full w-full animate-ping rounded-full opacity-75",
+                offlineCount > 0 ? "bg-amber-500" : "bg-wah-neon",
+              )}
+            />
+            <span
+              className={cn(
+                "relative inline-flex h-2.5 w-2.5 rounded-full",
+                offlineCount > 0 ? "bg-amber-500" : "bg-wah-neon",
+              )}
+            />
           </span>
-          <span className="text-xs font-semibold text-text-muted">Connectivity: Optimal</span>
+          <span className="text-xs font-semibold text-text-muted">
+            {offlineCount > 0
+              ? `Connectivity: ${offlineCount} service${offlineCount > 1 ? "s" : ""} offline`
+              : "Connectivity: Optimal"}
+          </span>
         </div>
       </div>
 

@@ -443,3 +443,18 @@ The pre-change build is tagged `prompt-build-v1` (also still on `main`) so it ca
 - The Billing and Interoperability frontends are empty for now (a README says why). Their screens
   belong to portals we haven't built.
 - `npm run lint:frontends` lints the service frontends with the web app's ESLint config.
+
+### D-044: Showing when a service is down
+- When a service is down, Kong answers 502/503/504, or the request times out after 10s. The web
+  shows "<Service> is unavailable right now. Nothing was saved; try again in a moment." instead of
+  Kong's raw "invalid response from the upstream server".
+- The data context records which services failed their last refresh. Each tab lists the services
+  it reads from (`TABS[tab].services`), and `ServiceOfflineNotice` shows an amber notice on the
+  affected tabs only. Other tabs, and the parts of the same tab served by other services, keep
+  working. The notice clears itself on the next refresh after the service is back.
+- The Dashboard's connectivity pill now says how many services are offline instead of always
+  "Optimal".
+- A failed MEWS acknowledgment now shows its error on the alert, which stays open. Before this
+  the error was swallowed.
+- Kong upstream timeouts are down to 3s connect / 15s read with 1 retry. With the defaults (60s,
+  5 retries), a stopped container took about a minute to show up as down.

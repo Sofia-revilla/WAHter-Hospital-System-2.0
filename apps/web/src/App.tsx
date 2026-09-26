@@ -20,6 +20,7 @@ import { DataProvider } from "@/context/DataContext";
 import { ArchitectureStatusView } from "@/components/ArchitectureStatusView";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DemoTour } from "@/components/DemoTour";
+import { ServiceOfflineNotice } from "@/components/ServiceOfflineNotice";
 import { Sidebar } from "@/components/Sidebar";
 // Each tab's screen belongs to the service that owns its data (services/<name>/frontend)
 import { DashboardView, PatientsView } from "@services/clinical-records/frontend";
@@ -304,6 +305,7 @@ export function App() {
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.25 }}
               >
+                <ServiceOfflineNotice services={TABS[activeTab].services} />
                 {renderTab()}
               </motion.div>
             </AnimatePresence>

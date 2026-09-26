@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { ApiError, currentSession, isApiMode } from "@/lib/api";
+import { ApiError, currentSession, isApiMode, type ServiceName } from "@/lib/api";
 import { fetchCensus, fetchVitals, postVitals } from "@services/clinical-records/frontend/api";
 import { fetchAlerts, postAcknowledgement } from "@services/notifications/frontend/api";
 import {
@@ -44,8 +44,9 @@ const REFRESH_INTERVAL_MS = 10_000;
 interface DataContextValue {
   mode: DataMode;
   isLoading: boolean;
-  // set when the services can't be reached; screens keep the last good data
-  loadError: string | null;
+  // services that didn't answer the last refresh, with when each last did.
+  // Screens keep the last good data; ServiceOfflineNotice tells staff why.
+  offlineServices: OfflineService[];
   patients: Patient[];
   formulary: FormularyItem[];
   labTests: LabTest[];
@@ -95,6 +96,12 @@ export interface PrescriptionRequest {
   duration?: string;
   instructions?: string;
   prescribedBy: string;
+}
+
+export interface OfflineService {
+  service: ServiceName;
+  // null if it hasn't answered once since sign-in, so there's no data to show
+  lastSeenAt: string | null;
 }
 
 const DataContext = createContext<DataContextValue | null>(null);
@@ -206,7 +213,9 @@ export function DataProvider({ children }: DataProviderProps) {
   const [wards, setWards] = useState<Ward[]>(mode === "api" ? [] : WARDS);
   const [bedAssignments, setBedAssignments] = useState<BedAssignment[]>([]);
   const [isLoading, setIsLoading] = useState(mode === "api");
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [offlineServices, setOfflineServices] = useState<OfflineService[]>([]);
+  // last time each service answered, kept across refreshes
+  const [lastSeen] = useState(() => new Map<ServiceName, string>());
 
   // One call per service. allSettled, because a service being down should
   // blank only its own part of the screen (the paper's fault-isolation goal).
@@ -231,12 +240,28 @@ export function DataProvider({ children }: DataProviderProps) {
     if (medications.status === "fulfilled") setMedicationOrders(medications.value);
     if (drugs.status === "fulfilled") setFormulary(drugs.value);
 
-    const failed = [census, vitals, alerts, wardList, admissions, diagnostics, medications, drugs].filter(
-      (result) => result.status === "rejected",
-    ).length;
-    setLoadError(failed > 0 ? `${failed} of 8 data requests failed. Some services may be down.` : null);
+    // a service counts as offline if any of its requests failed
+    const results: [ServiceName, PromiseSettledResult<unknown>][] = [
+      ["clinical-records", census],
+      ["clinical-records", vitals],
+      ["notifications", alerts],
+      ["scheduling", wardList],
+      ["scheduling", admissions],
+      ["orders-diagnostics", diagnostics],
+      ["orders-diagnostics", medications],
+      ["orders-diagnostics", drugs],
+    ];
+    const down = new Set<ServiceName>();
+    const now = new Date().toISOString();
+    for (const [service, result] of results) {
+      if (result.status === "rejected") down.add(service);
+    }
+    for (const [service] of results) {
+      if (!down.has(service)) lastSeen.set(service, now);
+    }
+    setOfflineServices([...down].map((service) => ({ service, lastSeenAt: lastSeen.get(service) ?? null })));
     setIsLoading(false);
-  }, []);
+  }, [lastSeen]);
 
   useEffect(() => {
     if (mode !== "api") return;
@@ -426,7 +451,7 @@ export function DataProvider({ children }: DataProviderProps) {
       value={{
         mode,
         isLoading,
-        loadError,
+        offlineServices,
         patients,
         formulary,
         labTests,

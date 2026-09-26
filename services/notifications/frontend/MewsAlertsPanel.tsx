@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { BellRing, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ApiError } from "@/lib/api";
 import { useData } from "@/context/DataContext";
 import type { MewsAlert } from "@/types";
 import { MewsChip } from "@services/clinical-records/frontend/MewsChip";
@@ -22,9 +23,16 @@ function AlertRow({ alert, staffName }: AlertRowProps) {
   const [isAcknowledging, setIsAcknowledging] = useState(false);
   const [note, setNote] = useState("");
   const [isFalseAlarm, setIsFalseAlarm] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function confirm() {
-    void acknowledgeAlert(alert.id, { by: staffName, note: note.trim() || undefined, isFalseAlarm });
+  async function confirm() {
+    setError(null);
+    try {
+      await acknowledgeAlert(alert.id, { by: staffName, note: note.trim() || undefined, isFalseAlarm });
+    } catch (caught) {
+      // the alert stays open, so nobody thinks it was handled when it wasn't
+      setError(caught instanceof ApiError ? caught.message : "Couldn't save the acknowledgment. Try again.");
+    }
   }
 
   return (
@@ -66,6 +74,7 @@ function AlertRow({ alert, staffName }: AlertRowProps) {
             />
             False alarm / data correction needed
           </label>
+          {error && <p className="text-xs font-semibold text-rose-500">{error}</p>}
           <div className="flex justify-end gap-2">
             <button
               type="button"
@@ -76,7 +85,7 @@ function AlertRow({ alert, staffName }: AlertRowProps) {
             </button>
             <button
               type="button"
-              onClick={confirm}
+              onClick={() => void confirm()}
               className="rounded-lg bg-wah-purple px-3 py-1.5 text-[10px] font-black uppercase text-white"
             >
               Confirm

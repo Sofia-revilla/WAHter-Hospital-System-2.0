@@ -31,8 +31,14 @@ plugins:
       echo_downstream: true
 
 services:
+  # Short timeouts on purpose: Kong's defaults (60s, 5 retries) left the app
+  # waiting a full minute on a stopped container before reporting it down.
   - name: identity
     url: http://identity:3000
+    connect_timeout: 3000
+    read_timeout: 15000
+    write_timeout: 15000
+    retries: 1
     routes:
       - name: identity-public
         # no token needed: login, refresh, health checks, and API docs
@@ -48,6 +54,10 @@ services:
               run_on_preflight: false
   - name: clinical-records
     url: http://clinical-records:3000
+    connect_timeout: 3000
+    read_timeout: 15000
+    write_timeout: 15000
+    retries: 1
     routes:
       - name: clinical-records-public
         # no token needed: health checks and API docs
@@ -63,6 +73,10 @@ services:
               run_on_preflight: false
   - name: scheduling
     url: http://scheduling:3000
+    connect_timeout: 3000
+    read_timeout: 15000
+    write_timeout: 15000
+    retries: 1
     routes:
       - name: scheduling-public
         # no token needed: health checks and API docs
@@ -78,6 +92,10 @@ services:
               run_on_preflight: false
   - name: orders-diagnostics
     url: http://orders-diagnostics:3000
+    connect_timeout: 3000
+    read_timeout: 15000
+    write_timeout: 15000
+    retries: 1
     routes:
       - name: orders-diagnostics-public
         # no token needed: health checks and API docs
@@ -93,6 +111,10 @@ services:
               run_on_preflight: false
   - name: billing
     url: http://billing:3000
+    connect_timeout: 3000
+    read_timeout: 15000
+    write_timeout: 15000
+    retries: 1
     routes:
       - name: billing-public
         # no token needed: health checks and API docs
@@ -108,6 +130,10 @@ services:
               run_on_preflight: false
   - name: interoperability
     url: http://interoperability:3000
+    connect_timeout: 3000
+    read_timeout: 15000
+    write_timeout: 15000
+    retries: 1
     routes:
       - name: interoperability-public
         # no token needed: health checks and API docs
@@ -123,6 +149,10 @@ services:
               run_on_preflight: false
   - name: notifications
     url: http://notifications:3000
+    connect_timeout: 3000
+    read_timeout: 15000
+    write_timeout: 15000
+    retries: 1
     routes:
       - name: notifications-public
         # no token needed: health checks and API docs
@@ -138,6 +168,10 @@ services:
               run_on_preflight: false
   - name: audit-log
     url: http://audit-log:3000
+    connect_timeout: 3000
+    read_timeout: 15000
+    write_timeout: 15000
+    retries: 1
     routes:
       - name: audit-log-public
         # no token needed: health checks and API docs

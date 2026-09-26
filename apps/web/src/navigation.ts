@@ -13,6 +13,7 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
+import type { ServiceName } from "./lib/api";
 import type { StaffRole } from "./types";
 
 export type TabId =
@@ -31,6 +32,9 @@ interface TabConfig {
   label: string;
   icon: LucideIcon;
   description: string;
+  // services whose data this tab shows, for the "service offline" notice.
+  // Tabs that load their own data (Staff & Access, Architecture) handle it themselves.
+  services: ServiceName[];
 }
 
 export const TABS: Record<TabId, TabConfig> = {
@@ -38,46 +42,55 @@ export const TABS: Record<TabId, TabConfig> = {
     label: "Dashboard",
     icon: LayoutDashboard,
     description: "Census, bed occupancy, MEWS alerts, and patient risk at a glance.",
+    services: ["clinical-records", "scheduling", "notifications", "orders-diagnostics"],
   },
   patients: {
     label: "Patients",
     icon: Users,
     description: "Search the patient registry and open inpatient records.",
+    services: ["clinical-records", "scheduling"],
   },
   prescription: {
     label: "E-Prescribing",
     icon: Receipt,
     description: "Write and e-sign medication orders for admitted patients.",
+    services: ["orders-diagnostics", "clinical-records"],
   },
   pharmacy: {
     label: "Pharmacy",
     icon: Pill,
     description: "Prescription worklist and medication dispensing.",
+    services: ["orders-diagnostics"],
   },
   lab: {
     label: "Laboratory",
     icon: FlaskConical,
     description: "Lab and radiology requests, results, and turnaround.",
+    services: ["orders-diagnostics", "clinical-records"],
   },
   rooms: {
     label: "Bed Management",
     icon: Bed,
     description: "Ward occupancy, bed assignment, and smart referral.",
+    services: ["scheduling", "clinical-records"],
   },
   architecture: {
     label: "Architecture",
     icon: Database,
     description: "Service health, the event bus, and the access sandbox.",
+    services: [],
   },
   staff: {
     label: "Staff & Access",
     icon: ShieldCheck,
     description: "Staff accounts, roles, and the audit log.",
+    services: [],
   },
   profile: {
     label: "Profile",
     icon: User,
     description: "Your staff badge and account details.",
+    services: [],
   },
 };
 
