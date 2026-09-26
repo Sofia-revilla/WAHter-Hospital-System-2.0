@@ -4,7 +4,8 @@ import type { Config } from "tailwindcss";
 // brand colors here (instead of only in @theme) so the whole palette lives in
 // one place the team already knows how to find.
 const config: Config = {
-  content: ["./src/**/*.{ts,tsx}"],
+  // each service's tab screens live in services/<name>/frontend, outside this app
+  content: ["./src/**/*.{ts,tsx}", "../../services/*/frontend/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {

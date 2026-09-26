@@ -14,22 +14,19 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react"; // not 'framer-motion', the package got renamed in v11
 import { ChevronDown, LayoutDashboard, LogOut, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { clearSession } from "@/lib/api";
 import { formatDisplayName } from "@/lib/staff";
 import { DataProvider } from "@/context/DataContext";
 import { ArchitectureStatusView } from "@/components/ArchitectureStatusView";
-import { BedManagementView } from "@/components/BedManagementView";
-import { DashboardView } from "@/components/DashboardView";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DemoTour } from "@/components/DemoTour";
-import { LaboratoryView } from "@/components/LaboratoryView";
-import { PatientsView } from "@/components/PatientsView";
-import { PharmacyView } from "@/components/PharmacyView";
-import { PrescriptionView } from "@/components/PrescriptionView";
-import { LoginScreen, type LoginHandler } from "@/components/LoginScreen";
-import { NotificationBell } from "@/components/NotificationBell";
-import { ProfileView } from "@/components/ProfileView";
-import { StaffAccessView } from "@/components/StaffAccessView";
 import { Sidebar } from "@/components/Sidebar";
+// Each tab's screen belongs to the service that owns its data (services/<name>/frontend)
+import { DashboardView, PatientsView } from "@services/clinical-records/frontend";
+import { LoginScreen, ProfileView, StaffAccessView, type LoginHandler } from "@services/identity/frontend";
+import { NotificationBell } from "@services/notifications/frontend";
+import { LaboratoryView, PharmacyView, PrescriptionView } from "@services/orders-diagnostics/frontend";
+import { BedManagementView } from "@services/scheduling/frontend";
 import { TABS, type TabId } from "@/navigation";
 import { DEMO_STEPS } from "@/demoTour";
 import { ROLE_LABELS, type StaffRole } from "@/types";
@@ -213,14 +210,8 @@ export function App() {
     setActiveTab(role === "IT" ? "architecture" : "dashboard");
   };
 
-  // DataProvider wraps the login screen too, so the Supabase fetch starts
-  // while staff are still picking a portal
   if (!userRole) {
-    return (
-      <DataProvider>
-        <LoginScreen onLogin={handleLogin} />
-      </DataProvider>
-    );
+    return <LoginScreen onLogin={handleLogin} />;
   }
 
   const role = userRole;
@@ -240,7 +231,7 @@ export function App() {
       case "patients":
         return <PatientsView staffName={displayName} />;
       case "prescription":
-        return <PrescriptionView />;
+        return <PrescriptionView staffName={displayName} />;
       case "pharmacy":
         return <PharmacyView role={role} />;
       case "lab":
@@ -328,6 +319,7 @@ export function App() {
           onCancel={() => setIsConfirmingSignOut(false)}
           onConfirm={() => {
             setIsConfirmingSignOut(false);
+            clearSession();
             setUserRole(null);
           }}
         />

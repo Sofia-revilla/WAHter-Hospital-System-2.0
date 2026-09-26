@@ -8,6 +8,11 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: fileURLToPath(new URL("../..", import.meta.url)),
   // the dev-only "N" badge sat on top of the sidebar's Profile item
   devIndicators: { position: "bottom-right" },
+  experimental: {
+    // the tab screens are in services/<name>/frontend, next to each service's
+    // backend, so Next has to compile TSX from outside apps/web
+    externalDir: true,
+  },
 };
 
 export default nextConfig;

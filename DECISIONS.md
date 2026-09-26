@@ -390,3 +390,56 @@ The pre-change build is tagged `prompt-build-v1` (also still on `main`) so it ca
   pharmacy is dispensing-only. `InventoryView` was deleted. The `INVENTORY` list stays because
   E-Prescribing uses it for drug name suggestions.
 - The tours lost those steps: Nurse 6 steps, IT 3 steps.
+
+### D-042: Conversion to microservices
+- The eight FSAs from the paper (TABLE IV) are now separate NestJS 11 services, each in its own
+  container. Every service has REST controller → service → repository layers, `/health`, and
+  OpenAPI docs at `/api/<name>/docs`.
+- **NestJS 11, not 12.** NestJS 12 is ESM-only, which clashed with the shared package that the
+  CommonJS services and the Next app both import. 11 is still maintained.
+- **Stack as in TABLE IX:** Nginx (the only exposed port, 8080) → Kong 3.9 in DB-less mode (JWT
+  check, rate limit, CORS, correlation IDs) → the services. RabbitMQ topic exchange `wah.events`
+  with a dead-letter queue. One PostgreSQL 16 instance with one schema and one login per service
+  and no cross-schema grants. Docker Compose runs all of it.
+- **Kong path handling:** services use `/api/<name>` as their own global prefix and Kong doesn't
+  strip it. When Kong stripped the prefix, the Swagger UI asset links broke.
+- **JWTs are checked twice:** at Kong and again in each service, since services are reachable
+  inside the Docker network without passing Kong.
+- **Consumers are idempotent:** every service has a `processed_events` table keyed by `eventId`.
+  A handler that throws sends the message to the dead-letter queue instead of retrying forever.
+- **Publishing never blocks a request:** if RabbitMQ is down, events wait in memory and go out on
+  reconnect. Tested: with Notifications stopped, vitals still save (201), and the alert is
+  delivered from the queue after a restart (UC-05 6a, objective 2).
+- **Per-service copies of patient data.** Clinical Records, Orders & Diagnostics, and
+  Interoperability keep their own copies of the demographics they need, filled from
+  `patient.registered`, instead of calling Identity (the C4 L2 event flows).
+- **Seeds:** each service seeds the same 12 fictional patients as the web mock, so both modes look
+  the same. Prototype passwords are stored as argon2id hashes of the public demo values.
+- **Login:** a named account signs in with its own password. Any other name can use the portal's
+  prototype password and gets a session under that name, tied to the portal's demo account ID, so
+  the audit trail still points at a real row. Sign-up creates a real account. TODO(Phase 10): drop
+  the prototype fallback.
+- **Roles without portals** (Pharmacist, Billing Staff, Lab Staff, Hospital Admin) can be named
+  on endpoints. Nobody holds them yet, so those endpoints (dispense, charges) stay closed.
+- **Two web modes:** with `NEXT_PUBLIC_API_URL` set (Docker), every screen reads and writes
+  through the services. Without it (the Vercel preview), the same screens run on the mock data.
+  Supabase was removed, as the master prompt routes everything through Kong.
+- **Inventory → formulary:** the old `INVENTORY` mock became `FORMULARY`, with no stock fields,
+  matching dispensing-only.
+
+### D-043: One folder per service, frontend and backend together
+- Each service folder holds both halves: `services/<name>/backend` (the NestJS service) and
+  `services/<name>/frontend` (the tab screens for that service's data plus its `api.ts` client).
+  This lets anyone reading the repo see a whole service in one place.
+- Screens were moved, not changed: Dashboard and Patients → clinical-records; Bed Management →
+  scheduling; E-Prescribing, Pharmacy, and Laboratory → orders-diagnostics; Login, Profile, and
+  Staff & Access → identity; the notification bell and MEWS Alerts panel → notifications. The
+  audit table from Staff & Access became `AuditLogPanel` in audit-log, rendered in the same place.
+- `apps/web` stays as the shell that builds the frontends into one Next.js app: routing by portal,
+  sidebar, guided tour, shared UI (StatCard, ConfirmDialog), the data context, and the
+  Architecture tab. That tab monitors all eight services, so it doesn't belong to any one of them.
+- Next compiles the service frontends through `experimental.externalDir`. The `@services/*` path
+  alias points at `services/`, and Tailwind scans `services/*/frontend`.
+- The Billing and Interoperability frontends are empty for now (a README says why). Their screens
+  belong to portals we haven't built.
+- `npm run lint:frontends` lints the service frontends with the web app's ESLint config.

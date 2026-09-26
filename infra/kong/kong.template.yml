@@ -1,0 +1,153 @@
+# Kong in DB-less mode: this file is the whole gateway config.
+# start.sh swaps __JWT_SECRET__ for the real value at container start, so
+# the secret lives only in .env.
+_format_version: "3.0"
+
+consumers:
+  # Identity is the only token issuer; its tokens carry iss = wahter-identity
+  - username: wahter-staff
+    jwt_secrets:
+      - key: wahter-identity
+        secret: __JWT_SECRET__
+        algorithm: HS256
+
+plugins:
+  # the app is served through the same nginx origin, but `npm run dev:web`
+  # on :3000 calls the gateway on :8080, so CORS has to allow that
+  - name: cors
+    config:
+      origins: ["http://localhost:3000", "http://localhost:3001", "http://localhost:8080"]
+      methods: [GET, POST, PATCH, OPTIONS]
+      headers: [Authorization, Content-Type]
+      max_age: 3600
+  - name: rate-limiting
+    config:
+      minute: 600
+      policy: local
+  - name: correlation-id
+    config:
+      header_name: X-Request-ID
+      generator: uuid
+      echo_downstream: true
+
+services:
+  - name: identity
+    url: http://identity:3000
+    routes:
+      - name: identity-public
+        # no token needed: login, refresh, health checks, and API docs
+        paths: [/api/identity/auth, /api/identity/health, /api/identity/docs]
+        strip_path: false
+      - name: identity
+        paths: [/api/identity]
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify: [exp]
+              run_on_preflight: false
+  - name: clinical-records
+    url: http://clinical-records:3000
+    routes:
+      - name: clinical-records-public
+        # no token needed: health checks and API docs
+        paths: [/api/clinical-records/health, /api/clinical-records/docs]
+        strip_path: false
+      - name: clinical-records
+        paths: [/api/clinical-records]
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify: [exp]
+              run_on_preflight: false
+  - name: scheduling
+    url: http://scheduling:3000
+    routes:
+      - name: scheduling-public
+        # no token needed: health checks and API docs
+        paths: [/api/scheduling/health, /api/scheduling/docs]
+        strip_path: false
+      - name: scheduling
+        paths: [/api/scheduling]
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify: [exp]
+              run_on_preflight: false
+  - name: orders-diagnostics
+    url: http://orders-diagnostics:3000
+    routes:
+      - name: orders-diagnostics-public
+        # no token needed: health checks and API docs
+        paths: [/api/orders-diagnostics/health, /api/orders-diagnostics/docs]
+        strip_path: false
+      - name: orders-diagnostics
+        paths: [/api/orders-diagnostics]
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify: [exp]
+              run_on_preflight: false
+  - name: billing
+    url: http://billing:3000
+    routes:
+      - name: billing-public
+        # no token needed: health checks and API docs
+        paths: [/api/billing/health, /api/billing/docs]
+        strip_path: false
+      - name: billing
+        paths: [/api/billing]
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify: [exp]
+              run_on_preflight: false
+  - name: interoperability
+    url: http://interoperability:3000
+    routes:
+      - name: interoperability-public
+        # no token needed: health checks and API docs
+        paths: [/api/interoperability/health, /api/interoperability/docs]
+        strip_path: false
+      - name: interoperability
+        paths: [/api/interoperability]
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify: [exp]
+              run_on_preflight: false
+  - name: notifications
+    url: http://notifications:3000
+    routes:
+      - name: notifications-public
+        # no token needed: health checks and API docs
+        paths: [/api/notifications/health, /api/notifications/docs]
+        strip_path: false
+      - name: notifications
+        paths: [/api/notifications]
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify: [exp]
+              run_on_preflight: false
+  - name: audit-log
+    url: http://audit-log:3000
+    routes:
+      - name: audit-log-public
+        # no token needed: health checks and API docs
+        paths: [/api/audit-log/health, /api/audit-log/docs]
+        strip_path: false
+      - name: audit-log
+        paths: [/api/audit-log]
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify: [exp]
+              run_on_preflight: false

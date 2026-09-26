@@ -6,10 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "predev": "npm --prefix ../.. run build --workspace @wahter/shared",
+    "prebuild": "npm --prefix ../.. run build --workspace @wahter/shared"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.117.1",
+    "@wahter/shared": "*",
     "clsx": "^2.1.1",
     "framer-motion": "^13.4.3",
     "lucide-react": "^1.48.0",

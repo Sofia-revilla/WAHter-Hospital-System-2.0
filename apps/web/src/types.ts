@@ -1,5 +1,5 @@
-// Shapes shared by constants.ts, DataContext, and the tab views.
-// Kept deliberately flat so a Supabase row maps onto them without a transform.
+// Shapes shared by constants.ts, DataContext, and the tab views. The services
+// return these same shapes, so API responses drop straight into state.
 
 import type { RiskLevel, VitalSigns } from "./lib/mews";
 
@@ -14,32 +14,47 @@ export interface Patient {
   gender: "Male" | "Female";
   department: Department;
   status: PatientStatus;
-  // random in the prototype, not derived from vitals (see generateRandomPatient)
+  // latest MEWS from charted vitals (random in the offline mock)
   mewsScore: number;
   admittedAt: string;
   avatar: string;
 }
 
-export type StockStatus = "Good" | "Low" | "Critical";
-
-export interface InventoryItem {
+// An orderable drug. Pharmacy is dispensing-only, so there's no stock here.
+export interface FormularyItem {
   id: string;
   name: string;
-  category: "Medication" | "Supply";
-  stock: number;
-  minStock: number;
-  unit: string;
-  status: StockStatus;
+  form: string;
+  // RA 9165 dangerous drug; dispensing needs a second approval
+  isControlled: boolean;
+}
+
+export type MedicationOrderStatus = "Pending" | "Dispensed" | "Review";
+
+export interface MedicationOrder {
+  id: string;
+  patientId: string;
+  patientName: string;
+  drug: string;
+  dose: string;
+  frequency: string;
+  route?: string | null;
+  duration?: string | null;
+  status: MedicationOrderStatus;
+  prescribedBy: string;
+  orderedAt: string;
 }
 
 export interface LabTest {
   id: string;
+  patientId?: string;
   patient: string;
   test: string;
   priority: "Urgent" | "Routine";
   status: "Pending" | "In-Progress" | "Completed";
-  // display string ("10m ago"), not a timestamp. Fine until the lab worklist is live
+  // display string ("10m ago"); from the API it's worked out from orderedAt
   time: string;
+  isCritical?: boolean;
 }
 
 export interface Ward {
@@ -103,6 +118,8 @@ export interface MewsAlert {
   note?: string;
   // "false alarm / data correction needed" from UC-08 extension 4a
   isFalseAlarm?: boolean;
+  // set by Notifications when a High alert sits unacknowledged too long
+  escalatedAt?: string;
 }
 
 // Every role from the paper's user classes (TABLE XIII), including the ones
@@ -133,7 +150,8 @@ export interface AuditEntry {
   id: string;
   time: string;
   actor: string;
-  role: HospitalRole;
+  // "System" for things no person did, like charge capture
+  role: HospitalRole | "System";
   action: AuditAction;
   // what was touched, by ID only (never clinical details)
   resource: string;

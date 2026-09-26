@@ -1,0 +1,181 @@
+# WAHter on one machine: Postgres, RabbitMQ, the eight services, Kong, nginx,
+# and the web app. Copy .env.example to .env, run `docker compose up --build`,
+# then open http://localhost:8080.
+name: wahter
+
+x-service: &service
+  restart: unless-stopped
+  depends_on:
+    postgres:
+      condition: service_healthy
+    rabbitmq:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: wahter
+      POSTGRES_USER: wahter_admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?copy .env.example to .env}
+      IDENTITY_DB_PASSWORD: ${IDENTITY_DB_PASSWORD}
+      CLINICAL_RECORDS_DB_PASSWORD: ${CLINICAL_RECORDS_DB_PASSWORD}
+      SCHEDULING_DB_PASSWORD: ${SCHEDULING_DB_PASSWORD}
+      ORDERS_DIAGNOSTICS_DB_PASSWORD: ${ORDERS_DIAGNOSTICS_DB_PASSWORD}
+      BILLING_DB_PASSWORD: ${BILLING_DB_PASSWORD}
+      INTEROPERABILITY_DB_PASSWORD: ${INTEROPERABILITY_DB_PASSWORD}
+      NOTIFICATIONS_DB_PASSWORD: ${NOTIFICATIONS_DB_PASSWORD}
+      AUDIT_LOG_DB_PASSWORD: ${AUDIT_LOG_DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    # 5433 on the host so it doesn't clash with a locally installed Postgres
+    ports:
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wahter_admin -d wahter"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: wahter
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?copy .env.example to .env}
+    # management UI at http://localhost:15672 to watch the queues
+    ports:
+      - "127.0.0.1:15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  identity:
+    <<: *service
+    build:
+      context: .
+      dockerfile: services/identity/backend/Dockerfile
+    environment:
+      DATABASE_URL: postgres://identity_svc:${IDENTITY_DB_PASSWORD}@postgres:5432/wahter
+      RABBITMQ_URL: amqp://wahter:${RABBITMQ_PASSWORD}@rabbitmq:5672
+      JWT_SECRET: ${JWT_SECRET:?copy .env.example to .env}
+
+  clinical-records:
+    <<: *service
+    build:
+      context: .
+      dockerfile: services/clinical-records/backend/Dockerfile
+    environment:
+      DATABASE_URL: postgres://clinical_records_svc:${CLINICAL_RECORDS_DB_PASSWORD}@postgres:5432/wahter
+      RABBITMQ_URL: amqp://wahter:${RABBITMQ_PASSWORD}@rabbitmq:5672
+      JWT_SECRET: ${JWT_SECRET:?copy .env.example to .env}
+
+  scheduling:
+    <<: *service
+    build:
+      context: .
+      dockerfile: services/scheduling/backend/Dockerfile
+    environment:
+      DATABASE_URL: postgres://scheduling_svc:${SCHEDULING_DB_PASSWORD}@postgres:5432/wahter
+      RABBITMQ_URL: amqp://wahter:${RABBITMQ_PASSWORD}@rabbitmq:5672
+      JWT_SECRET: ${JWT_SECRET:?copy .env.example to .env}
+
+  orders-diagnostics:
+    <<: *service
+    build:
+      context: .
+      dockerfile: services/orders-diagnostics/backend/Dockerfile
+    environment:
+      DATABASE_URL: postgres://orders_diagnostics_svc:${ORDERS_DIAGNOSTICS_DB_PASSWORD}@postgres:5432/wahter
+      RABBITMQ_URL: amqp://wahter:${RABBITMQ_PASSWORD}@rabbitmq:5672
+      JWT_SECRET: ${JWT_SECRET:?copy .env.example to .env}
+
+  billing:
+    <<: *service
+    build:
+      context: .
+      dockerfile: services/billing/backend/Dockerfile
+    environment:
+      DATABASE_URL: postgres://billing_svc:${BILLING_DB_PASSWORD}@postgres:5432/wahter
+      RABBITMQ_URL: amqp://wahter:${RABBITMQ_PASSWORD}@rabbitmq:5672
+      JWT_SECRET: ${JWT_SECRET:?copy .env.example to .env}
+
+  interoperability:
+    <<: *service
+    build:
+      context: .
+      dockerfile: services/interoperability/backend/Dockerfile
+    environment:
+      DATABASE_URL: postgres://interoperability_svc:${INTEROPERABILITY_DB_PASSWORD}@postgres:5432/wahter
+      RABBITMQ_URL: amqp://wahter:${RABBITMQ_PASSWORD}@rabbitmq:5672
+      JWT_SECRET: ${JWT_SECRET:?copy .env.example to .env}
+
+  notifications:
+    <<: *service
+    build:
+      context: .
+      dockerfile: services/notifications/backend/Dockerfile
+    environment:
+      DATABASE_URL: postgres://notifications_svc:${NOTIFICATIONS_DB_PASSWORD}@postgres:5432/wahter
+      RABBITMQ_URL: amqp://wahter:${RABBITMQ_PASSWORD}@rabbitmq:5672
+      JWT_SECRET: ${JWT_SECRET:?copy .env.example to .env}
+
+  audit-log:
+    <<: *service
+    build:
+      context: .
+      dockerfile: services/audit-log/backend/Dockerfile
+    environment:
+      DATABASE_URL: postgres://audit_log_svc:${AUDIT_LOG_DB_PASSWORD}@postgres:5432/wahter
+      RABBITMQ_URL: amqp://wahter:${RABBITMQ_PASSWORD}@rabbitmq:5672
+      JWT_SECRET: ${JWT_SECRET:?copy .env.example to .env}
+
+  kong:
+    image: kong:3.9
+    restart: unless-stopped
+    command: ["sh", "/etc/kong/wahter/start.sh"]
+    environment:
+      KONG_DATABASE: "off"
+      KONG_PROXY_LISTEN: 0.0.0.0:8000
+      KONG_ADMIN_LISTEN: "off"
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      JWT_SECRET: ${JWT_SECRET}
+    volumes:
+      - ./infra/kong:/etc/kong/wahter:ro
+    depends_on:
+      - identity
+      - clinical-records
+      - scheduling
+      - orders-diagnostics
+      - billing
+      - interoperability
+      - notifications
+      - audit-log
+
+  web:
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        # same origin through nginx, so the browser never needs Kong's address
+        NEXT_PUBLIC_API_URL: /api
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    ports:
+      - "8080:80"
+    depends_on:
+      - kong
+      - web
+
+volumes:
+  pgdata:

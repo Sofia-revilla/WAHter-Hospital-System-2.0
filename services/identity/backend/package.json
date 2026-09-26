@@ -1,0 +1,27 @@
+{
+  "name": "@wahter/identity",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Identity Service: Staff login (JWT), role-based access, and the Master Patient Index (UC-01, UC-16).",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.1.6",
+    "@nestjs/core": "^11.1.6",
+    "@nestjs/platform-express": "^11.1.6",
+    "@nestjs/swagger": "^11.2.0",
+    "@wahter/shared": "*",
+    "argon2": "^0.44.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.2",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "typescript": "^5.9.2"
+  }
+}

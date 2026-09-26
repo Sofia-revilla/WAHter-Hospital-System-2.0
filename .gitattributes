@@ -1,0 +1,7 @@
+# These run inside Linux containers, where a Windows CRLF checkout breaks them
+# (sh chokes on the \r). Keep them LF on every machine.
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.yml text eol=lf
+*.conf text eol=lf
+*.sql text eol=lf

@@ -1,0 +1,66 @@
+{
+  "name": "@wahter/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Code every WAHter service shares: event bus, database access, auth guard, and MEWS.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./mews": {
+      "types": "./dist/mews/index.d.ts",
+      "default": "./dist/mews/index.js"
+    },
+    "./events": {
+      "types": "./dist/events.d.ts",
+      "default": "./dist/events.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "amqplib": "^0.10.9",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.16.3"
+  },
+  "peerDependencies": {
+    "@nestjs/common": "^11.1.0",
+    "@nestjs/core": "^11.1.0",
+    "@nestjs/swagger": "^11.2.0",
+    "reflect-metadata": "^0.2.2",
+    "class-validator": "^0.14.2",
+    "class-transformer": "^0.5.1"
+  },
+  "peerDependenciesMeta": {
+    "@nestjs/common": {
+      "optional": true
+    },
+    "@nestjs/core": {
+      "optional": true
+    },
+    "@nestjs/swagger": {
+      "optional": true
+    },
+    "reflect-metadata": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/amqplib": "^0.10.8",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^22",
+    "@types/pg": "^8.15.5",
+    "typescript": "^5.9.2",
+    "@nestjs/common": "^11.1.6",
+    "@nestjs/core": "^11.1.6",
+    "@nestjs/swagger": "^11.2.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "class-validator": "^0.14.2",
+    "class-transformer": "^0.5.1"
+  }
+}

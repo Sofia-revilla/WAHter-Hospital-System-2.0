@@ -5,22 +5,107 @@
 # WAHter (WAH2.0) Hospital System
 
 WAHter is an inpatient hospital information system for Philippine DOH Level 2–3 LGU hospitals.
-It re-engineers WAH4H V1 into separate functional service areas: Identity, Clinical Care,
-Scheduling, Billing, Orders & Diagnostics, Interoperability, Notifications, and Audit Log. The
-pilot reference site is Concepcion District Hospital.
+It re-engineers WAH4H V1 from one monolith into eight microservices, one per functional service
+area in our paper: Identity, Clinical Records, Scheduling, Orders & Diagnostics, Billing,
+Interoperability, Notifications, and Audit Log. The pilot reference site is Concepcion District
+Hospital.
 
-This repo has the web prototype of the staff portals. It covers ward census, bed management,
-patient charting with MEWS (Modified Early Warning Score) alerts, prescriptions and dispensing,
-lab orders, and a system view for the IT admin.
+**Live demo:** https://wahter-hospital-system.vercel.app (the web app on mock data, see below)
 
-**Live demo:** https://wahter-hospital-system.vercel.app
+> All patients, staff, and records in this system are fictional. No real patient data is used.
 
-> All patients, staff, and records in this prototype are fictional. No real patient data is used.
+## How the repo is organized
 
-## Trying the demo
+Every service has its own folder with its own **backend** (a NestJS service in its own container,
+with its own database schema) and its own **frontend** (the tab screens that show that service's
+data). The web app in `apps/web` is only the shell that puts the portals together.
 
-On the login screen, pick a portal and sign in with its prototype password. These are only for the
-demo and there is no real account behind them.
+```
+services/
+├── identity/             login, staff accounts, patient registry (MPI)
+│   ├── backend/          → own container, schema "identity"
+│   └── frontend/         → Login screen, Profile tab, Staff & Access tab
+├── clinical-records/     census, vital signs, MEWS
+│   ├── backend/          → schema "clinical"
+│   └── frontend/         → Dashboard tab, Patients tab
+├── scheduling/           wards, beds, admissions
+│   ├── backend/          → schema "scheduling"
+│   └── frontend/         → Bed Management tab
+├── orders-diagnostics/   prescriptions, formulary, lab/radiology orders
+│   ├── backend/          → schema "orders"
+│   └── frontend/         → E-Prescribing, Pharmacy, and Laboratory tabs
+├── notifications/        MEWS alerts, acknowledgment, escalation
+│   ├── backend/          → schema "notifications"
+│   └── frontend/         → notification bell, MEWS Alerts panel
+├── audit-log/            append-only audit trail
+│   ├── backend/          → schema "audit"
+│   └── frontend/         → Audit Log panel (in Staff & Access)
+├── billing/              charge capture from bus events
+│   ├── backend/          → schema "billing"
+│   └── frontend/         → (Billing Staff portal, not built yet)
+└── interoperability/     FHIR R4 reads, DOH report exports
+    ├── backend/          → schema "interop"
+    └── frontend/         → (Hospital Admin portal, not built yet)
+
+apps/web/                 the shell: portal routing, sidebar, guided tour, shared UI,
+                          and the Architecture tab (it watches all eight services)
+packages/shared/          event bus, database access, JWT guard, MEWS scoring
+infra/                    nginx, Kong (API gateway), Postgres setup
+docker-compose.yml        runs the whole system
+```
+
+Each `services/<name>/README.md` lists that service's tables, endpoints, and events.
+
+### How the pieces talk
+
+```
+browser → nginx (:8080) → Kong (JWT, rate limit, CORS) → /api/<service>/... → that service
+                                                                   │
+                                   services never share tables ────┤
+                                   they publish events on RabbitMQ ┘
+```
+
+- **One Postgres, one schema per service.** Each service logs in as its own database user that can
+  only see its own schema, so no service can read another's tables.
+- **Events instead of cross-service calls.** Charting High-risk vitals in Clinical Records
+  publishes `mews.alert.high`. Notifications turns it into an alert and Audit Log records it.
+  Admitting a patient in Scheduling makes Billing post the bed charge on its own.
+- **Fault isolation.** If a service is down, the rest keep working. Vitals still save with
+  Notifications stopped, and the alert is delivered from the queue once it's back.
+
+## Running the full system (Docker)
+
+Needs Docker Desktop.
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+Then open http://localhost:8080. The first build takes a few minutes. The databases are created
+and seeded on first start.
+
+- API docs for each service: `http://localhost:8080/api/<service>/docs`, for example
+  http://localhost:8080/api/clinical-records/docs
+- RabbitMQ dashboard (watch the event queues): http://localhost:15672, user `wahter` with the
+  password from `.env`
+
+To start again from a clean database: `docker compose down -v`
+
+## Running only the web app (no Docker)
+
+```bash
+npm install
+npm run dev:web
+```
+
+Then open http://localhost:3000. Without `NEXT_PUBLIC_API_URL`, the screens run on the mock data in
+`apps/web/src/constants.ts`. This is how the Vercel demo runs. To point the dev server at the Docker
+services instead, start it with `NEXT_PUBLIC_API_URL=http://localhost:8080/api`.
+
+## Signing in
+
+Pick a portal and sign in with its prototype password. These are public demo values, not secrets.
 
 | Portal | Password |
 | --- | --- |
@@ -28,37 +113,24 @@ demo and there is no real account behind them.
 | Nurse's Portal | `nurse2026` |
 | Administrator Portal | `admin2026` |
 
-You can also click **Try Demo** for a guided tour of each role, no password needed.
+**Try Demo** gives a guided tour of each role. With Docker running, logins go through the Identity
+service and get a real JWT.
 
-## What's in the prototype
+## What each role sees
 
-- **Dashboard**: live admitted count, bed occupancy, MEWS alerts, and patient risk per department
-- **Patients**: chart vitals (RR, SpO2, temperature, systolic BP, heart rate, level of consciousness);
-  the MEWS score is computed right away and Medium/High raises an alert
-- **Bed Management**: admit or transfer a patient into a free bed, filter wards
-- **Pharmacy**: dispensing only (no stock or inventory, per the paper's scope)
-- **Laboratory**: doctors order tests, results show with a critical flag
-- **IT Admin**: service architecture status, staff access, and the audit log (no patient data)
+- **Doctor**: Dashboard, Patients, E-Prescribing, Pharmacy (view), Laboratory (order tests), Bed
+  Management, Profile
+- **Nurse**: Dashboard, Patients (chart vitals with MEWS), Pharmacy (view), Bed Management
+  (admit/transfer), Laboratory (view), Profile
+- **IT Admin**: Architecture (live service health), Staff & Access (accounts and audit log),
+  Profile. No patient data (RA 10173).
 
 MEWS is decision support only. It never replaces clinical judgment.
 
-## Running it locally
-
-Needs Node.js 20 or newer.
-
-```bash
-npm install
-npm run dev:web
-```
-
-Then open http://localhost:3000. No environment variables are needed; the app runs on the mock data
-in `apps/web/src/constants.ts`.
-
 ## Tech stack
 
-- **Web prototype (this repo):** Next.js 15, React 19, TypeScript, Tailwind CSS 4, Recharts, Motion
-- **Planned backend (from the paper):** NestJS services behind Kong and Nginx, RabbitMQ event bus,
-  PostgreSQL with one schema per service, Docker Compose
+Next.js 15, React 19, TypeScript, Tailwind CSS 4 · NestJS 11 · Kong 3.9 (DB-less) · Nginx ·
+RabbitMQ 3.13 · PostgreSQL 16 · Docker Compose
 
 `PLAN.md` has the build phases and `DECISIONS.md` logs the choices we made along the way.
 

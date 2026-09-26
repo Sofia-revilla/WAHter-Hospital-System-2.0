@@ -1,13 +1,14 @@
-// Mock data for the prototype. Every name here is made up, no real patients.
-// DataContext serves these whenever Supabase isn't configured or comes back empty.
-//
-// TODO(Phase 10): replace with the seed script once the services own this data.
+// Mock data for the offline prototype (the Vercel preview). Every name here is
+// made up, no real patients. With the services running, DataContext loads
+// from the API instead, and the services seed the same people into Postgres
+// (services/*/db/seed.sql).
 
 import type {
   AuditEntry,
   StaffAccount,
   Department,
-  InventoryItem,
+  FormularyItem,
+  MedicationOrder,
   LabTest,
   Patient,
   PatientStatus,
@@ -150,54 +151,53 @@ export const PATIENTS: Patient[] = Array.from({ length: 12 }, (_, index) =>
   generateRandomPatient(index + 1),
 );
 
-// ─── INVENTORY ───
+// ─── FORMULARY & MEDICATION ORDERS ───
 
-export const INVENTORY: InventoryItem[] = [
-  {
-    id: "INV-001",
-    name: "Paracetamol 500mg",
-    category: "Medication",
-    stock: 1250,
-    minStock: 500,
-    unit: "Tabs",
-    status: "Good",
-  },
-  {
-    id: "INV-002",
-    name: "Surgical Gloves (Size 7)",
-    category: "Supply",
-    stock: 45,
-    minStock: 100,
-    unit: "Pairs",
-    status: "Critical",
-  },
-  {
-    id: "INV-003",
-    name: "Amoxicillin 250mg Syrup",
-    category: "Medication",
-    stock: 200,
-    minStock: 150,
-    unit: "Bottles",
-    status: "Low",
-  },
-  {
-    id: "INV-004",
-    name: "N95 Respirator Masks",
-    category: "Supply",
-    stock: 500,
-    minStock: 200,
-    unit: "Pcs",
-    status: "Good",
-  },
-  {
-    id: "INV-005",
-    name: "Saline Solution 1L",
-    category: "Supply",
-    stock: 85,
-    minStock: 50,
-    unit: "Bags",
-    status: "Good",
-  },
+// Same list as the Orders & Diagnostics seed. No stock: dispensing-only.
+export const FORMULARY: FormularyItem[] = [
+  { id: "FRM-001", name: "Paracetamol 500mg", form: "Tablet", isControlled: false },
+  { id: "FRM-002", name: "Amoxicillin 500mg", form: "Capsule", isControlled: false },
+  { id: "FRM-003", name: "Amoxicillin 250mg/5mL", form: "Syrup", isControlled: false },
+  { id: "FRM-004", name: "Losartan 50mg", form: "Tablet", isControlled: false },
+  { id: "FRM-005", name: "Metformin 500mg", form: "Tablet", isControlled: false },
+  { id: "FRM-006", name: "Cefuroxime 750mg", form: "IV vial", isControlled: false },
+  { id: "FRM-007", name: "Omeprazole 40mg", form: "IV vial", isControlled: false },
+  { id: "FRM-008", name: "Salbutamol 2.5mg/2.5mL", form: "Nebule", isControlled: false },
+  { id: "FRM-009", name: "Sodium Chloride 0.9% 1L", form: "IV bag", isControlled: false },
+  { id: "FRM-010", name: "Morphine 10mg/mL", form: "Ampule", isControlled: true },
+];
+
+const HOUR_MS = 3_600_000;
+
+function mockOrder(
+  id: string,
+  patient: Patient,
+  drug: string,
+  dose: string,
+  frequency: string,
+  status: MedicationOrder["status"],
+  hoursAgo: number,
+): MedicationOrder {
+  return {
+    id,
+    patientId: patient.id,
+    patientName: patient.name,
+    drug,
+    dose,
+    frequency,
+    route: "PO",
+    status,
+    prescribedBy: "Dr. Andrea Mendoza",
+    // only rendered after login (client side), so Date.now() can't cause a hydration mismatch
+    orderedAt: new Date(Date.now() - hoursAgo * HOUR_MS).toISOString(),
+  };
+}
+
+export const MEDICATION_ORDERS: MedicationOrder[] = [
+  mockOrder("RX-1004", PATIENTS[8], "Metformin 500mg", "1 tab", "OD", "Review", 1),
+  mockOrder("RX-1003", PATIENTS[0], "Amoxicillin 500mg", "1 cap", "TID", "Pending", 2),
+  mockOrder("RX-1002", PATIENTS[1], "Paracetamol 500mg", "1 tab", "PRN", "Dispensed", 4),
+  mockOrder("RX-1001", PATIENTS[2], "Losartan 50mg", "1 tab", "OD", "Dispensed", 24),
 ];
 
 // ─── LAB ───

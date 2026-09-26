@@ -1,41 +1,73 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { supabase } from "@/lib/supabase";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { ApiError, currentSession, isApiMode } from "@/lib/api";
+import { fetchCensus, fetchVitals, postVitals } from "@services/clinical-records/frontend/api";
+import { fetchAlerts, postAcknowledgement } from "@services/notifications/frontend/api";
+import {
+  fetchDiagnosticOrders,
+  fetchFormulary,
+  fetchMedicationOrders,
+  postDiagnosticOrder,
+  postMedicationOrder,
+} from "@services/orders-diagnostics/frontend/api";
+import { fetchAdmissions, fetchWards, postAdmission } from "@services/scheduling/frontend/api";
 import { calculateMews, implausibleReadings, type VitalSigns } from "@/lib/mews";
-import { INVENTORY, LAB_TESTS, PATIENTS, WARDS } from "@/constants";
+import { FORMULARY, LAB_TESTS, MEDICATION_ORDERS, PATIENTS, WARDS } from "@/constants";
 import type {
   AdmissionType,
   BedAssignment,
-  InventoryItem,
+  FormularyItem,
   LabTest,
+  MedicationOrder,
   MewsAlert,
   Patient,
   VitalsRecord,
   Ward,
 } from "@/types";
 
-type DataSource = "mock" | "supabase";
+// The one place the tab screens get data from. Each service's calls live in
+// services/<name>/frontend/api.ts; this file only decides which to use.
+//
+// Two ways to run, same screens:
+//  - "api": the Docker Compose stack is up, so every list comes from its
+//    service through Kong and every change is a POST to that service.
+//  - "mock": no services (the Vercel preview). Lists start from constants.ts
+//    and changes only live in this component's state until a reload.
+
+type DataMode = "api" | "mock";
+
+// the services publish to each other over RabbitMQ; the browser just re-reads
+// every so often to pick up what other staff changed
+const REFRESH_INTERVAL_MS = 10_000;
 
 interface DataContextValue {
-  patients: Patient[];
-  inventory: InventoryItem[];
-  labTests: LabTest[];
-  wards: Ward[];
+  mode: DataMode;
   isLoading: boolean;
-  // which tables actually came from Supabase. Handy during demos, since a
-  // half-seeded project can give us real patients but mock wards
-  sources: Record<"patients" | "inventory" | "labTests" | "wards", DataSource>;
+  // set when the services can't be reached; screens keep the last good data
+  loadError: string | null;
+  patients: Patient[];
+  formulary: FormularyItem[];
+  labTests: LabTest[];
+  medicationOrders: MedicationOrder[];
+  wards: Ward[];
   vitalsRecords: VitalsRecord[];
   mewsAlerts: MewsAlert[];
-  recordVitals: (patientId: string, vitals: VitalSigns, recordedBy: string) => VitalsRecord;
+  bedAssignments: BedAssignment[];
+  recordVitals: (
+    patientId: string,
+    vitals: VitalSigns,
+    recordedBy: string,
+    confirmedImplausible: boolean,
+  ) => Promise<VitalsRecord>;
   acknowledgeAlert: (
     alertId: string,
     acknowledgement: { by: string; note?: string; isFalseAlarm?: boolean },
-  ) => void;
-  bedAssignments: BedAssignment[];
+  ) => Promise<void>;
   occupiedBeds: (wardId: string) => number[];
-  assignBed: (request: BedRequest) => { ok: true } | { ok: false; reason: string };
+  assignBed: (request: BedRequest) => Promise<{ ok: true } | { ok: false; reason: string }>;
+  orderDiagnosticTest: (order: DiagnosticOrderRequest) => Promise<LabTest>;
+  prescribe: (order: PrescriptionRequest) => Promise<MedicationOrder>;
 }
 
 export interface BedRequest {
@@ -47,24 +79,27 @@ export interface BedRequest {
   assignedBy: string;
 }
 
-const DataContext = createContext<DataContextValue | null>(null);
-
-// Returns null on any error or an empty table, so the caller keeps the mock.
-// We'd rather show demo data than a blank screen during a live walkthrough.
-async function fetchTable<T>(table: string): Promise<T[] | null> {
-  if (!supabase) return null;
-
-  const { data, error } = await supabase.from(table).select("*");
-  if (error || !data || data.length === 0) return null;
-
-  // HACK: rows are untyped until we set up Supabase type generation, so we
-  // trust the table columns to match our camelCase types for now.
-  return data as T[];
+export interface DiagnosticOrderRequest {
+  patientId: string;
+  test: string;
+  kind: "Laboratory" | "Radiology";
+  priority: LabTest["priority"];
 }
 
-// ─── VITALS & MEWS (local only for now) ───
-// TODO(Phase 3): vitals go to Clinical Records and alerts come from the
-// Notifications service over the event bus. Until then they live in memory.
+export interface PrescriptionRequest {
+  patientId: string;
+  drug: string;
+  dose: string;
+  frequency: string;
+  route?: string;
+  duration?: string;
+  instructions?: string;
+  prescribedBy: string;
+}
+
+const DataContext = createContext<DataContextValue | null>(null);
+
+// ─── MOCK MODE: VITALS & MEWS IN MEMORY ───
 
 let nextRecordNumber = 1;
 
@@ -100,8 +135,8 @@ function alertFor(record: VitalsRecord, patientName: string): MewsAlert | null {
   };
 }
 
-// Two charted sets so the dashboard has real alerts on first load, both run
-// through the same MEWS function as anything a nurse enters.
+// Same two charted sets as the Clinical Records seed, so both modes open
+// with the same alerts
 function seedVitals() {
   const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
   const seeds: { patientId: string; vitals: VitalSigns; minutes: number }[] = [
@@ -149,68 +184,81 @@ interface DataProviderProps {
 }
 
 export function DataProvider({ children }: DataProviderProps) {
+  // API mode needs a signed-in session; without one we stay on the mock
+  const mode: DataMode = isApiMode && currentSession() ? "api" : "mock";
+
   const [seed] = useState(seedVitals);
-  // seeded patients show the MEWS from their charted vitals, not the random mock score
   const [patients, setPatients] = useState<Patient[]>(() =>
-    PATIENTS.map((patient) => {
-      const record = seed.records.find((candidate) => candidate.patientId === patient.id);
-      return record ? { ...patient, mewsScore: record.mewsScore } : patient;
-    }),
+    mode === "api"
+      ? []
+      : PATIENTS.map((patient) => {
+          const record = seed.records.find((candidate) => candidate.patientId === patient.id);
+          return record ? { ...patient, mewsScore: record.mewsScore } : patient;
+        }),
   );
-  const [vitalsRecords, setVitalsRecords] = useState<VitalsRecord[]>(seed.records);
-  const [mewsAlerts, setMewsAlerts] = useState<MewsAlert[]>(seed.alerts);
-  const [inventory, setInventory] = useState<InventoryItem[]>(INVENTORY);
-  const [labTests, setLabTests] = useState<LabTest[]>(LAB_TESTS);
-  const [wards, setWards] = useState<Ward[]>(WARDS);
-  const [isLoading, setIsLoading] = useState(supabase !== null);
-  const [sources, setSources] = useState<DataContextValue["sources"]>({
-    patients: "mock",
-    inventory: "mock",
-    labTests: "mock",
-    wards: "mock",
-  });
+  const [vitalsRecords, setVitalsRecords] = useState<VitalsRecord[]>(mode === "api" ? [] : seed.records);
+  const [mewsAlerts, setMewsAlerts] = useState<MewsAlert[]>(mode === "api" ? [] : seed.alerts);
+  const [formulary, setFormulary] = useState<FormularyItem[]>(mode === "api" ? [] : FORMULARY);
+  const [labTests, setLabTests] = useState<LabTest[]>(mode === "api" ? [] : LAB_TESTS);
+  const [medicationOrders, setMedicationOrders] = useState<MedicationOrder[]>(
+    mode === "api" ? [] : MEDICATION_ORDERS,
+  );
+  const [wards, setWards] = useState<Ward[]>(mode === "api" ? [] : WARDS);
+  const [bedAssignments, setBedAssignments] = useState<BedAssignment[]>([]);
+  const [isLoading, setIsLoading] = useState(mode === "api");
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!supabase) return;
+  // One call per service. allSettled, because a service being down should
+  // blank only its own part of the screen (the paper's fault-isolation goal).
+  const loadFromServices = useCallback(async () => {
+    const [census, vitals, alerts, wardList, admissions, diagnostics, medications, drugs] = await Promise.allSettled([
+      fetchCensus(),
+      fetchVitals(),
+      fetchAlerts(),
+      fetchWards(),
+      fetchAdmissions(),
+      fetchDiagnosticOrders(),
+      fetchMedicationOrders(),
+      fetchFormulary(),
+    ]);
 
-    // guards against setting state after unmount (Strict Mode mounts twice in dev)
-    let cancelled = false;
+    if (census.status === "fulfilled") setPatients(census.value);
+    if (vitals.status === "fulfilled") setVitalsRecords(vitals.value);
+    if (alerts.status === "fulfilled") setMewsAlerts(alerts.value);
+    if (wardList.status === "fulfilled") setWards(wardList.value);
+    if (admissions.status === "fulfilled") setBedAssignments(admissions.value);
+    if (diagnostics.status === "fulfilled") setLabTests(diagnostics.value);
+    if (medications.status === "fulfilled") setMedicationOrders(medications.value);
+    if (drugs.status === "fulfilled") setFormulary(drugs.value);
 
-    async function load() {
-      const [livePatients, liveInventory, liveLabTests, liveWards] = await Promise.all([
-        fetchTable<Patient>("patients"),
-        fetchTable<InventoryItem>("inventory"),
-        fetchTable<LabTest>("lab_tests"),
-        fetchTable<Ward>("wards"),
-      ]);
-
-      if (cancelled) return;
-
-      if (livePatients) setPatients(livePatients);
-      if (liveInventory) setInventory(liveInventory);
-      if (liveLabTests) setLabTests(liveLabTests);
-      if (liveWards) setWards(liveWards);
-
-      setSources({
-        patients: livePatients ? "supabase" : "mock",
-        inventory: liveInventory ? "supabase" : "mock",
-        labTests: liveLabTests ? "supabase" : "mock",
-        wards: liveWards ? "supabase" : "mock",
-      });
-      setIsLoading(false);
-    }
-
-    load().catch(() => {
-      // network failure: the mock data is already in state, so just stop loading
-      if (!cancelled) setIsLoading(false);
-    });
-
-    return () => {
-      cancelled = true;
-    };
+    const failed = [census, vitals, alerts, wardList, admissions, diagnostics, medications, drugs].filter(
+      (result) => result.status === "rejected",
+    ).length;
+    setLoadError(failed > 0 ? `${failed} of 8 data requests failed. Some services may be down.` : null);
+    setIsLoading(false);
   }, []);
 
-  function recordVitals(patientId: string, vitals: VitalSigns, recordedBy: string) {
+  useEffect(() => {
+    if (mode !== "api") return;
+    void loadFromServices();
+    const timer = setInterval(() => void loadFromServices(), REFRESH_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [mode, loadFromServices]);
+
+  async function recordVitals(
+    patientId: string,
+    vitals: VitalSigns,
+    recordedBy: string,
+    confirmedImplausible: boolean,
+  ) {
+    if (mode === "api") {
+      // Clinical Records scores MEWS and publishes the alert; we re-read so
+      // the new alert and the patient's updated score both show up
+      const record = await postVitals(patientId, vitals, confirmedImplausible);
+      await loadFromServices();
+      return record;
+    }
+
     const record = buildVitalsRecord(patientId, vitals, recordedBy, new Date().toISOString());
     const patientName = patients.find((patient) => patient.id === patientId)?.name ?? patientId;
 
@@ -223,16 +271,13 @@ export function DataProvider({ children }: DataProviderProps) {
     );
     const alert = alertFor(record, patientName);
     if (alert) setMewsAlerts((current) => [alert, ...current]);
-
     return record;
   }
 
   // ─── beds ───
-  // The mock wards only give a count of occupied beds, so the first
-  // `occupied` beds in each grid count as taken by patients we don't have
-  // records for. Anything assigned in this session is tracked by bed index.
-  const [bedAssignments, setBedAssignments] = useState<BedAssignment[]>([]);
-
+  // Wards only give a count of beds taken before go-live, so the first
+  // `occupied` beds of each grid count as taken by patients we don't have
+  // records for. Admissions after that are tracked bed by bed.
   function occupiedBeds(wardId: string) {
     const ward = wards.find((candidate) => candidate.id === wardId);
     if (!ward) return [];
@@ -243,9 +288,27 @@ export function DataProvider({ children }: DataProviderProps) {
     return [...baseline, ...assigned];
   }
 
-  function assignBed(request: BedRequest): { ok: true } | { ok: false; reason: string } {
-    // checked against current state right before writing, the in-memory
-    // version of UC-04 BR-03's atomic reservation
+  async function assignBed(request: BedRequest): Promise<{ ok: true } | { ok: false; reason: string }> {
+    if (mode === "api") {
+      try {
+        // Scheduling holds the real bed lock (a unique index), so a bed another
+        // nurse took a second ago comes back as a 409 here
+        await postAdmission({
+          patientId: request.patientId,
+          wardId: request.wardId,
+          bedIndex: request.bedIndex,
+          admissionType: request.admissionType,
+          attendingPhysician: request.attendingPhysician,
+        });
+        await loadFromServices();
+        return { ok: true };
+      } catch (error) {
+        await loadFromServices();
+        return { ok: false, reason: error instanceof ApiError ? error.message : "Couldn't reach Scheduling." };
+      }
+    }
+
+    // mock mode: checked against current state right before writing
     if (occupiedBeds(request.wardId).includes(request.bedIndex)) {
       return { ok: false, reason: "That bed was just taken. Please pick another one." };
     }
@@ -267,14 +330,26 @@ export function DataProvider({ children }: DataProviderProps) {
         assignedAt: new Date().toISOString(),
       },
     ]);
-    // TODO(Phase 4): POST to Scheduling, which publishes bed.assigned on the bus
     return { ok: true };
   }
 
-  function acknowledgeAlert(
+  async function acknowledgeAlert(
     alertId: string,
     acknowledgement: { by: string; note?: string; isFalseAlarm?: boolean },
   ) {
+    if (mode === "api") {
+      try {
+        await postAcknowledgement(alertId, {
+          note: acknowledgement.note,
+          isFalseAlarm: acknowledgement.isFalseAlarm ?? false,
+        });
+      } finally {
+        // on a 409 someone else acknowledged first; re-reading shows who
+        await loadFromServices();
+      }
+      return;
+    }
+
     setMewsAlerts((current) =>
       current.map((alert) =>
         // already-acknowledged alerts stay as they were (UC-08 BR-03: immutable)
@@ -291,22 +366,81 @@ export function DataProvider({ children }: DataProviderProps) {
     );
   }
 
+  async function orderDiagnosticTest(order: DiagnosticOrderRequest) {
+    if (mode === "api") {
+      const test = await postDiagnosticOrder(order);
+      setLabTests((current) => [test, ...current]);
+      return test;
+    }
+
+    const patient = patients.find((candidate) => candidate.id === order.patientId);
+    const prefix = order.kind === "Laboratory" ? "LAB" : "RAD";
+    const test: LabTest = {
+      id: `${prefix}-${5600 + labTests.length}`,
+      patientId: order.patientId,
+      patient: patient?.name ?? order.patientId,
+      test: order.test,
+      priority: order.priority,
+      status: "Pending",
+      time: "just now",
+    };
+    setLabTests((current) => [test, ...current]);
+    return test;
+  }
+
+  async function prescribe(order: PrescriptionRequest) {
+    if (mode === "api") {
+      const created = await postMedicationOrder({
+        patientId: order.patientId,
+        drug: order.drug,
+        dose: order.dose,
+        frequency: order.frequency,
+        route: order.route,
+        duration: order.duration,
+        instructions: order.instructions,
+      });
+      setMedicationOrders((current) => [created, ...current]);
+      return created;
+    }
+
+    const patient = patients.find((candidate) => candidate.id === order.patientId);
+    const created: MedicationOrder = {
+      id: `RX-${1001 + medicationOrders.length}`,
+      patientId: order.patientId,
+      patientName: patient?.name ?? order.patientId,
+      drug: order.drug,
+      dose: order.dose,
+      frequency: order.frequency,
+      route: order.route ?? null,
+      duration: order.duration ?? null,
+      status: "Pending",
+      prescribedBy: order.prescribedBy,
+      orderedAt: new Date().toISOString(),
+    };
+    setMedicationOrders((current) => [created, ...current]);
+    return created;
+  }
+
   return (
     <DataContext.Provider
       value={{
-        patients,
-        inventory,
-        labTests,
-        wards,
+        mode,
         isLoading,
-        sources,
+        loadError,
+        patients,
+        formulary,
+        labTests,
+        medicationOrders,
+        wards,
         vitalsRecords,
         mewsAlerts,
+        bedAssignments,
         recordVitals,
         acknowledgeAlert,
-        bedAssignments,
         occupiedBeds,
         assignBed,
+        orderDiagnosticTest,
+        prescribe,
       }}
     >
       {children}

@@ -2,15 +2,41 @@
 // IT Admin's architecture monitor, matching the paper's stack (TABLE IX):
 // Nginx → Kong → 8 NestJS services, RabbitMQ, PostgreSQL schema-per-service,
 // Docker Compose. No patient data on this screen (IT portal, RA 10173).
-// Everything is simulated in the browser for the prototype demo.
-// TODO(Phase 9c): replace with live /health checks and the Audit Log's
-// transaction feed once the services are running.
+// With the Docker Compose stack running, the service, bus, and database
+// cards come from each service's live /health. On the offline Vercel
+// preview they're simulated, like the RBAC sandbox and event bus demo below.
+// This tab lives in the web shell, not a service folder: it watches all eight.
 
 "use client";
 
 import { useEffect, useRef, useState } from "react";
 import { Power, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { apiGet, isApiMode, SERVICE_NAMES, type ServiceName } from "@/lib/api";
+
+const HEALTH_POLL_MS = 10_000;
+
+interface ServiceHealth {
+  service: string;
+  status: "up" | "degraded";
+  database: "up" | "down";
+  eventBus: "up" | "reconnecting";
+}
+
+// null means the /health call itself failed (container down or unreachable)
+type HealthMap = Record<ServiceName, ServiceHealth | null>;
+
+async function checkAllServices(): Promise<HealthMap> {
+  const results = await Promise.allSettled(
+    SERVICE_NAMES.map((name) => apiGet<ServiceHealth>(name, "/health")),
+  );
+  return Object.fromEntries(
+    SERVICE_NAMES.map((name, index) => {
+      const result = results[index];
+      return [name, result.status === "fulfilled" ? result.value : null];
+    }),
+  ) as HealthMap;
+}
 
 type SandboxRole = "GUEST" | "NURSE" | "DOCTOR";
 type SandboxTab = "rbac" | "schemas";
@@ -90,39 +116,44 @@ const ENDPOINTS: SandboxEndpoint[] = [
 // One row per Functional Service Area (paper TABLE IV), each with its own
 // schema and DB user and no cross-schema foreign keys
 const SERVICE_SCHEMAS = [
-  { service: "identity", schema: "identity", owns: "users, roles, patients (MPI)", publishes: "patient.registered" },
+  {
+    service: "identity",
+    schema: "identity",
+    owns: "staff, patients (MPI)",
+    publishes: "staff.logged-in, patient.registered",
+  },
   {
     service: "clinical-records",
     schema: "clinical",
-    owns: "encounters, diagnoses, vitals, notes",
-    publishes: "vitals.recorded, mews.alert, encounter.discharged",
+    owns: "patients (copy), encounters, vitals",
+    publishes: "vitals.recorded, mews.alert.medium, mews.alert.high",
   },
   {
     service: "scheduling",
     schema: "scheduling",
-    owns: "wards, rooms, beds, admissions",
-    publishes: "encounter.admitted, bed.assigned",
+    owns: "wards, admissions (bed lock)",
+    publishes: "patient.admitted, patient.transferred",
   },
   {
     service: "orders-diagnostics",
     schema: "orders",
-    owns: "orders, prescriptions, dispenses, results",
-    publishes: "order.created, medication.dispensed, result.released",
+    owns: "formulary, medication_orders, diagnostic_orders",
+    publishes: "medication.ordered, diagnostic.ordered",
   },
   {
     service: "billing",
     schema: "billing",
-    owns: "charges, invoices, payments",
-    publishes: "charge.posted, invoice.updated, claim.package.ready",
+    owns: "charge_master, charges",
+    publishes: "charge.posted",
   },
   {
     service: "interoperability",
     schema: "interop",
-    owns: "claims, claim_forms, fhir_exchanges, referrals",
-    publishes: "claim.status.changed",
+    owns: "patients, admissions (copies), report_runs",
+    publishes: "report.generated",
   },
-  { service: "notifications", schema: "notifications", owns: "alerts, deliveries", publishes: "(consumes events)" },
-  { service: "audit-log", schema: "audit", owns: "audit_entries (append-only)", publishes: "(consumes audit.event)" },
+  { service: "notifications", schema: "notifications", owns: "alerts", publishes: "alert.acknowledged" },
+  { service: "audit-log", schema: "audit", owns: "entries (append-only)", publishes: "(consumes every event)" },
 ];
 
 const LOG_BADGE: Record<LogType, string> = {
@@ -207,6 +238,28 @@ export function ArchitectureStatusView() {
 
   // event bus simulation
   const [isNotificationsUp, setIsNotificationsUp] = useState(true);
+  const [liveHealth, setLiveHealth] = useState<HealthMap | null>(null);
+
+  useEffect(() => {
+    if (!isApiMode) return;
+    let cancelled = false;
+    const poll = () =>
+      checkAllServices().then((health) => {
+        if (!cancelled) setLiveHealth(health);
+      });
+    void poll();
+    const timer = setInterval(() => void poll(), HEALTH_POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, []);
+
+  const liveEntries = liveHealth ? SERVICE_NAMES.map((name) => [name, liveHealth[name]] as const) : [];
+  const upCount = liveEntries.filter(([, health]) => health?.status === "up").length;
+  const failing = liveEntries.filter(([, health]) => health?.status !== "up").map(([name]) => name);
+  const busDown = liveEntries.some(([, health]) => health && health.eventBus !== "up");
+  const databaseDown = liveEntries.some(([, health]) => !health || health.database !== "up");
   const [published, setPublished] = useState(128);
   const [delivered, setDelivered] = useState(128);
   const [waiting, setWaiting] = useState(0);
@@ -332,17 +385,24 @@ export function ArchitectureStatusView() {
       label: "Microservices",
       labelClass: "text-rose-500",
       borderClass: "border-l-rose-500",
-      status: isNotificationsUp ? "8 / 8 up" : "7 / 8 up",
-      isDown: !isNotificationsUp,
+      status: liveHealth ? `${upCount} / 8 up` : isNotificationsUp ? "8 / 8 up" : "7 / 8 up",
+      isDown: liveHealth ? upCount < 8 : !isNotificationsUp,
       name: "NestJS × 8 FSAs",
       sub: "One container per service",
-      footer: isNotificationsUp ? "All /health checks OK" : "notifications /health failing",
+      footer: liveHealth
+        ? failing.length === 0
+          ? "All /health checks OK (live)"
+          : `${failing.join(", ")} /health failing`
+        : isNotificationsUp
+          ? "All /health checks OK"
+          : "notifications /health failing",
     },
     {
       label: "Event Bus",
       labelClass: "text-orange-500",
       borderClass: "border-l-orange-500",
-      status: "Running",
+      status: liveHealth && busDown ? "Reconnecting" : "Running",
+      isDown: Boolean(liveHealth && busDown),
       name: "RabbitMQ",
       sub: "Topic exchange wah.events",
       footer: `Queued: ${waiting} • DLQ: 0`,
@@ -351,7 +411,8 @@ export function ArchitectureStatusView() {
       label: "Database",
       labelClass: "text-amber-600",
       borderClass: "border-l-amber-500",
-      status: "Connected",
+      status: liveHealth && databaseDown ? "Degraded" : "Connected",
+      isDown: Boolean(liveHealth && databaseDown),
       name: "PostgreSQL",
       sub: "Schema per service",
       footer: "8 schemas • 8 DB users",

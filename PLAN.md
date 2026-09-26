@@ -58,16 +58,16 @@ a build, tests, a commit, and an update to this file.
 
 ## Master prompt phases
 
-- [ ] **0**: Monorepo, Docker Compose (nginx, Kong, RabbitMQ, single Postgres instance), shared package
-- [ ] **1**: Identity and auth
-- [ ] **2**: Audit Log and Notifications
-- [ ] **3**: Clinical Records (with vitals and MEWS)
-- [ ] **4**: Scheduling
-- [ ] **5**: Orders & Diagnostics
-- [ ] **6**: Billing
+- [x] **0**: Monorepo, Docker Compose (nginx, Kong, RabbitMQ, single Postgres instance), shared package (2026-09-26, D-042)
+- [~] **1**: Identity and auth: JWT login/signup/refresh, staff list, MPI register + match. Left: patient merge (UC-02), step-up auth
+- [~] **2**: Audit Log and Notifications: append-only trail with meta-audit, MEWS alerts with ack and escalation. Left: paging on escalation
+- [~] **3**: Clinical Records: census, immutable vitals, server-side MEWS, alert events. Left: diagnoses (UC-06), discharge (UC-07)
+- [~] **4**: Scheduling: wards, admit/transfer with a DB bed lock. Left: appointments and queue (UC-03)
+- [~] **5**: Orders & Diagnostics: formulary, medication and diagnostic orders. Left: dispensing and result release (need their portals), allergy/dose checks
+- [~] **6**: Billing: charge master and event-driven charge capture. Left: adjustments, statement of account
 - [ ] **7a**: Interoperability (eClaims tables, XML, validator, gateway adapters)
-- [ ] **7b**: Interoperability (DOH exports, FHIR, referral support, WAH4C stub)
-- [ ] **8**: Web app shell, auth, role navigation, global components (theme tokens already exist from Prompt 1)
+- [~] **7b**: Interoperability: FHIR Patient/Encounter reads and an admissions summary export done. Left: other FHIR resources, AHSR/FHSIS/PIDSR templates, referral, WAH4C
+- [~] **8**: Web app shell: screens live in each service's frontend folder (D-043), real JWT login, live data in Docker mode
 - [ ] **9a**: Registrar, Nurse, Doctor screens (ProfileView already exists from Prompt 1)
 - [ ] **9b**: Pharmacist and Ancillary screens
 - [ ] **9c**: Billing, Hospital Admin, System Admin screens
