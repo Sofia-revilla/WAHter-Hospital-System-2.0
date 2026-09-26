@@ -15,13 +15,15 @@ services/billing/
 
 ## Backend
 
-- Database: `billing`: `charge_master`, `charges`
+- Database: `billing`: `patients` (copy), `charge_master`, `charges`, `charge_adjustments` (append-only)
 - Endpoints (through Kong):
-  - `GET /api/billing/charges` (Billing Staff and Hospital Admin only)
+  - `GET /api/billing/charges`, `GET /api/billing/accounts` (Billing Staff, Hospital Admin)
+  - `POST /api/billing/charges/:id/price` (prices an unpriced line and logs the reason)
   - `GET /api/billing/health` and API docs at `/api/billing/docs`
-- Publishes: `charge.posted`
-- Listens for: `patient.admitted`, `diagnostic.ordered`, `medication.dispensed`
+- Publishes: `charge.posted`, `charge.priced`
+- Listens for: `patient.admitted`, `diagnostic.ordered`, `medication.dispensed`, `patient.registered`
 
 ## Frontend
 
-Billing has no tab yet: it belongs to the Billing Staff and Hospital Admin portals, which aren't built (see DECISIONS.md D-041). Their screens will go in this folder.
+- `BillingView.tsx`: the **Billing** tab (Billing Staff): accounts, captured charges, pricing
+- `api.ts`: this service's API calls, used by `apps/web/src/context/DataContext.tsx`

@@ -4,10 +4,11 @@ import { WahServiceModule } from "@wahter/shared";
 import { ChargeCaptureConsumer } from "./charges/charge-capture.consumer";
 import { ChargesController } from "./charges/charges.controller";
 import { ChargesRepository } from "./charges/charges.repository";
+import { ChargesService } from "./charges/charges.service";
 
 @Module({
   imports: [WahServiceModule.register({ name: "billing", migrationsDir: join(__dirname, "..", "db") })],
   controllers: [ChargesController],
-  providers: [ChargesRepository, ChargeCaptureConsumer],
+  providers: [ChargesRepository, ChargesService, ChargeCaptureConsumer],
 })
 export class AppModule {}

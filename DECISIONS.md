@@ -458,3 +458,30 @@ The pre-change build is tagged `prompt-build-v1` (also still on `main`) so it ca
   the error was swallowed.
 - Kong upstream timeouts are down to 3s connect / 15s read with 1 retry. With the defaults (60s,
   5 retries), a stopped container took about a minute to show up as down.
+
+### D-045: Pharmacist and Billing Staff portals, remembered sign-in, loading screen
+- **Two new portals** (TABLE XIII roles): Pharmacist (Pharmacy + Profile) and Billing Staff
+  (Billing + Profile). The token role for Billing Staff is `Billing`. Demo accounts are
+  `pharmacy2026` and `billing2026`, and the seeded pharmacist (Grace Villanueva) and billing clerk
+  (Mark Aquino) can sign in too. Lab/Radiology, Registrar, and Hospital Admin portals come later
+  the same way.
+- **Dispensing (UC-10)** lives in Orders & Diagnostics: only a Pending order, with a quantity
+  (partial fills allowed) and an optional note. A Review order or an already dispensed one is
+  refused with a reason. RA 9165 controlled drugs are refused until step-up approval (master
+  prompt §13) exists; one signature isn't enough, and we'd rather block than fake it. It
+  publishes `medication.dispensed`, and Billing posts the drug charge from that event.
+- **Billing (UC-12):** a copy of patient names, a per-patient accounts endpoint, and pricing of
+  unpriced lines. Each price goes into an append-only `charge_adjustments` log with the reason and
+  who set it, and publishes `charge.priced` (so it lands in the audit trail). Correcting a line
+  that's already priced waits for Phase 6 (it needs a supervisor).
+- **Each portal loads only what it reads.** A pharmacist never calls Clinical Records (they'd
+  get a 403 anyway). Only "service unreachable" counts as offline, never a 403.
+- **Staying signed in:** the JWT pair and the portal profile (name, role, open tab) are kept in
+  sessionStorage, so a refresh lands on the same tab. We chose sessionStorage over localStorage
+  on purpose: closing the tab or browser ends the session, which suits a shared ward PC. Signing
+  out clears both. An expired refresh token sends you back to login.
+- **Loading screen:** shown while the saved session is checked on start, and over the portal
+  until its first data load finishes. It lists each service the portal needs as it answers
+  (Connecting → Ready / Offline). It stays at least 700 ms so it never just flashes.
+- The seed and schema files were edited in place instead of adding migrations, since nothing is
+  deployed with a database yet. Anyone who ran the earlier stack needs `docker compose down -v`.

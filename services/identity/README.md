@@ -27,6 +27,6 @@ services/identity/
 ## Frontend
 
 - `LoginScreen.tsx`: the login overlay (portal picker, sign in, sign up, Try Demo)
-- `ProfileView.tsx`: the **Profile** tab (every role)
+- `ProfileView.tsx`: the **Profile** tab (all five portals)
 - `StaffAccessView.tsx`: the **Staff & Access** tab (IT), with the audit panel from `audit-log/frontend`
 - `api.ts`: this service's API calls, used by `apps/web/src/context/DataContext.tsx`

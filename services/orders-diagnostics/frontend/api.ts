@@ -42,6 +42,10 @@ export const postMedicationOrder = (order: {
   instructions?: string;
 }) => apiPost<MedicationOrder>("orders-diagnostics", "/medication-orders", order);
 
+// Pharmacist only (UC-10). Billing charges the drug from the event this publishes.
+export const postDispense = (orderId: string, quantity: number, note?: string) =>
+  apiPost<MedicationOrder>("orders-diagnostics", `/medication-orders/${orderId}/dispense`, { quantity, note });
+
 export async function fetchDiagnosticOrders() {
   const orders = await apiGet<DiagnosticOrderResponse[]>("orders-diagnostics", "/diagnostic-orders");
   return orders.map(toLabTest);

@@ -6,6 +6,8 @@ import { EntriesRepository, type AuditAction } from "./entries.repository";
 const HOSPITAL_ROLE: Record<string, string> = {
   Doctor: "Physician",
   Nurse: "Nurse",
+  Pharmacist: "Pharmacist",
+  Billing: "Billing Staff",
   IT: "System Administrator",
 };
 
@@ -23,6 +25,7 @@ const ACTION_FOR_EVENT: Record<string, AuditAction> = {
   "diagnostic.ordered": "CREATE",
   "diagnostic.resulted": "UPDATE",
   "charge.posted": "CREATE",
+  "charge.priced": "UPDATE",
   "report.generated": "EXPORT",
 };
 
@@ -51,6 +54,7 @@ function resourceFor(event: EventEnvelope) {
     case "diagnostic.resulted":
       return `Diagnostic order ${data.orderId}`;
     case "charge.posted":
+    case "charge.priced":
       return `Charge ${data.chargeId} (${data.patientId})`;
     case "report.generated":
       return `Report ${data.reportId}`;

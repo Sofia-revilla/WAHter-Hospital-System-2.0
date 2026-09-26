@@ -43,6 +43,28 @@ export interface MedicationOrder {
   status: MedicationOrderStatus;
   prescribedBy: string;
   orderedAt: string;
+  // RA 9165 dangerous drug (from the formulary); needs step-up to dispense
+  isControlled?: boolean;
+  dispensedQuantity?: number | null;
+  dispensedBy?: string | null;
+  dispensedAt?: string | null;
+}
+
+// One line on a patient's account, posted by Billing from a bus event (UC-12)
+export interface Charge {
+  id: string;
+  patientId: string;
+  patientName: string;
+  code: string | null;
+  description: string;
+  quantity: number;
+  unitAmount: number;
+  amount: number;
+  // no charge master price yet; billing staff set it before the statement
+  isUnpriced: boolean;
+  // the event type that caused it, e.g. "patient.admitted"
+  source: string;
+  postedAt: string;
 }
 
 export interface LabTest {
@@ -73,13 +95,16 @@ export interface RevenuePoint {
 }
 
 
-// Only the three portals from the login screen exist in the prototype.
-// The IT role is stored as "IT" but shown as "IT Admin" on screen.
-export type StaffRole = "Doctor" | "Nurse" | "IT";
+// The portals on the login screen. Stored names are short ("IT", "Billing");
+// ROLE_LABELS has what staff see. Lab/Radiology, Registrar, and Hospital
+// Admin portals come later.
+export type StaffRole = "Doctor" | "Nurse" | "Pharmacist" | "Billing" | "IT";
 
 export const ROLE_LABELS: Record<StaffRole, string> = {
   Doctor: "Doctor",
   Nurse: "Nurse",
+  Pharmacist: "Pharmacist",
+  Billing: "Billing Staff",
   IT: "IT Admin",
 };
 

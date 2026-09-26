@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsOptional, IsString, MinLength } from "class-validator";
+import { IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from "class-validator";
 
 export class CreateMedicationOrderDto {
   @ApiProperty({ example: "WAH-2026-00003" })
@@ -35,4 +35,19 @@ export class CreateMedicationOrderDto {
   @IsOptional()
   @IsString()
   instructions?: string;
+}
+
+export class DispenseDto {
+  // UC-10: a partial fill is allowed; the pharmacist records what went out
+  @ApiProperty({ example: 21 })
+  @IsInt()
+  @Min(1)
+  @Max(1000)
+  quantity: number;
+
+  @ApiPropertyOptional({ example: "Partial fill, rest tomorrow" })
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  note?: string;
 }

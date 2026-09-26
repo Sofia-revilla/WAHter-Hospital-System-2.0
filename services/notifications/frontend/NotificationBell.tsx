@@ -28,7 +28,9 @@ export function NotificationBell({ role, onOpenAlerts }: NotificationBellProps) 
 
   // IT has no clinical access (paper: IT portal sees no patient data), so MEWS
   // alerts never reach its inbox
-  const notifications = role === "IT" ? [] : mewsAlerts.filter((alert) => !alert.acknowledgedAt);
+  // MEWS alerts go to the bedside roles (UC-08); pharmacy, billing, and IT get none
+  const isBedside = role === "Doctor" || role === "Nurse";
+  const notifications = isBedside ? mewsAlerts.filter((alert) => !alert.acknowledgedAt) : [];
 
   // close on outside click or Escape, like any other dropdown
   useEffect(() => {

@@ -1,32 +1,44 @@
-import { Controller, Get, Query } from "@nestjs/common";
-import { ApiBearerAuth, ApiQuery, ApiTags } from "@nestjs/swagger";
-import { Roles } from "@wahter/shared";
-import { ChargesRepository } from "./charges.repository";
+import { Body, Controller, Get, HttpCode, Param, Post, Query } from "@nestjs/common";
+import { ApiBearerAuth, ApiProperty, ApiQuery, ApiTags } from "@nestjs/swagger";
+import { IsNumber, IsString, Max, Min, MinLength } from "class-validator";
+import { CurrentUser, Roles, type AuthUser } from "@wahter/shared";
+import { ChargesService } from "./charges.service";
 
+class PriceChargeDto {
+  @ApiProperty({ example: 250 })
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0.01)
+  @Max(1_000_000)
+  unitAmount: number;
+
+  @ApiProperty({ example: "Priced from the supplier invoice" })
+  @IsString()
+  @MinLength(3)
+  reason: string;
+}
+
+// UC-12: Billing Staff (and the Hospital Admin, whose portal comes later)
 @ApiTags("charges")
 @ApiBearerAuth()
-@Controller("charges")
+@Roles("Billing", "Hospital Administrator")
+@Controller()
 export class ChargesController {
-  constructor(private readonly charges: ChargesRepository) {}
+  constructor(private readonly charges: ChargesService) {}
 
-  // Billing Staff and the Hospital Admin only. Neither has a portal yet, so
-  // this is closed for now; charges still show up in the audit log.
-  @Roles("Billing Staff", "Hospital Administrator")
   @ApiQuery({ name: "patientId", required: false })
-  @Get()
-  async list(@Query("patientId") patientId?: string) {
-    const rows = await this.charges.findByPatient(patientId);
-    return rows.map((row) => ({
-      id: row.id,
-      patientId: row.patient_id,
-      code: row.code,
-      description: row.description,
-      quantity: row.quantity,
-      unitAmount: Number(row.unit_amount),
-      amount: Number(row.amount),
-      isUnpriced: row.is_unpriced,
-      source: row.source_type,
-      postedAt: row.posted_at.toISOString(),
-    }));
+  @Get("charges")
+  list(@Query("patientId") patientId?: string) {
+    return this.charges.list(patientId);
+  }
+
+  @Get("accounts")
+  accounts() {
+    return this.charges.accounts();
+  }
+
+  @HttpCode(200)
+  @Post("charges/:id/price")
+  price(@Param("id") id: string, @Body() body: PriceChargeDto, @CurrentUser() user: AuthUser) {
+    return this.charges.price(id, body, user);
   }
 }

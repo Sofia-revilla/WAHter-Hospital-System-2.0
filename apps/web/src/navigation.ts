@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   User,
   Users,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import type { ServiceName } from "./lib/api";
@@ -23,6 +24,7 @@ export type TabId =
   | "pharmacy"
   | "lab"
   | "rooms"
+  | "billing"
   | "architecture"
   | "staff"
   | "profile";
@@ -74,6 +76,12 @@ export const TABS: Record<TabId, TabConfig> = {
     description: "Ward occupancy, bed assignment, and smart referral.",
     services: ["scheduling", "clinical-records"],
   },
+  billing: {
+    label: "Billing",
+    icon: Wallet,
+    description: "Patient accounts, captured charges, and unpriced items.",
+    services: ["billing"],
+  },
   architecture: {
     label: "Architecture",
     icon: Database,
@@ -95,10 +103,14 @@ export const TABS: Record<TabId, TabConfig> = {
 };
 
 export const ROLE_TABS: Record<StaffRole, TabId[]> = {
-  // Billing is for Billing Staff and the Hospital Admin (UC-12/13), so the
+  // Billing belongs to Billing Staff (and later the Hospital Admin), so the
   // clinical portals don't get it
   Doctor: ["dashboard", "patients", "prescription", "pharmacy", "lab", "rooms", "profile"],
   Nurse: ["dashboard", "patients", "pharmacy", "rooms", "lab", "profile"],
+  // UC-10 is the pharmacist's only use case, so the portal is the worklist
+  Pharmacist: ["pharmacy", "profile"],
+  // UC-12/13: billing staff see accounts and charges, never clinical tabs
+  Billing: ["billing", "profile"],
   // The paper's IT portal has no clinical modules and no patient data
   // (RA 10173), so IT gets system screens only. No inventory tab either:
   // no FSA or use case covers stock management.

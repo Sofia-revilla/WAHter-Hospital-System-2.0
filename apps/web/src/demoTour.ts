@@ -80,6 +80,30 @@ export const DEMO_STEPS: Record<StaffRole, DemoStep[]> = {
       desc: "Keep your nursing profile current: department, employee ID, biography, and your on-duty status for the shift.",
     },
   ],
+  Pharmacist: [
+    {
+      tab: "pharmacy",
+      title: "Dispensing Worklist",
+      desc: "Every physician order lands here. Check it against the order, enter the quantity (partial fills are fine), and dispense. Billing charges the drug on its own once you do.",
+    },
+    {
+      tab: "profile",
+      title: "Your Profile",
+      desc: "Keep your pharmacist profile current: department, license, and your on-duty status.",
+    },
+  ],
+  Billing: [
+    {
+      tab: "billing",
+      title: "Patient Accounts",
+      desc: "Charges arrive by themselves from admissions, test orders, and dispensing. Items without a charge master price are flagged for you to price, and each price you set is logged.",
+    },
+    {
+      tab: "profile",
+      title: "Your Profile",
+      desc: "Keep your billing office profile and on-duty status up to date.",
+    },
+  ],
   IT: [
     {
       tab: "architecture",
@@ -142,6 +166,13 @@ export const TAB_FEATURES: Record<TabId, string[]> = {
     "Admission coordination",
     "Transfer management",
   ],
+  billing: [
+    "Captured charges by patient",
+    "Price flagged items",
+    "Logged price changes",
+    "Account running totals",
+    "Charges from bus events",
+  ],
   staff: [
     "Staff accounts & roles",
     "Second approval for role changes",
@@ -173,6 +204,7 @@ export const TAB_EMOJI: Record<TabId, string> = {
   lab: "🧪",
   rooms: "🛏️",
   architecture: "🖥️",
+  billing: "💳",
   staff: "🛡️",
   profile: "👤",
 };

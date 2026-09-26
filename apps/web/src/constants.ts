@@ -7,6 +7,7 @@ import type {
   AuditEntry,
   StaffAccount,
   Department,
+  Charge,
   FormularyItem,
   MedicationOrder,
   LabTest,
@@ -198,6 +199,47 @@ export const MEDICATION_ORDERS: MedicationOrder[] = [
   mockOrder("RX-1003", PATIENTS[0], "Amoxicillin 500mg", "1 cap", "TID", "Pending", 2),
   mockOrder("RX-1002", PATIENTS[1], "Paracetamol 500mg", "1 tab", "PRN", "Dispensed", 4),
   mockOrder("RX-1001", PATIENTS[2], "Losartan 50mg", "1 tab", "OD", "Dispensed", 24),
+];
+
+// ─── BILLING ───
+
+function mockCharge(
+  id: string,
+  patient: Patient,
+  description: string,
+  source: string,
+  quantity: number,
+  unitAmount: number,
+  hoursAgo: number,
+): Charge {
+  return {
+    id,
+    patientId: patient.id,
+    patientName: patient.name,
+    code: unitAmount > 0 ? id.replace("CHG", "CM") : null,
+    description,
+    quantity,
+    unitAmount,
+    amount: quantity * unitAmount,
+    isUnpriced: unitAmount === 0,
+    source,
+    postedAt: new Date(Date.now() - hoursAgo * HOUR_MS).toISOString(),
+  };
+}
+
+// Same lines as the Billing service seed, including one unpriced item
+export const CHARGES: Charge[] = [
+  mockCharge("CHG-000005", PATIENTS[3], "Complete Blood Count (CBC)", "diagnostic.ordered", 1, 350, 0.2),
+  mockCharge("CHG-000006", PATIENTS[1], "Urinalysis", "diagnostic.ordered", 1, 150, 0.4),
+  mockCharge("CHG-000007", PATIENTS[2], "Lipid Profile", "diagnostic.ordered", 1, 800, 1),
+  mockCharge("CHG-000008", PATIENTS[4], "Fasting Blood Sugar", "diagnostic.ordered", 1, 180, 2),
+  mockCharge("CHG-000010", PATIENTS[1], "Paracetamol 500mg tablet", "medication.dispensed", 10, 3.5, 3),
+  mockCharge("CHG-000011", PATIENTS[0], "Nebulization kit", "medication.dispensed", 1, 0, 6),
+  mockCharge("CHG-000009", PATIENTS[2], "Losartan 50mg tablet", "medication.dispensed", 10, 12, 23),
+  mockCharge("CHG-000004", PATIENTS[4], "General Ward (Female) bed, first day", "patient.admitted", 1, 1200, 67),
+  mockCharge("CHG-000001", PATIENTS[0], "ICU bed, first day", "patient.admitted", 1, 4500, 100),
+  mockCharge("CHG-000002", PATIENTS[3], "ICU bed, first day", "patient.admitted", 1, 4500, 115),
+  mockCharge("CHG-000003", PATIENTS[1], "Pediatrics Ward bed, first day", "patient.admitted", 1, 1200, 172),
 ];
 
 // ─── LAB ───

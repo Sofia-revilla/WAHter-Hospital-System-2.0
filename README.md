@@ -33,16 +33,16 @@ services/
 │   └── frontend/         → Bed Management tab
 ├── orders-diagnostics/   prescriptions, formulary, lab/radiology orders
 │   ├── backend/          → schema "orders"
-│   └── frontend/         → E-Prescribing, Pharmacy, and Laboratory tabs
+│   └── frontend/         → E-Prescribing, Pharmacy (dispensing), and Laboratory tabs
 ├── notifications/        MEWS alerts, acknowledgment, escalation
 │   ├── backend/          → schema "notifications"
 │   └── frontend/         → notification bell, MEWS Alerts panel
 ├── audit-log/            append-only audit trail
 │   ├── backend/          → schema "audit"
 │   └── frontend/         → Audit Log panel (in Staff & Access)
-├── billing/              charge capture from bus events
+├── billing/              charge capture from bus events, pricing
 │   ├── backend/          → schema "billing"
-│   └── frontend/         → (Billing Staff portal, not built yet)
+│   └── frontend/         → Billing tab (Billing Staff portal)
 └── interoperability/     FHIR R4 reads, DOH report exports
     ├── backend/          → schema "interop"
     └── frontend/         → (Hospital Admin portal, not built yet)
@@ -90,7 +90,8 @@ and seeded on first start.
 - RabbitMQ dashboard (watch the event queues): http://localhost:15672, user `wahter` with the
   password from `.env`
 
-To start again from a clean database: `docker compose down -v`
+To start again from a clean database: `docker compose down -v`. Do this once if you ran an
+earlier version, since the Pharmacist and Billing portals changed the starting tables.
 
 ## Running only the web app (no Docker)
 
@@ -111,10 +112,12 @@ Pick a portal and sign in with its prototype password. These are public demo val
 | --- | --- |
 | Doctor's Portal | `doctor2026` |
 | Nurse's Portal | `nurse2026` |
+| Pharmacy Portal | `pharmacy2026` |
+| Billing Portal | `billing2026` |
 | Administrator Portal | `admin2026` |
 
 **Try Demo** gives a guided tour of each role. With Docker running, logins go through the Identity
-service and get a real JWT.
+service and get a real JWT. A refresh keeps you signed in; signing out or closing the tab ends it.
 
 ## What each role sees
 
@@ -122,8 +125,15 @@ service and get a real JWT.
   Management, Profile
 - **Nurse**: Dashboard, Patients (chart vitals with MEWS), Pharmacy (view), Bed Management
   (admit/transfer), Laboratory (view), Profile
+- **Pharmacist**: Pharmacy (dispense physician orders, partial fills, controlled drugs blocked
+  until step-up approval exists), Profile
+- **Billing Staff**: Billing (every captured charge per patient, price flagged items with a logged
+  reason), Profile
 - **IT Admin**: Architecture (live service health), Staff & Access (accounts and audit log),
   Profile. No patient data (RA 10173).
+
+Dispensing in the Pharmacy portal makes Billing post the drug charge on its own, through the event
+bus. The two services never call each other.
 
 MEWS is decision support only. It never replaces clinical judgment.
 

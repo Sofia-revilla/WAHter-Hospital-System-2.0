@@ -19,6 +19,8 @@ import {
   IdCard,
   KeyRound,
   Mail,
+  Pill,
+  Receipt,
   ShieldCheck,
   Stethoscope,
   Users,
@@ -51,6 +53,8 @@ const MIN_PASSWORD_LENGTH = 8;
 const PROTOTYPE_PASSWORDS: Record<StaffRole, string> = {
   Doctor: "doctor2026",
   Nurse: "nurse2026",
+  Pharmacist: "pharmacy2026",
+  Billing: "billing2026",
   IT: "admin2026",
 };
 
@@ -94,6 +98,30 @@ const ROLE_STYLES: Record<StaffRole, RoleStyle> = {
     chip: "bg-wah-neon/15 text-wah-neon",
     submit: "bg-wah-neon",
   },
+  Pharmacist: {
+    icon: Pill,
+    portal: "Pharmacy Portal",
+    subtitle: "Dispensing",
+    placeholder: "e.g. Grace Villanueva",
+    demoName: "Demo Pharmacist",
+    iconBox: "bg-indigo-500/15 text-indigo-500",
+    hoverBorder: "hover:border-indigo-500",
+    hoverRotate: "group-hover:-rotate-12",
+    chip: "bg-indigo-500/15 text-indigo-500",
+    submit: "bg-indigo-500",
+  },
+  Billing: {
+    icon: Receipt,
+    portal: "Billing Portal",
+    subtitle: "Accounts & Charges",
+    placeholder: "e.g. Mark Aquino",
+    demoName: "Demo Billing",
+    iconBox: "bg-fuchsia-500/15 text-fuchsia-500",
+    hoverBorder: "hover:border-fuchsia-500",
+    hoverRotate: "group-hover:rotate-6",
+    chip: "bg-fuchsia-500/15 text-fuchsia-500",
+    submit: "bg-fuchsia-500",
+  },
   IT: {
     icon: Database,
     portal: "Administrator Portal",
@@ -108,7 +136,7 @@ const ROLE_STYLES: Record<StaffRole, RoleStyle> = {
   },
 };
 
-const ROLES: StaffRole[] = ["Doctor", "Nurse", "IT"];
+const ROLES: StaffRole[] = ["Doctor", "Nurse", "Pharmacist", "Billing", "IT"];
 
 // ─── SMALL PIECES ───
 
@@ -417,7 +445,8 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                     <h2 className="text-3xl font-black">System Access</h2>
                     <p className="mt-1 text-text-muted">Select your portal to begin</p>
 
-                    <div className="mt-8 space-y-4">
+                    {/* five portals: two columns, the IT portal spans the last row */}
+                    <div className="mt-8 grid gap-3 sm:grid-cols-2">
                       {ROLES.map((roleOption) => {
                         const roleStyle = ROLE_STYLES[roleOption];
                         const Icon = roleStyle.icon;
@@ -427,24 +456,25 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                             type="button"
                             onClick={() => chooseRole(roleOption)}
                             className={cn(
-                              "group flex w-full items-center gap-4 rounded-xl border-2 p-4 text-left sm:gap-5 sm:p-6",
+                              "group flex w-full items-center gap-4 rounded-xl border-2 p-4 text-left",
                               "border-glass-border transition-all duration-300",
                               "hover:-translate-y-1 hover:shadow-xl",
+                              roleOption === "IT" && "sm:col-span-2",
                               roleStyle.hoverBorder,
                             )}
                           >
                             <div
                               className={cn(
-                                "flex h-16 w-16 shrink-0 items-center justify-center rounded-xl",
+                                "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl",
                                 "transition-transform duration-300",
                                 roleStyle.iconBox,
                                 roleStyle.hoverRotate,
                               )}
                             >
-                              <Icon size={28} />
+                              <Icon size={24} />
                             </div>
                             <div>
-                              <p className="text-xl font-black">{roleStyle.portal}</p>
+                              <p className="text-base font-black">{roleStyle.portal}</p>
                               <p className="text-[10px] font-bold uppercase tracking-widest text-text-muted">
                                 {roleStyle.subtitle}
                               </p>

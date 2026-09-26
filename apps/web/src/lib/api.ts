@@ -82,9 +82,32 @@ function unavailable(service: ServiceName, status: number) {
   );
 }
 
-// Kept in memory only. A page reload signs you out, same as the mock login;
-// we didn't want tokens sitting in localStorage on a shared ward PC.
+// Kept in sessionStorage so a page refresh doesn't sign staff out. Not
+// localStorage: closing the tab (or the browser) ends the session, which is
+// what we want on a shared ward PC.
+const SESSION_KEY = "wahter.session";
+
 let session: Session | null = null;
+
+function storeSession(next: Session | null) {
+  try {
+    if (next) sessionStorage.setItem(SESSION_KEY, JSON.stringify(next));
+    else sessionStorage.removeItem(SESSION_KEY);
+  } catch {
+    // private mode or storage blocked: the session just won't survive a refresh
+  }
+}
+
+// Called once on app start. Returns null if there's nothing (valid) saved.
+export function restoreSession() {
+  try {
+    const saved = sessionStorage.getItem(SESSION_KEY);
+    session = saved ? (JSON.parse(saved) as Session) : null;
+  } catch {
+    session = null;
+  }
+  return session;
+}
 
 export function currentSession() {
   return session;
@@ -92,10 +115,12 @@ export function currentSession() {
 
 export function setSession(next: Session) {
   session = next;
+  storeSession(next);
 }
 
 export function clearSession() {
   session = null;
+  storeSession(null);
 }
 
 // Nest puts validation errors in `message` as an array; show the first one
@@ -132,10 +157,10 @@ async function refreshSession() {
     null,
   );
   if (!response.ok) {
-    session = null;
+    clearSession();
     return false;
   }
-  session = (await response.json()) as Session;
+  setSession((await response.json()) as Session);
   return true;
 }
 

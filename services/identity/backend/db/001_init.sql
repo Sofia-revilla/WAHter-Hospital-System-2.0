@@ -8,7 +8,7 @@ CREATE TABLE staff (
   -- the paper's user class (TABLE XIII)
   hospital_role text NOT NULL,
   -- which login portal the account can use; null for roles without a portal yet
-  portal_role text CHECK (portal_role IN ('Doctor', 'Nurse', 'IT')),
+  portal_role text CHECK (portal_role IN ('Doctor', 'Nurse', 'Pharmacist', 'Billing', 'IT')),
   department text NOT NULL,
   license text,
   password_hash text,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { AlertTriangle, CheckCircle2, ClipboardCheck, Clock, Pill } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { can } from "@/lib/staff";
@@ -24,19 +24,90 @@ function countByStatus(orders: MedicationOrder[], status: MedicationOrderStatus)
   return String(orders.filter((order) => order.status === status).length).padStart(2, "0");
 }
 
-interface PharmacyViewProps {
-  role: StaffRole;
+interface DispenseFormProps {
+  order: MedicationOrder;
+  staffName: string;
+  onDone: () => void;
 }
 
-export function PharmacyView({ role }: PharmacyViewProps) {
-  const { medicationOrders } = useData();
-  // nobody can dispense yet (pharmacist only, UC-10); this matters once the
-  // Pharmacist portal exists
-  const [dispensedIds, setDispensedIds] = useState<string[]>([]);
-  const canDispense = can(role, "dispenseMedication");
-  const worklist = medicationOrders.map((order) =>
-    dispensedIds.includes(order.id) ? { ...order, status: "Dispensed" as const } : order,
+// UC-10: the pharmacist records how much actually went out (a partial fill
+// is fine) and the order is released. Billing charges it from the event.
+function DispenseForm({ order, staffName, onDone }: DispenseFormProps) {
+  const { dispenseMedication } = useData();
+  const [quantity, setQuantity] = useState("");
+  const [note, setNote] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const amount = Number.parseInt(quantity, 10);
+    if (!Number.isInteger(amount) || amount < 1) {
+      setError("Enter how many units you're releasing.");
+      return;
+    }
+    setIsSaving(true);
+    try {
+      await dispenseMedication(order.id, amount, note.trim() || undefined, staffName);
+      onDone();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Couldn't dispense. Try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  const fieldClass = cn(
+    "rounded-lg border border-glass-border bg-glass-bg px-3 py-2 text-xs",
+    "text-foreground outline-none focus:ring-1 focus:ring-wah-purple",
   );
+
+  return (
+    <form onSubmit={handleSubmit} noValidate className="flex w-full flex-wrap items-start gap-2">
+      <input
+        value={quantity}
+        onChange={(event) => setQuantity(event.target.value)}
+        inputMode="numeric"
+        placeholder="Quantity"
+        aria-label={`Quantity of ${order.drug} to dispense`}
+        className={cn(fieldClass, "w-28")}
+      />
+      <input
+        value={note}
+        onChange={(event) => setNote(event.target.value)}
+        placeholder="Note (optional), e.g. partial fill"
+        aria-label="Dispensing note"
+        className={cn(fieldClass, "min-w-0 flex-1")}
+      />
+      <button
+        type="submit"
+        disabled={isSaving}
+        className="rounded-lg bg-wah-purple px-3 py-2 text-[10px] font-black uppercase text-white disabled:opacity-60"
+      >
+        {isSaving ? "Releasing…" : "Confirm dispense"}
+      </button>
+      <button
+        type="button"
+        onClick={onDone}
+        className="rounded-lg px-3 py-2 text-[10px] font-black uppercase text-text-muted"
+      >
+        Cancel
+      </button>
+      {error && <p className="w-full text-xs font-semibold text-rose-500">{error}</p>}
+    </form>
+  );
+}
+
+interface PharmacyViewProps {
+  role: StaffRole;
+  staffName: string;
+}
+
+export function PharmacyView({ role, staffName }: PharmacyViewProps) {
+  const { medicationOrders: worklist } = useData();
+  // UC-10: only the pharmacist dispenses; doctors and nurses see the same list read-only
+  const canDispense = can(role, "dispenseMedication");
+  const [dispensingId, setDispensingId] = useState<string | null>(null);
 
   // counted from the worklist so the cards always agree with the list below
   const statCards = [
@@ -60,12 +131,6 @@ export function PharmacyView({ role }: PharmacyViewProps) {
       trend: "Review",
     },
   ];
-
-  function dispense(orderId: string) {
-    // TODO(Phase 9b): POST the dispense to Orders & Diagnostics from the
-    // Pharmacist portal (controlled drugs need step-up approval, §13)
-    setDispensedIds((current) => [...current, orderId]);
-  }
 
   return (
     <div className="space-y-6">
@@ -107,10 +172,22 @@ export function PharmacyView({ role }: PharmacyViewProps) {
                       <Pill size={20} />
                     </div>
                     <div className="min-w-0">
-                      <p className="font-bold">{order.drug}</p>
+                      <p className="font-bold">
+                        {order.drug}
+                        {order.isControlled && (
+                          <span className="ml-2 rounded bg-rose-500/10 px-1.5 py-0.5 text-[9px] font-black uppercase text-rose-500">
+                            RA 9165
+                          </span>
+                        )}
+                      </p>
                       <p className="text-sm text-text-muted">
                         {order.patientName} • {order.dose} {order.frequency}
                       </p>
+                      {isDispensed && order.dispensedBy && (
+                        <p className="text-xs text-text-muted">
+                          {order.dispensedQuantity} released by {order.dispensedBy}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -125,20 +202,22 @@ export function PharmacyView({ role }: PharmacyViewProps) {
                     >
                       {order.status}
                     </span>
-                    {canDispense && (
+                    {canDispense && order.status === "Pending" && dispensingId !== order.id && (
                       <button
                         type="button"
-                        onClick={isDispensed ? undefined : () => dispense(order.id)}
+                        onClick={() => setDispensingId(order.id)}
                         className={cn(
                           "rounded-lg bg-wah-purple px-4 py-2 text-[10px] font-black uppercase text-white",
                           "transition-colors hover:bg-wah-neon",
                         )}
                       >
-                        {/* TODO(Phase 9b): VIEW opens the dispensing record */}
-                        {isDispensed ? "View" : "Dispense"}
+                        Dispense
                       </button>
                     )}
                   </div>
+                  {dispensingId === order.id && (
+                    <DispenseForm order={order} staffName={staffName} onDone={() => setDispensingId(null)} />
+                  )}
                 </li>
               );
             })}

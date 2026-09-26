@@ -137,14 +137,14 @@ const SERVICE_SCHEMAS = [
   {
     service: "orders-diagnostics",
     schema: "orders",
-    owns: "formulary, medication_orders, diagnostic_orders",
-    publishes: "medication.ordered, diagnostic.ordered",
+    owns: "patients (copy), formulary, medication_orders, diagnostic_orders",
+    publishes: "medication.ordered, medication.dispensed, diagnostic.ordered",
   },
   {
     service: "billing",
     schema: "billing",
-    owns: "charge_master, charges",
-    publishes: "charge.posted",
+    owns: "patients (copy), charge_master, charges, charge_adjustments",
+    publishes: "charge.posted, charge.priced",
   },
   {
     service: "interoperability",

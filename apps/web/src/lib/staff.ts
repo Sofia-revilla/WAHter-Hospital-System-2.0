@@ -9,17 +9,16 @@ export function formatDisplayName(rawName: string, role: StaffRole) {
   return name;
 }
 
-// Who can do what, per the paper's use case actors. The prototype only has
-// Doctor, Nurse, and IT portals, so actions owned by roles we haven't built
-// yet (Pharmacist, Lab/Radiology staff, Billing staff) are empty here and show
-// up read-only. Add the role to the list once its portal exists.
+// Who can do what, per the paper's use case actors. Actions owned by roles
+// we haven't built yet (Lab/Radiology staff) are empty here and show up
+// read-only. Add the role to the list once its portal exists.
 const PERMISSIONS = {
   // UC-10: Pharmacist only
-  dispenseMedication: [],
+  dispenseMedication: ["Pharmacist"],
   // UC-11.1 / 11.2: Ancillary (lab & radiology) staff only
   processLabResult: [],
   // UC-12 / UC-13: Billing staff only
-  manageBilling: [],
+  manageBilling: ["Billing"],
   // UC-04: Patient Registrar or Nurse
   admitPatient: ["Nurse"],
   // UC-11 step 1: the physician places diagnostic orders

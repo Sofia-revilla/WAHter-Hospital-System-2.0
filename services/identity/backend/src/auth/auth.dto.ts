@@ -2,7 +2,7 @@ import { ApiProperty } from "@nestjs/swagger";
 import { IsIn, IsString, Matches, MinLength } from "class-validator";
 import type { PortalRole } from "@wahter/shared";
 
-const PORTALS: PortalRole[] = ["Doctor", "Nurse", "IT"];
+const PORTALS: PortalRole[] = ["Doctor", "Nurse", "Pharmacist", "Billing", "IT"];
 
 export class LoginDto {
   @ApiProperty({ enum: PORTALS })

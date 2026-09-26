@@ -28,7 +28,14 @@ CREATE TABLE medication_orders (
   status text NOT NULL DEFAULT 'Pending' CHECK (status IN ('Pending', 'Dispensed', 'Review')),
   prescribed_by text NOT NULL,
   prescribed_by_id text NOT NULL,
-  ordered_at timestamptz NOT NULL DEFAULT now()
+  ordered_at timestamptz NOT NULL DEFAULT now(),
+  -- UC-10: filled in by the pharmacist. A partial fill still counts as
+  -- dispensed; the quantity says how much actually went to the ward.
+  dispensed_quantity integer CHECK (dispensed_quantity > 0),
+  dispense_note text,
+  dispensed_by text,
+  dispensed_by_id text,
+  dispensed_at timestamptz
 );
 
 CREATE SEQUENCE medication_order_number START 1100;

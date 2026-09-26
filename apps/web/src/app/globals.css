@@ -72,3 +72,25 @@ body {
     display: none;
   }
 }
+
+/* LoadingScreen's bar when we don't know how far along we are yet */
+@keyframes wah-loading-slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+
+.wah-loading-indeterminate {
+  animation: wah-loading-slide 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wah-loading-indeterminate {
+    animation: none;
+    width: 100%;
+    opacity: 0.4;
+  }
+}

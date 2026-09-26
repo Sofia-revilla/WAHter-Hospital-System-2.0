@@ -7,12 +7,16 @@ import type { LoginDto, SignupDto } from "./auth.dto";
 const HOSPITAL_ROLE_FOR_PORTAL: Record<PortalRole, string> = {
   Doctor: "Physician",
   Nurse: "Nurse",
+  Pharmacist: "Pharmacist",
+  Billing: "Billing Staff",
   IT: "System Administrator",
 };
 
 const DEPARTMENT_FOR_PORTAL: Record<PortalRole, string> = {
   Doctor: "Internal Medicine",
   Nurse: "Medical Ward",
+  Pharmacist: "Pharmacy",
+  Billing: "Billing",
   IT: "IT Department",
 };
 

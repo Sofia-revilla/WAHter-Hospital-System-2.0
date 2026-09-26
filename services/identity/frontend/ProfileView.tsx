@@ -11,6 +11,10 @@ const DEFAULT_BIOS: Record<StaffRole, string> = {
     "Experienced medical professional specializing in internal medicine with over 10 years of clinical practice at WAHter Hospital. Dedicated to patient-centered care and evidence-based treatment.",
   Nurse:
     "Certified registered nurse with expertise in acute care and patient monitoring. Committed to compassionate and efficient patient care within the WAHter hospital network.",
+  Pharmacist:
+    "Licensed hospital pharmacist handling inpatient dispensing and medication safety checks for the WAHter wards.",
+  Billing:
+    "Billing office staff keeping patient accounts accurate and ready for PhilHealth claims.",
   IT: "Lead systems administrator and IT infrastructure analyst managing healthcare security policies.",
 };
 
@@ -26,11 +30,29 @@ const ROLE_STYLES: Record<StaffRole, { band: string; avatar: string; badge: stri
     avatar: "bg-gradient-to-br from-wah-neon to-wah-purple",
     badge: "bg-wah-neon/10 text-wah-neon",
   },
+  Pharmacist: {
+    band: "bg-indigo-500",
+    avatar: "bg-gradient-to-br from-indigo-500 to-wah-purple",
+    badge: "bg-indigo-500/10 text-indigo-500",
+  },
+  Billing: {
+    band: "bg-fuchsia-500",
+    avatar: "bg-gradient-to-br from-fuchsia-500 to-wah-purple",
+    badge: "bg-fuchsia-500/10 text-fuchsia-500",
+  },
   IT: {
     band: "bg-rose-500",
     avatar: "bg-gradient-to-br from-rose-500 to-rose-700",
     badge: "bg-rose-500/10 text-rose-500",
   },
+};
+
+const PROFILE_TITLES: Record<StaffRole, string> = {
+  Doctor: "Clinician Profile",
+  Nurse: "Clinician Profile",
+  Pharmacist: "Pharmacist Profile",
+  Billing: "Billing Office Profile",
+  IT: "Administrator Profile",
 };
 
 const ACTIVITY = [
@@ -106,7 +128,7 @@ export function ProfileView({
         <div>
           <p className="text-sm font-semibold text-wah-purple">Staff Profile</p>
           <h2 className="text-2xl font-bold tracking-tight">
-            {role === "IT" ? "Administrator Profile" : "Clinician Profile"}
+            {PROFILE_TITLES[role]}
           </h2>
         </div>
         <button

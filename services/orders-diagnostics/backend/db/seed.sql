@@ -32,6 +32,12 @@ INSERT INTO medication_orders (id, patient_id, drug, dose, frequency, route, dur
   ('RX-1003', 'WAH-2026-00001', 'Amoxicillin 500mg', '1 cap', 'TID', 'PO', '7 days', 'Pending', 'Dr. Andrea Mendoza', 'EMP-0001', now() - interval '2 hours'),
   ('RX-1004', 'WAH-2026-00009', 'Metformin 500mg', '1 tab', 'OD', 'PO', '30 days', 'Review', 'Dr. Andrea Mendoza', 'EMP-0001', now() - interval '1 hour');
 
+-- who released the two orders that are already dispensed
+UPDATE medication_orders
+   SET dispensed_quantity = 10, dispensed_by = 'Grace Villanueva', dispensed_by_id = 'EMP-0005',
+       dispensed_at = ordered_at + interval '40 minutes'
+ WHERE id IN ('RX-1001', 'RX-1002');
+
 INSERT INTO diagnostic_orders (id, patient_id, test, kind, priority, status, is_critical, ordered_by, ordered_by_id, ordered_at, resulted_at) VALUES
   ('LAB-5501', 'WAH-2026-00004', 'Complete Blood Count (CBC)', 'Laboratory', 'Urgent', 'In-Progress', false, 'Dr. Andrea Mendoza', 'EMP-0001', now() - interval '10 minutes', NULL),
   ('LAB-5502', 'WAH-2026-00002', 'Urinalysis', 'Laboratory', 'Routine', 'Pending', false, 'Dr. Carla Dizon', 'EMP-0012', now() - interval '25 minutes', NULL),

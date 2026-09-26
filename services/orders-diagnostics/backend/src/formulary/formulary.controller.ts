@@ -17,7 +17,7 @@ interface FormularyRow {
 export class FormularyController {
   constructor(private readonly database: Database) {}
 
-  @Roles("Doctor", "Nurse")
+  @Roles("Doctor", "Nurse", "Pharmacist")
   @Get()
   async list() {
     const rows = await this.database.query<FormularyRow>("SELECT * FROM formulary ORDER BY name");

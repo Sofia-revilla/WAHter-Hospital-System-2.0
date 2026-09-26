@@ -63,14 +63,14 @@ a build, tests, a commit, and an update to this file.
 - [~] **2**: Audit Log and Notifications: append-only trail with meta-audit, MEWS alerts with ack and escalation. Left: paging on escalation
 - [~] **3**: Clinical Records: census, immutable vitals, server-side MEWS, alert events. Left: diagnoses (UC-06), discharge (UC-07)
 - [~] **4**: Scheduling: wards, admit/transfer with a DB bed lock. Left: appointments and queue (UC-03)
-- [~] **5**: Orders & Diagnostics: formulary, medication and diagnostic orders. Left: dispensing and result release (need their portals), allergy/dose checks
-- [~] **6**: Billing: charge master and event-driven charge capture. Left: adjustments, statement of account
+- [~] **5**: Orders & Diagnostics: formulary, medication and diagnostic orders, dispensing (D-045). Left: result release (Lab portal), allergy/dose checks, controlled-drug step-up
+- [~] **6**: Billing: charge master, event-driven charge capture, pricing with an adjustment log (D-045). Left: supervisor corrections, statement of account
 - [ ] **7a**: Interoperability (eClaims tables, XML, validator, gateway adapters)
 - [~] **7b**: Interoperability: FHIR Patient/Encounter reads and an admissions summary export done. Left: other FHIR resources, AHSR/FHSIS/PIDSR templates, referral, WAH4C
 - [~] **8**: Web app shell: screens live in each service's frontend folder (D-043), real JWT login, live data in Docker mode
 - [ ] **9a**: Registrar, Nurse, Doctor screens (ProfileView already exists from Prompt 1)
-- [ ] **9b**: Pharmacist and Ancillary screens
-- [ ] **9c**: Billing, Hospital Admin, System Admin screens
+- [~] **9b**: Pharmacist portal done (D-045). Left: Lab/Radiology (Ancillary) portal
+- [~] **9c**: Billing Staff portal done (D-045), System Admin exists. Left: Hospital Admin portal
 - [ ] **10**: Seeds, end-to-end test, README, DECISIONS.md
 
 ## Living docs to keep current (§14)

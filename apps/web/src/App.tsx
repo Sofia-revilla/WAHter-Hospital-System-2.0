@@ -14,13 +14,15 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react"; // not 'framer-motion', the package got renamed in v11
 import { ChevronDown, LayoutDashboard, LogOut, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { clearSession } from "@/lib/api";
+import { clearSession, isApiMode, restoreSession } from "@/lib/api";
 import { formatDisplayName } from "@/lib/staff";
 import { DataProvider } from "@/context/DataContext";
 import { ArchitectureStatusView } from "@/components/ArchitectureStatusView";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DemoTour } from "@/components/DemoTour";
+import { LoadingScreen } from "@/components/LoadingScreen";
 import { ServiceOfflineNotice } from "@/components/ServiceOfflineNotice";
+import { WorkspaceLoader } from "@/components/WorkspaceLoader";
 import { Sidebar } from "@/components/Sidebar";
 // Each tab's screen belongs to the service that owns its data (services/<name>/frontend)
 import { DashboardView, PatientsView } from "@services/clinical-records/frontend";
@@ -28,7 +30,8 @@ import { LoginScreen, ProfileView, StaffAccessView, type LoginHandler } from "@s
 import { NotificationBell } from "@services/notifications/frontend";
 import { LaboratoryView, PharmacyView, PrescriptionView } from "@services/orders-diagnostics/frontend";
 import { BedManagementView } from "@services/scheduling/frontend";
-import { TABS, type TabId } from "@/navigation";
+import { BillingView } from "@services/billing/frontend";
+import { ROLE_TABS, TABS, type TabId } from "@/navigation";
 import { DEMO_STEPS } from "@/demoTour";
 import { ROLE_LABELS, type StaffRole } from "@/types";
 
@@ -37,6 +40,8 @@ import { ROLE_LABELS, type StaffRole } from "@/types";
 const ROLE_CHIP: Record<StaffRole, string> = {
   Doctor: "bg-wah-purple/15 text-wah-purple",
   Nurse: "bg-wah-neon/15 text-wah-neon",
+  Pharmacist: "bg-indigo-500/15 text-indigo-500",
+  Billing: "bg-fuchsia-500/15 text-fuchsia-500",
   IT: "bg-rose-500/15 text-rose-500",
 };
 
@@ -45,8 +50,40 @@ const ROLE_CHIP: Record<StaffRole, string> = {
 const DEFAULT_DEPARTMENT: Record<StaffRole, string> = {
   Doctor: "Internal Medicine",
   Nurse: "Nursing Service",
+  Pharmacist: "Pharmacy",
+  Billing: "Billing Office",
   IT: "IT Department",
 };
+
+// What's kept in sessionStorage so a refresh lands back on the same screen.
+// Signing out (or closing the tab) clears it.
+const PROFILE_KEY = "wahter.profile";
+
+interface SavedProfile {
+  role: StaffRole;
+  name: string;
+  dept: string;
+  license: string;
+  tab: TabId;
+}
+
+function loadSavedProfile(): SavedProfile | null {
+  try {
+    const saved = sessionStorage.getItem(PROFILE_KEY);
+    return saved ? (JSON.parse(saved) as SavedProfile) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveProfile(profile: SavedProfile | null) {
+  try {
+    if (profile) sessionStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+    else sessionStorage.removeItem(PROFILE_KEY);
+  } catch {
+    // storage blocked (private mode): a refresh will just go back to login
+  }
+}
 
 // ─── 2. TOPBAR ───
 
@@ -180,6 +217,33 @@ export function App() {
   const [isLight, setIsLight] = useState(true);
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [isConfirmingSignOut, setIsConfirmingSignOut] = useState(false);
+  // true until we've checked sessionStorage for a signed-in session. Starts
+  // true on the server too, so the first paint is the loader, not a flash of
+  // the login screen.
+  const [isRestoring, setIsRestoring] = useState(true);
+
+  // Refreshing the page keeps you signed in. With the services running, the
+  // saved JWT has to come back too; without one we treat it as signed out.
+  useEffect(() => {
+    const profile = loadSavedProfile();
+    const hasSession = !isApiMode || restoreSession() !== null;
+    if (profile && hasSession && ROLE_TABS[profile.role]) {
+      setUserRole(profile.role);
+      setUserName(profile.name);
+      setUserDept(profile.dept);
+      setUserLicense(profile.license);
+      setActiveTab(ROLE_TABS[profile.role].includes(profile.tab) ? profile.tab : ROLE_TABS[profile.role][0]);
+    } else {
+      saveProfile(null);
+    }
+    setIsRestoring(false);
+  }, []);
+
+  // keep the saved copy in step with the open tab, so a refresh stays put
+  useEffect(() => {
+    if (!userRole) return;
+    saveProfile({ role: userRole, name: userName, dept: userDept, license: userLicense, tab: activeTab });
+  }, [userRole, userName, userDept, userLicense, activeTab]);
 
   // The class goes on <html>, not a wrapper div, so the body background and
   // native scrollbars switch too. With a wrapper we got a dark strip on overscroll.
@@ -207,9 +271,13 @@ export function App() {
     setUserLicense(license ?? "Not on file");
     setIsDemoMode(!!demo);
     setDemoStep(0);
-    // IT staff start on the system view; everyone else starts on patient care
-    setActiveTab(role === "IT" ? "architecture" : "dashboard");
+    // each portal opens on its first tab (Dashboard, Pharmacy, Billing, Architecture)
+    setActiveTab(ROLE_TABS[role][0]);
   };
+
+  if (isRestoring) {
+    return <LoadingScreen title="Starting WAHter" subtitle="Checking your session" />;
+  }
 
   if (!userRole) {
     return <LoginScreen onLogin={handleLogin} />;
@@ -234,11 +302,13 @@ export function App() {
       case "prescription":
         return <PrescriptionView staffName={displayName} />;
       case "pharmacy":
-        return <PharmacyView role={role} />;
+        return <PharmacyView role={role} staffName={displayName} />;
       case "lab":
         return <LaboratoryView role={role} />;
       case "rooms":
         return <BedManagementView role={role} staffName={displayName} />;
+      case "billing":
+        return <BillingView role={role} />;
       case "architecture":
         return <ArchitectureStatusView />;
       case "staff":
@@ -268,6 +338,7 @@ export function App() {
 
   return (
     <DataProvider>
+      <WorkspaceLoader roleLabel={ROLE_LABELS[role]} />
       <div className="min-h-screen bg-background text-foreground">
         <Sidebar
           role={role}
@@ -322,6 +393,7 @@ export function App() {
           onConfirm={() => {
             setIsConfirmingSignOut(false);
             clearSession();
+            saveProfile(null);
             setUserRole(null);
           }}
         />

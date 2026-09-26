@@ -20,13 +20,14 @@ export const TOKEN_ISSUER = "wahter-identity";
 export const ACCESS_TOKEN_TTL = "8h";
 export const REFRESH_TOKEN_TTL = "7d";
 
-// The three portals from the login screen. The other paper roles (pharmacist,
-// billing staff, ...) exist as staff accounts but have no portal yet.
-export type PortalRole = "Doctor" | "Nurse" | "IT";
+// The portals on the login screen. "Billing" is the paper's Billing Staff.
+// The other paper roles (lab staff, registrar, ...) exist as staff accounts
+// but have no portal yet.
+export type PortalRole = "Doctor" | "Nurse" | "Pharmacist" | "Billing" | "IT";
 
 // Roles an endpoint can name before their portal exists. Nobody holds these
 // in a token yet, so an endpoint limited to them is closed until that portal ships.
-export type FutureRole = "Pharmacist" | "Billing Staff" | "Laboratory Staff" | "Hospital Administrator";
+export type FutureRole = "Laboratory Staff" | "Hospital Administrator";
 
 export interface AuthUser {
   id: string;

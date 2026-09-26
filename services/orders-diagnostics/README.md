@@ -19,14 +19,15 @@ services/orders-diagnostics/
 - Endpoints (through Kong):
   - `GET /api/orders-diagnostics/formulary`
   - `GET /api/orders-diagnostics/medication-orders`, `POST` (Doctor)
+  - `POST /api/orders-diagnostics/medication-orders/:id/dispense` (Pharmacist; partial fills, controlled drugs refused until step-up)
   - `GET /api/orders-diagnostics/diagnostic-orders`, `POST` (Doctor)
   - `GET /api/orders-diagnostics/health` and API docs at `/api/orders-diagnostics/docs`
-- Publishes: `medication.ordered`, `diagnostic.ordered`
+- Publishes: `medication.ordered`, `medication.dispensed`, `diagnostic.ordered`
 - Listens for: `patient.registered`
 
 ## Frontend
 
 - `PrescriptionView.tsx`: the **E-Prescribing** tab (Doctor)
-- `PharmacyView.tsx`: the **Pharmacy** tab (Doctor, Nurse; read-only until the Pharmacist portal)
+- `PharmacyView.tsx`: the **Pharmacy** tab (the Pharmacist dispenses; Doctor and Nurse read it)
 - `LaboratoryView.tsx`: the **Laboratory** tab (Doctor orders, Nurse follows)
 - `api.ts`: this service's API calls, used by `apps/web/src/context/DataContext.tsx`

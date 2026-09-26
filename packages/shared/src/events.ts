@@ -30,6 +30,7 @@ export const EVENT_TYPES = {
   diagnosticResulted: "diagnostic.resulted",
   // Billing
   chargePosted: "charge.posted",
+  chargePriced: "charge.priced",
   // Interoperability
   reportGenerated: "report.generated",
 } as const;
@@ -78,6 +79,7 @@ export interface EventPayloads {
   };
   "diagnostic.resulted": { orderId: string; patientId: string; isCritical: boolean };
   "charge.posted": { chargeId: string; patientId: string; amount: number; source: string };
+  "charge.priced": { chargeId: string; patientId: string; amount: number };
   "report.generated": { reportId: string; kind: string; period: string };
 }
 

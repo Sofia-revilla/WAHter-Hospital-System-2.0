@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { ApiError, currentSession, isApiMode, type ServiceName } from "@/lib/api";
+import { fetchCharges, postChargePrice } from "@services/billing/frontend/api";
 import { fetchCensus, fetchVitals, postVitals } from "@services/clinical-records/frontend/api";
 import { fetchAlerts, postAcknowledgement } from "@services/notifications/frontend/api";
 import {
@@ -9,19 +10,22 @@ import {
   fetchFormulary,
   fetchMedicationOrders,
   postDiagnosticOrder,
+  postDispense,
   postMedicationOrder,
 } from "@services/orders-diagnostics/frontend/api";
 import { fetchAdmissions, fetchWards, postAdmission } from "@services/scheduling/frontend/api";
 import { calculateMews, implausibleReadings, type VitalSigns } from "@/lib/mews";
-import { FORMULARY, LAB_TESTS, MEDICATION_ORDERS, PATIENTS, WARDS } from "@/constants";
+import { CHARGES, FORMULARY, LAB_TESTS, MEDICATION_ORDERS, PATIENTS, WARDS } from "@/constants";
 import type {
   AdmissionType,
   BedAssignment,
+  Charge,
   FormularyItem,
   LabTest,
   MedicationOrder,
   MewsAlert,
   Patient,
+  StaffRole,
   VitalsRecord,
   Ward,
 } from "@/types";
@@ -41,9 +45,61 @@ type DataMode = "api" | "mock";
 // every so often to pick up what other staff changed
 const REFRESH_INTERVAL_MS = 10_000;
 
+// What each portal reads. A pharmacist's screen never waits on (or gets a
+// 403 from) Clinical Records, and IT's screens load their own data.
+type LoadKey =
+  | "census"
+  | "vitals"
+  | "alerts"
+  | "wards"
+  | "admissions"
+  | "diagnostics"
+  | "medications"
+  | "formulary"
+  | "charges";
+
+const CLINICAL_LOADS: LoadKey[] = [
+  "census",
+  "vitals",
+  "alerts",
+  "wards",
+  "admissions",
+  "diagnostics",
+  "medications",
+  "formulary",
+];
+
+const LOADS_BY_ROLE: Record<StaffRole, LoadKey[]> = {
+  Doctor: CLINICAL_LOADS,
+  Nurse: CLINICAL_LOADS,
+  Pharmacist: ["medications", "formulary"],
+  Billing: ["charges"],
+  IT: [],
+};
+
+const SERVICE_FOR_LOAD: Record<LoadKey, ServiceName> = {
+  census: "clinical-records",
+  vitals: "clinical-records",
+  alerts: "notifications",
+  wards: "scheduling",
+  admissions: "scheduling",
+  diagnostics: "orders-diagnostics",
+  medications: "orders-diagnostics",
+  formulary: "orders-diagnostics",
+  charges: "billing",
+};
+
+export interface LoadStep {
+  service: ServiceName;
+  state: "loading" | "ready" | "offline";
+}
+
 interface DataContextValue {
   mode: DataMode;
+  // true until the first load after sign-in finishes (WorkspaceLoader)
   isLoading: boolean;
+  // per-service progress of that first load, for the loading screen
+  loadSteps: LoadStep[];
   // services that didn't answer the last refresh, with when each last did.
   // Screens keep the last good data; ServiceOfflineNotice tells staff why.
   offlineServices: OfflineService[];
@@ -55,6 +111,7 @@ interface DataContextValue {
   vitalsRecords: VitalsRecord[];
   mewsAlerts: MewsAlert[];
   bedAssignments: BedAssignment[];
+  charges: Charge[];
   recordVitals: (
     patientId: string,
     vitals: VitalSigns,
@@ -69,6 +126,8 @@ interface DataContextValue {
   assignBed: (request: BedRequest) => Promise<{ ok: true } | { ok: false; reason: string }>;
   orderDiagnosticTest: (order: DiagnosticOrderRequest) => Promise<LabTest>;
   prescribe: (order: PrescriptionRequest) => Promise<MedicationOrder>;
+  dispenseMedication: (orderId: string, quantity: number, note?: string, by?: string) => Promise<MedicationOrder>;
+  priceCharge: (chargeId: string, unitAmount: number, reason: string) => Promise<Charge>;
 }
 
 export interface BedRequest {
@@ -212,60 +271,75 @@ export function DataProvider({ children }: DataProviderProps) {
   );
   const [wards, setWards] = useState<Ward[]>(mode === "api" ? [] : WARDS);
   const [bedAssignments, setBedAssignments] = useState<BedAssignment[]>([]);
+  const [charges, setCharges] = useState<Charge[]>(mode === "api" ? [] : CHARGES);
   const [isLoading, setIsLoading] = useState(mode === "api");
+  const [loadSteps, setLoadSteps] = useState<LoadStep[]>([]);
   const [offlineServices, setOfflineServices] = useState<OfflineService[]>([]);
   // last time each service answered, kept across refreshes
   const [lastSeen] = useState(() => new Map<ServiceName, string>());
 
-  // One call per service. allSettled, because a service being down should
-  // blank only its own part of the screen (the paper's fault-isolation goal).
-  const loadFromServices = useCallback(async () => {
-    const [census, vitals, alerts, wardList, admissions, diagnostics, medications, drugs] = await Promise.allSettled([
-      fetchCensus(),
-      fetchVitals(),
-      fetchAlerts(),
-      fetchWards(),
-      fetchAdmissions(),
-      fetchDiagnosticOrders(),
-      fetchMedicationOrders(),
-      fetchFormulary(),
-    ]);
+  // Every call is independent (allSettled), because a service being down
+  // should blank only its own part of the screen (the paper's fault-isolation
+  // goal). Only "can't reach it" counts as offline; a 403 is a bug, not an outage.
+  const loadFromServices = useCallback(
+    async (isFirstLoad = false) => {
+      const role = currentSession()?.user.role;
+      if (!role) return;
 
-    if (census.status === "fulfilled") setPatients(census.value);
-    if (vitals.status === "fulfilled") setVitalsRecords(vitals.value);
-    if (alerts.status === "fulfilled") setMewsAlerts(alerts.value);
-    if (wardList.status === "fulfilled") setWards(wardList.value);
-    if (admissions.status === "fulfilled") setBedAssignments(admissions.value);
-    if (diagnostics.status === "fulfilled") setLabTests(diagnostics.value);
-    if (medications.status === "fulfilled") setMedicationOrders(medications.value);
-    if (drugs.status === "fulfilled") setFormulary(drugs.value);
+      const loaders: Record<LoadKey, () => Promise<void>> = {
+        census: () => fetchCensus().then(setPatients),
+        vitals: () => fetchVitals().then(setVitalsRecords),
+        alerts: () => fetchAlerts().then(setMewsAlerts),
+        wards: () => fetchWards().then(setWards),
+        admissions: () => fetchAdmissions().then(setBedAssignments),
+        diagnostics: () => fetchDiagnosticOrders().then(setLabTests),
+        medications: () => fetchMedicationOrders().then(setMedicationOrders),
+        formulary: () => fetchFormulary().then(setFormulary),
+        charges: () => fetchCharges().then(setCharges),
+      };
 
-    // a service counts as offline if any of its requests failed
-    const results: [ServiceName, PromiseSettledResult<unknown>][] = [
-      ["clinical-records", census],
-      ["clinical-records", vitals],
-      ["notifications", alerts],
-      ["scheduling", wardList],
-      ["scheduling", admissions],
-      ["orders-diagnostics", diagnostics],
-      ["orders-diagnostics", medications],
-      ["orders-diagnostics", drugs],
-    ];
-    const down = new Set<ServiceName>();
-    const now = new Date().toISOString();
-    for (const [service, result] of results) {
-      if (result.status === "rejected") down.add(service);
-    }
-    for (const [service] of results) {
-      if (!down.has(service)) lastSeen.set(service, now);
-    }
-    setOfflineServices([...down].map((service) => ({ service, lastSeenAt: lastSeen.get(service) ?? null })));
-    setIsLoading(false);
-  }, [lastSeen]);
+      const keys = LOADS_BY_ROLE[role];
+      const services = [...new Set(keys.map((key) => SERVICE_FOR_LOAD[key]))];
+      const pendingByService = new Map(
+        services.map((service) => [service, keys.filter((key) => SERVICE_FOR_LOAD[key] === service).length]),
+      );
+      const down = new Set<ServiceName>();
+      if (isFirstLoad) setLoadSteps(services.map((service) => ({ service, state: "loading" })));
+
+      await Promise.all(
+        keys.map(async (key) => {
+          const service = SERVICE_FOR_LOAD[key];
+          try {
+            await loaders[key]();
+          } catch (error) {
+            if (error instanceof ApiError && error.isServiceDown) down.add(service);
+          }
+          const left = pendingByService.get(service)! - 1;
+          pendingByService.set(service, left);
+          // a service's step settles once all of its calls have answered
+          if (isFirstLoad && left === 0) {
+            setLoadSteps((steps) =>
+              steps.map((step) =>
+                step.service === service ? { ...step, state: down.has(service) ? "offline" : "ready" } : step,
+              ),
+            );
+          }
+        }),
+      );
+
+      const now = new Date().toISOString();
+      for (const service of services) {
+        if (!down.has(service)) lastSeen.set(service, now);
+      }
+      setOfflineServices([...down].map((service) => ({ service, lastSeenAt: lastSeen.get(service) ?? null })));
+      setIsLoading(false);
+    },
+    [lastSeen],
+  );
 
   useEffect(() => {
     if (mode !== "api") return;
-    void loadFromServices();
+    void loadFromServices(true);
     const timer = setInterval(() => void loadFromServices(), REFRESH_INTERVAL_MS);
     return () => clearInterval(timer);
   }, [mode, loadFromServices]);
@@ -446,11 +520,48 @@ export function DataProvider({ children }: DataProviderProps) {
     return created;
   }
 
+  async function dispenseMedication(orderId: string, quantity: number, note?: string, by = "Pharmacist") {
+    if (mode === "api") {
+      const dispensed = await postDispense(orderId, quantity, note);
+      setMedicationOrders((current) => current.map((order) => (order.id === orderId ? dispensed : order)));
+      return dispensed;
+    }
+
+    const order = medicationOrders.find((candidate) => candidate.id === orderId);
+    if (!order) throw new Error(`No medication order ${orderId}`);
+    if (order.status !== "Pending") throw new Error("Only a pending order can be dispensed.");
+    if (order.isControlled) throw new Error("Controlled drugs need a second pharmacist's approval.");
+    const dispensed: MedicationOrder = {
+      ...order,
+      status: "Dispensed",
+      dispensedQuantity: quantity,
+      dispensedBy: by,
+      dispensedAt: new Date().toISOString(),
+    };
+    setMedicationOrders((current) => current.map((candidate) => (candidate.id === orderId ? dispensed : candidate)));
+    return dispensed;
+  }
+
+  async function priceCharge(chargeId: string, unitAmount: number, reason: string) {
+    if (mode === "api") {
+      const priced = await postChargePrice(chargeId, unitAmount, reason);
+      setCharges((current) => current.map((charge) => (charge.id === chargeId ? priced : charge)));
+      return priced;
+    }
+
+    const charge = charges.find((candidate) => candidate.id === chargeId);
+    if (!charge) throw new Error(`No charge ${chargeId}`);
+    const priced: Charge = { ...charge, unitAmount, amount: unitAmount * charge.quantity, isUnpriced: false };
+    setCharges((current) => current.map((candidate) => (candidate.id === chargeId ? priced : candidate)));
+    return priced;
+  }
+
   return (
     <DataContext.Provider
       value={{
         mode,
         isLoading,
+        loadSteps,
         offlineServices,
         patients,
         formulary,
@@ -460,12 +571,15 @@ export function DataProvider({ children }: DataProviderProps) {
         vitalsRecords,
         mewsAlerts,
         bedAssignments,
+        charges,
         recordVitals,
         acknowledgeAlert,
         occupiedBeds,
         assignBed,
         orderDiagnosticTest,
         prescribe,
+        dispenseMedication,
+        priceCharge,
       }}
     >
       {children}

@@ -18,6 +18,10 @@ export class ChargeCaptureConsumer implements OnModuleInit {
       [EVENT_TYPES.patientAdmitted, EVENT_TYPES.diagnosticOrdered, EVENT_TYPES.medicationDispensed],
       (event) => this.capture(event),
     );
+    await this.bus.subscribe("billing.patients", [EVENT_TYPES.patientRegistered], async (event) => {
+      const data = event.data as EventPayloads["patient.registered"];
+      await this.charges.upsertPatient(data.patientId, data.name);
+    });
   }
 
   private async capture(event: EventEnvelope) {
