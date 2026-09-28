@@ -144,6 +144,10 @@ services:
       KONG_ADMIN_LISTEN: "off"
       KONG_PROXY_ACCESS_LOG: /dev/stdout
       KONG_PROXY_ERROR_LOG: /dev/stderr
+      # Recreated containers get new IPs. With Kong's default DNS caching it
+      # kept sending traffic to the old addresses, which by then belonged to
+      # other services, so re-resolve often.
+      KONG_DNS_VALID_TTL: "10"
       JWT_SECRET: ${JWT_SECRET}
     volumes:
       - ./infra/kong:/etc/kong/wahter:ro

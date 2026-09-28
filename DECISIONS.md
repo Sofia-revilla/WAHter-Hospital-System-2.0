@@ -522,3 +522,6 @@ The pre-change build is tagged `prompt-build-v1` (also still on `main`) so it ca
 - This doesn't replace the tunnel: the services, Kong, and RabbitMQ still run on the laptop.
   Supabase only makes the data outlive the laptop's Docker volume, and it's a step toward hosting
   everything for the final demo.
+- Found while switching to Supabase: Kong cached the services' old container IPs after they
+  were recreated, so requests went to whichever service had taken that IP (odd 404s, failed
+  logins). `KONG_DNS_VALID_TTL=10` makes Kong re-resolve names every 10 seconds.
