@@ -537,3 +537,13 @@ The pre-change build is tagged `prompt-build-v1` (also still on `main`) so it ca
 - `restart: unless-stopped` already restarts a service that crashes. One stopped on purpose
   (`docker compose stop`) stays down until it's started again, which is what the
   fault-isolation demo needs.
+
+### D-049: Demos run on the local database
+- For demos the stack runs on the local Postgres container (`docker compose up -d`), not
+  Supabase. There's no round trip over the internet, no risk of a paused free project, and a
+  restarted service is back in about 4s instead of about 20s. Supabase stays available with
+  `npm run up:supabase`.
+- A restarted service used to look down for another 30s, because Kong cached the "name not
+  found" answer from while it was stopped. `KONG_DNS_NOT_FOUND_TTL=5` and `KONG_DNS_ERROR_TTL=1`
+  fix that. Measured through the tunnel: stopped shows as offline in about 2–4s, and it's back
+  about 4s after `docker compose start`.

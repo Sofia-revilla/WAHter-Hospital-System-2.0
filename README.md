@@ -98,7 +98,9 @@ earlier version, since the Pharmacist and Billing portals changed the starting t
 The Vercel site normally runs on built-in demo data. For a demo, it can use the Docker stack on
 your laptop through a Cloudflare tunnel:
 
-1. Start Docker Desktop, then `docker compose up -d` and wait until everything is healthy.
+1. Start Docker Desktop, then `docker compose up -d` and wait until everything is healthy. For
+   demos, use this local database rather than Supabase: it's faster, and a stopped service
+   comes back in a few seconds.
 2. Start the tunnel (needs [cloudflared](https://github.com/cloudflare/cloudflared/releases)):
    `npm run tunnel`. It prints an address like `https://something-random.trycloudflare.com`.
 3. In Vercel → the project → **Settings → Environment Variables**, set

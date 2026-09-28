@@ -148,6 +148,10 @@ services:
       # kept sending traffic to the old addresses, which by then belonged to
       # other services, so re-resolve often.
       KONG_DNS_VALID_TTL: "10"
+      # A stopped container has no DNS name, and Kong remembers "not found"
+      # for 30s by default, so a restarted service looked down for 30s more.
+      KONG_DNS_NOT_FOUND_TTL: "5"
+      KONG_DNS_ERROR_TTL: "1"
       JWT_SECRET: ${JWT_SECRET}
     volumes:
       - ./infra/kong:/etc/kong/wahter:ro
