@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion } from "motion/react";
 import {
@@ -48,6 +48,8 @@ const FAKE_AUTH_DELAY_MS = 800;
 
 const LICENSE_PATTERN = /^MED-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
 const MIN_PASSWORD_LENGTH = 8;
+// how often the login screen re-checks while the system is offline
+const OFFLINE_RECHECK_MS = 4000;
 
 // Prototype passwords per portal, shown on the form so anyone can demo it.
 // Not secrets: Identity seeds its demo accounts with these same values
@@ -327,6 +329,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
 
   async function signInThroughIdentity() {
     setError(null);
+    setIsBackOnline(false);
     setIsLoading(true);
     try {
       const user =
@@ -389,6 +392,26 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
     }, FAKE_AUTH_DELAY_MS);
   }
 
+  // While the "offline" message is up, keep checking. As soon as the system
+  // answers again the message goes away and staff can sign in, no reload needed.
+  const [isBackOnline, setIsBackOnline] = useState(false);
+  useEffect(() => {
+    if (!isSystemOffline) return;
+    const timer = setInterval(async () => {
+      if (await gatewayReachable()) {
+        setIsSystemOffline(false);
+        setIsBackOnline(true);
+      }
+    }, OFFLINE_RECHECK_MS);
+    return () => clearInterval(timer);
+  }, [isSystemOffline]);
+
+  async function retry() {
+    setIsSystemOffline(false);
+    if (pendingDemoRole) await startDemo(pendingDemoRole);
+    else await signInThroughIdentity();
+  }
+
   function continueWithDemoData() {
     setUseDemoData(true);
     setIsSystemOffline(false);
@@ -405,13 +428,13 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
         <CloudOff size={16} /> The hospital services are offline
       </p>
       <p className="mt-1 text-xs text-text-muted">
-        WAHter can&apos;t reach any of its services right now, so nobody can sign in. Start the
-        system and try again.
+        WAHter can&apos;t reach any of its services right now, so nobody can sign in. This clears by
+        itself as soon as the system is back.
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
         <button
           type="button"
-          onClick={() => setIsSystemOffline(false)}
+          onClick={() => void retry()}
           className="rounded-lg bg-wah-purple px-3 py-1.5 text-[10px] font-black uppercase text-white"
         >
           Try again
@@ -425,6 +448,12 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
         </button>
       </div>
     </div>
+  );
+
+  const backOnlineNotice = isBackOnline && !isSystemOffline && (
+    <p role="status" className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 text-xs text-emerald-700">
+      The hospital services are back online. You can sign in now.
+    </p>
   );
 
   const style = ROLE_STYLES[role];
@@ -676,6 +705,8 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
 
                       {error && <p className="text-sm font-semibold text-rose-500">{error}</p>}
                       {offlineNotice}
+                    {backOnlineNotice}
+                      {backOnlineNotice}
 
                       <SubmitButton
                         isLoading={isLoading}
@@ -810,6 +841,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                     </div>
                     {error && <p className="mt-4 text-sm font-semibold text-rose-500">{error}</p>}
                     {offlineNotice}
+                    {backOnlineNotice}
                   </div>
                 )}
               </motion.div>
