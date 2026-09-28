@@ -66,14 +66,29 @@ export class ApiError extends Error {
 
   // true when the service itself is unreachable, not when it said no
   get isServiceDown() {
-    return this.status === 0 || this.status >= 502;
+    return this.status === 0 || this.status >= 502 || this.status === GATEWAY_LOOKUP_FAILED;
   }
 }
 
 // Kong answers 502/503/504 when a service's container is stopped, and fetch
-// throws when nginx or Kong themselves are gone. Either way the raw message
+// throws when nginx or Kong themselves are gone. A container that's been
+// stopped for a while also drops out of Docker's DNS, and then Kong answers
+// 500 "name resolution failed" instead; we tag that one separately so a real
+// 500 from a service still shows its own message. Either way the raw message
 // ("An invalid response was received from the upstream server") means
 // nothing to a nurse, so we say which service is down instead.
+// our own marker for Kong's "name resolution failed" (not a real HTTP status)
+const GATEWAY_LOOKUP_FAILED = 599;
+
+async function isKongLookupFailure(response: Response) {
+  try {
+    const body = (await response.clone().json()) as { message?: unknown };
+    return body.message === "name resolution failed";
+  } catch {
+    return false;
+  }
+}
+
 function unavailable(service: ServiceName, status: number) {
   return new ApiError(
     status,
@@ -178,6 +193,9 @@ export async function apiRequest<T>(service: ServiceName, path: string, init: Re
   }
 
   if (response.status >= 502) throw unavailable(service, response.status);
+  if (response.status === 500 && (await isKongLookupFailure(response))) {
+    throw unavailable(service, GATEWAY_LOOKUP_FAILED);
+  }
 
   const text = await response.text();
   let body: unknown = null;
