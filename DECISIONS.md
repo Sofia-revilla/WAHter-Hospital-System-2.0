@@ -486,3 +486,21 @@ The pre-change build is tagged `prompt-build-v1` (also still on `main`) so it ca
   stays at least 700 ms so it never just flashes.
 - The seed and schema files were edited in place instead of adding migrations, since nothing is
   deployed with a database yet. Anyone who ran the earlier stack needs `docker compose down -v`.
+
+### D-046: Showing the live services on the Vercel site through a tunnel
+- For the demo, the Vercel site can use the Docker stack on the presenter's laptop through a
+  Cloudflare quick tunnel (`npm run tunnel`), with `NEXT_PUBLIC_API_URL` on Vercel pointing at it.
+  We picked this over cloud hosting for now: it's free, it needs no new accounts, and it shows the
+  same stack we test locally. Hosting the containers (Azure Container Instances, per the paper)
+  is for the final demo.
+- The free tunnel address changes each time, so the Vercel variable is updated and redeployed on
+  demo day. A fixed address needs a Cloudflare account and a domain.
+- Kong's CORS list now includes the production Vercel domain.
+- If the gateway can't be reached at all (tunnel or Docker off), sign-in falls back to the
+  built-in demo data and a banner says "Showing demo data". It only falls back when no service
+  answers: to check, it asks three services for /health, using real routes because Kong skips
+  CORS on paths with no route. One service being down still shows as that service being offline,
+  which is the fault-isolation behavior we want to demo.
+- Before exposing the stack, the example `JWT_SECRET` in `.env` gets replaced with a random one.
+  The database and RabbitMQ ports stay bound to localhost, so only nginx (the app and /api) goes
+  through the tunnel.

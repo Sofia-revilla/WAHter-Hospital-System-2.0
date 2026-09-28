@@ -12,11 +12,12 @@ consumers:
         algorithm: HS256
 
 plugins:
-  # the app is served through the same nginx origin, but `npm run dev:web`
-  # on :3000 calls the gateway on :8080, so CORS has to allow that
+  # nginx serves the app from the same origin, but two callers come from
+  # elsewhere: `npm run dev:web` on :3000/:3001, and the Vercel site when it's
+  # pointed at this stack through the demo tunnel (see README)
   - name: cors
     config:
-      origins: ["http://localhost:3000", "http://localhost:3001", "http://localhost:8080"]
+      origins: ["http://localhost:3000", "http://localhost:3001", "http://localhost:8080", "https://wahter-hospital-system.vercel.app"]
       methods: [GET, POST, PATCH, OPTIONS]
       headers: [Authorization, Content-Type]
       max_age: 3600

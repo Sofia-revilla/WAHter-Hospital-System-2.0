@@ -27,7 +27,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ApiError, isApiMode } from "@/lib/api";
+import { ApiError, gatewayReachable, isApiMode } from "@/lib/api";
 import { login, signup } from "./api";
 import { ROLE_LABELS, type StaffRole } from "@/types";
 
@@ -240,6 +240,11 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   const [otp, setOtp] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  // The Vercel site points at a laptop through a tunnel during demos. When
+  // that's off, we sign in on the built-in demo data instead of failing, and
+  // the app shows a banner saying so. A single service being down doesn't
+  // count: Kong still answers, and the portal shows that service as offline.
+  const [useDemoData, setUseDemoData] = useState(false);
 
   function goTo(nextMode: LoginMode) {
     setError(null);
@@ -283,11 +288,14 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
       }
     }
 
-    if (isApiMode) {
+    if (isApiMode && !useDemoData) {
       await signInThroughIdentity();
       return;
     }
+    signInLocally();
+  }
 
+  function signInLocally() {
     if (mode === "signup") {
       sessionAccounts.current.set(accountKey(role, name), password);
     } else {
@@ -325,11 +333,13 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
         onLogin(role, user.name);
       }
     } catch (caught) {
-      setError(
-        caught instanceof ApiError
-          ? caught.message
-          : "Can't reach the WAHter services. Is `docker compose up` running?",
-      );
+      if (caught instanceof ApiError && caught.isServiceDown && !(await gatewayReachable())) {
+        setUseDemoData(true);
+        setIsLoading(false);
+        signInLocally();
+        return;
+      }
+      setError(caught instanceof ApiError ? caught.message : "Couldn't sign in. Try again.");
       setPassword("");
     } finally {
       setIsLoading(false);
@@ -339,16 +349,22 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   // Try Demo signs in as the portal's demo account, so the tour runs on the
   // live services too
   async function startDemo(demoRole: StaffRole) {
-    if (!isApiMode) {
-      onLogin(demoRole, ROLE_STYLES[demoRole].demoName, undefined, undefined, true);
+    const demoName = ROLE_STYLES[demoRole].demoName;
+    if (!isApiMode || useDemoData) {
+      onLogin(demoRole, demoName, undefined, undefined, true);
       return;
     }
     setError(null);
     try {
-      const user = await login(demoRole, ROLE_STYLES[demoRole].demoName, PROTOTYPE_PASSWORDS[demoRole]);
+      const user = await login(demoRole, demoName, PROTOTYPE_PASSWORDS[demoRole]);
       onLogin(demoRole, user.name, undefined, undefined, true);
-    } catch {
-      setError("Can't reach the WAHter services. Is `docker compose up` running?");
+    } catch (caught) {
+      if (!(await gatewayReachable())) {
+        setUseDemoData(true);
+        onLogin(demoRole, demoName, undefined, undefined, true);
+        return;
+      }
+      setError(caught instanceof ApiError ? caught.message : "Couldn't start the demo. Try again.");
     }
   }
 

@@ -12,7 +12,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Power, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { apiGet, isApiMode, SERVICE_NAMES, type ServiceName } from "@/lib/api";
+import { apiGet, currentSession, isApiMode, SERVICE_NAMES, type ServiceName } from "@/lib/api";
 
 const HEALTH_POLL_MS = 10_000;
 
@@ -241,7 +241,8 @@ export function ArchitectureStatusView() {
   const [liveHealth, setLiveHealth] = useState<HealthMap | null>(null);
 
   useEffect(() => {
-    if (!isApiMode) return;
+    // on the built-in demo data there's nothing live to poll
+    if (!isApiMode || !currentSession()) return;
     let cancelled = false;
     const poll = () =>
       checkAllServices().then((health) => {

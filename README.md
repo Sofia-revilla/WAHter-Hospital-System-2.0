@@ -93,6 +93,24 @@ and seeded on first start.
 To start again from a clean database: `docker compose down -v`. Do this once if you ran an
 earlier version, since the Pharmacist and Billing portals changed the starting tables.
 
+## Showing the live services on the Vercel site (demo day)
+
+The Vercel site normally runs on built-in demo data. For a demo, it can use the Docker stack on
+your laptop through a Cloudflare tunnel:
+
+1. Start Docker Desktop, then `docker compose up -d` and wait until everything is healthy.
+2. Start the tunnel (needs [cloudflared](https://github.com/cloudflare/cloudflared/releases)):
+   `npm run tunnel`. It prints an address like `https://something-random.trycloudflare.com`.
+3. In Vercel → the project → **Settings → Environment Variables**, set
+   `NEXT_PUBLIC_API_URL` to that address plus `/api`, then **Deployments → ⋯ → Redeploy**.
+4. Open the Vercel site. Logins, data, and stopping containers now behave exactly like
+   http://localhost:8080.
+
+The free tunnel address changes every time it starts, so repeat steps 2–3 each demo day. If the
+tunnel or Docker is off, the site still works: sign-in falls back to the built-in demo data and a
+banner says so. Before exposing the stack, set a new random `JWT_SECRET` in `.env`; the prototype
+passwords are public, so anyone with the link can sign in (the data is fictional).
+
 ## Running only the web app (no Docker)
 
 ```bash

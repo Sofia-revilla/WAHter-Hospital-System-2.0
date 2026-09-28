@@ -20,6 +20,7 @@ import { DataProvider } from "@/context/DataContext";
 import { ArchitectureStatusView } from "@/components/ArchitectureStatusView";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DemoTour } from "@/components/DemoTour";
+import { DemoDataBanner } from "@/components/DemoDataBanner";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { ServiceOfflineNotice } from "@/components/ServiceOfflineNotice";
 import { WorkspaceLoader } from "@/components/WorkspaceLoader";
@@ -376,6 +377,7 @@ export function App() {
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.25 }}
               >
+                <DemoDataBanner />
                 <ServiceOfflineNotice services={TABS[activeTab].services} />
                 {renderTab()}
               </motion.div>

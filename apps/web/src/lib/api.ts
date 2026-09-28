@@ -197,6 +197,28 @@ export const apiGet = <T>(service: ServiceName, path: string) => apiRequest<T>(s
 export const apiPost = <T>(service: ServiceName, path: string, payload: unknown) =>
   apiRequest<T>(service, path, { method: "POST", body: JSON.stringify(payload) });
 
+// True if nginx and Kong answer at all, even if one service behind them is
+// down. We ask three services for /health and any JSON reply counts (Kong's
+// own 502 for a stopped service is JSON too). A dead tunnel or a laptop with
+// Docker off gives network errors or a proxy's HTML error page instead.
+// Real routes on purpose: Kong skips CORS on a path with no route, so the
+// Vercel site couldn't read that reply at all.
+const PROBE_SERVICES: ServiceName[] = ["scheduling", "notifications", "audit-log"];
+
+export async function gatewayReachable() {
+  if (!isApiMode) return false;
+  const probes = PROBE_SERVICES.map(async (service) => {
+    const response = await fetch(`${API_URL}/${service}/health`, { signal: AbortSignal.timeout(5000) });
+    if (!response.headers.get("content-type")?.includes("json")) throw new Error("not the gateway");
+  });
+  try {
+    await Promise.any(probes);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // "3m ago" style labels for lists that used to have hardcoded strings
 export function timeAgo(iso: string, now = Date.now()) {
   const minutes = Math.max(0, Math.round((now - new Date(iso).getTime()) / 60_000));

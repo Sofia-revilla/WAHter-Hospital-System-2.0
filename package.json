@@ -14,6 +14,7 @@
     "lint:web": "npm run lint --workspace apps/web",
     "build:shared": "npm run build --workspace @wahter/shared",
     "up": "docker compose up --build",
-    "lint:frontends": "eslint -c apps/web/eslint.config.mjs \"services/*/frontend/**/*.{ts,tsx}\""
+    "lint:frontends": "eslint -c apps/web/eslint.config.mjs \"services/*/frontend/**/*.{ts,tsx}\"",
+    "tunnel": "cloudflared tunnel --url http://localhost:8080"
   }
 }
