@@ -106,6 +106,8 @@ interface DataContextValue {
   // services that didn't answer the last refresh, with when each last did.
   // Screens keep the last good data; ServiceOfflineNotice tells staff why.
   offlineServices: OfflineService[];
+  // every service this portal uses is unreachable, i.e. the system is down
+  isSystemOffline: boolean;
   patients: Patient[];
   formulary: FormularyItem[];
   labTests: LabTest[];
@@ -278,6 +280,7 @@ export function DataProvider({ children }: DataProviderProps) {
   const [isLoading, setIsLoading] = useState(mode === "api");
   const [loadSteps, setLoadSteps] = useState<LoadStep[]>([]);
   const [offlineServices, setOfflineServices] = useState<OfflineService[]>([]);
+  const [isSystemOffline, setIsSystemOffline] = useState(false);
   // last time each service answered, kept across refreshes
   const [lastSeen] = useState(() => new Map<ServiceName, string>());
 
@@ -335,6 +338,7 @@ export function DataProvider({ children }: DataProviderProps) {
         if (!down.has(service)) lastSeen.set(service, now);
       }
       setOfflineServices([...down].map((service) => ({ service, lastSeenAt: lastSeen.get(service) ?? null })));
+      setIsSystemOffline(services.length > 0 && down.size === services.length);
       setIsLoading(false);
     },
     [lastSeen],
@@ -591,6 +595,7 @@ export function DataProvider({ children }: DataProviderProps) {
         isLoading,
         loadSteps,
         offlineServices,
+        isSystemOffline,
         patients,
         formulary,
         labTests,

@@ -1,8 +1,9 @@
 // WAHter — LoginScreen.tsx
 // Full-screen login overlay with five modes: select, login, signup, verify, demo.
-// With the services running (isApiMode), login and signup go to the Identity
-// service through Kong and get a real JWT. Without them (the Vercel preview)
-// it falls back to checking the prototype passwords right here.
+// With the services configured (isApiMode), login and signup go to the
+// Identity service through Kong and get a real JWT; if the whole system is
+// unreachable it says so and offers demo data. With no services configured
+// (plain Vercel preview) it checks the prototype passwords right here.
 
 "use client";
 
@@ -13,6 +14,7 @@ import {
   Activity,
   ArrowLeft,
   Building2,
+  CloudOff,
   Database,
   Eye,
   EyeOff,
@@ -240,11 +242,15 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   const [otp, setOtp] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  // The Vercel site points at a laptop through a tunnel during demos. When
-  // that's off, we sign in on the built-in demo data instead of failing, and
-  // the app shows a banner saying so. A single service being down doesn't
-  // count: Kong still answers, and the portal shows that service as offline.
+  // The Vercel site reaches the Docker stack through a tunnel. When the whole
+  // stack is unreachable we say so plainly instead of quietly switching to
+  // sample data; the sample data is only used if someone chooses it. A single
+  // service being down doesn't count: Kong still answers, and the portal
+  // shows that one service as offline.
   const [useDemoData, setUseDemoData] = useState(false);
+  const [isSystemOffline, setIsSystemOffline] = useState(false);
+  // what to finish once someone picks "Use demo data instead"
+  const [pendingDemoRole, setPendingDemoRole] = useState<StaffRole | null>(null);
 
   function goTo(nextMode: LoginMode) {
     setError(null);
@@ -334,9 +340,8 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
       }
     } catch (caught) {
       if (caught instanceof ApiError && caught.isServiceDown && !(await gatewayReachable())) {
-        setUseDemoData(true);
-        setIsLoading(false);
-        signInLocally();
+        setPendingDemoRole(null);
+        setIsSystemOffline(true);
         return;
       }
       setError(caught instanceof ApiError ? caught.message : "Couldn't sign in. Try again.");
@@ -360,8 +365,8 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
       onLogin(demoRole, user.name, undefined, undefined, true);
     } catch (caught) {
       if (!(await gatewayReachable())) {
-        setUseDemoData(true);
-        onLogin(demoRole, demoName, undefined, undefined, true);
+        setPendingDemoRole(demoRole);
+        setIsSystemOffline(true);
         return;
       }
       setError(caught instanceof ApiError ? caught.message : "Couldn't start the demo. Try again.");
@@ -383,6 +388,44 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
       onLogin(role, name.trim() || ROLE_STYLES[role].demoName);
     }, FAKE_AUTH_DELAY_MS);
   }
+
+  function continueWithDemoData() {
+    setUseDemoData(true);
+    setIsSystemOffline(false);
+    if (pendingDemoRole) {
+      onLogin(pendingDemoRole, ROLE_STYLES[pendingDemoRole].demoName, undefined, undefined, true);
+    } else {
+      signInLocally();
+    }
+  }
+
+  const offlineNotice = isSystemOffline && (
+    <div role="alert" className="mt-4 rounded-xl border border-rose-500/30 bg-rose-500/5 p-4">
+      <p className="flex items-center gap-2 text-sm font-bold text-rose-600">
+        <CloudOff size={16} /> The hospital services are offline
+      </p>
+      <p className="mt-1 text-xs text-text-muted">
+        WAHter can&apos;t reach any of its services right now, so nobody can sign in. Start the
+        system and try again.
+      </p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => setIsSystemOffline(false)}
+          className="rounded-lg bg-wah-purple px-3 py-1.5 text-[10px] font-black uppercase text-white"
+        >
+          Try again
+        </button>
+        <button
+          type="button"
+          onClick={continueWithDemoData}
+          className="rounded-lg px-3 py-1.5 text-[10px] font-black uppercase text-text-muted hover:bg-glass-bg"
+        >
+          Use demo data instead
+        </button>
+      </div>
+    </div>
+  );
 
   const style = ROLE_STYLES[role];
   const verifyEmail = `${(name.trim() || "staff").toLowerCase().replace(/[^a-z0-9]+/g, ".")}@wahter.local`;
@@ -632,6 +675,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                       )}
 
                       {error && <p className="text-sm font-semibold text-rose-500">{error}</p>}
+                      {offlineNotice}
 
                       <SubmitButton
                         isLoading={isLoading}
@@ -765,6 +809,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                       })}
                     </div>
                     {error && <p className="mt-4 text-sm font-semibold text-rose-500">{error}</p>}
+                    {offlineNotice}
                   </div>
                 )}
               </motion.div>

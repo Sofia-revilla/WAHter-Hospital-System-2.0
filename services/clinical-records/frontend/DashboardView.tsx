@@ -22,7 +22,7 @@ interface DashboardViewProps {
 // Clinical dashboard for doctors and nurses. Revenue lives with Billing Staff
 // and the Hospital Administrator (paper user classes), so it isn't here.
 export function DashboardView({ isLight, staffName }: DashboardViewProps) {
-  const { patients, wards, occupiedBeds, mewsAlerts, labTests, offlineServices } = useData();
+  const { patients, wards, occupiedBeds, mewsAlerts, labTests, offlineServices, isSystemOffline } = useData();
   const offlineCount = offlineServices.length;
 
   const activeAlerts = mewsAlerts.filter((alert) => !alert.acknowledgedAt);
@@ -95,9 +95,11 @@ export function DashboardView({ isLight, staffName }: DashboardViewProps) {
             />
           </span>
           <span className="text-xs font-semibold text-text-muted">
-            {offlineCount > 0
-              ? `Connectivity: ${offlineCount} service${offlineCount > 1 ? "s" : ""} offline`
-              : "Connectivity: Optimal"}
+            {isSystemOffline
+              ? "Connectivity: System offline"
+              : offlineCount > 0
+                ? `Connectivity: ${offlineCount} service${offlineCount > 1 ? "s" : ""} offline`
+                : "Connectivity: Optimal"}
           </span>
         </div>
       </div>

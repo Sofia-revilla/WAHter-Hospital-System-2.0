@@ -109,8 +109,9 @@ your laptop through a Cloudflare tunnel:
    http://localhost:8080.
 
 The free tunnel address changes every time it starts, so repeat steps 2–3 each demo day. If the
-tunnel or Docker is off, the site still works: sign-in falls back to the built-in demo data and a
-banner says so. Before exposing the stack, set a new random `JWT_SECRET` in `.env`; the prototype
+tunnel or Docker is off, the site says "The hospital services are offline" and offers
+**Use demo data instead** as a deliberate choice. If Docker stops while someone is signed in, the
+portal shows "The hospital system is offline" and recovers by itself once it's back. Before exposing the stack, set a new random `JWT_SECRET` in `.env`; the prototype
 passwords are public, so anyone with the link can sign in (the data is fictional).
 
 ## Using Supabase for the database (optional)

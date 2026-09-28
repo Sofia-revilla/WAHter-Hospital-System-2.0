@@ -14,7 +14,28 @@ interface ServiceOfflineNoticeProps {
 // paper's fault-isolation goal visible: the rest of the screen keeps working,
 // and staff can see exactly which part is stale and why.
 export function ServiceOfflineNotice({ services }: ServiceOfflineNoticeProps) {
-  const { offlineServices } = useData();
+  const { offlineServices, isSystemOffline } = useData();
+
+  // Everything down at once (Docker stopped, tunnel gone) reads better as one
+  // message than as a notice per service
+  if (isSystemOffline) {
+    return (
+      <p
+        role="alert"
+        className={cn(
+          "mb-6 flex items-start gap-3 rounded-xl border border-rose-500/30 bg-rose-500/5 px-4 py-3",
+          "text-sm text-rose-700",
+        )}
+      >
+        <CloudOff size={18} className="mt-0.5 shrink-0" />
+        <span>
+          <strong>The hospital system is offline.</strong> None of the services are answering, so
+          nothing can load or save. This screen picks it up again by itself once they&apos;re back.
+        </span>
+      </p>
+    );
+  }
+
   const affected = offlineServices.filter((offline) => services.includes(offline.service));
   if (affected.length === 0) return null;
 

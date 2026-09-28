@@ -547,3 +547,14 @@ The pre-change build is tagged `prompt-build-v1` (also still on `main`) so it ca
   found" answer from while it was stopped. `KONG_DNS_NOT_FOUND_TTL=5` and `KONG_DNS_ERROR_TTL=1`
   fix that. Measured through the tunnel: stopped shows as offline in about 2–4s, and it's back
   about 4s after `docker compose start`.
+
+### D-050: When the whole system is down, say so
+- Replaces the automatic fallback from D-046. When the gateway can't be reached at all, sign-in
+  shows "The hospital services are offline" with Try again and **Use demo data instead**. The
+  sample data is only used when someone picks it. During a demo, stopping Docker should look like
+  the system going down, not quietly turn into sample data.
+- Signed in when every service the portal uses stops answering: one "hospital system is offline"
+  notice replaces the per-service ones, and the Dashboard pill says "System offline". It clears by
+  itself when the services come back (5s refresh, focus, and tab changes, D-048).
+- `NEXT_PUBLIC_API_URL` on Vercel has to be set for **Production**. Set only for Development,
+  the live build had no API address and ran entirely on sample data.
