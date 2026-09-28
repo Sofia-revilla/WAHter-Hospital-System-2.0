@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { ApiError, currentSession, isApiMode, type ServiceName } from "@/lib/api";
 import { fetchCharges, postChargePrice } from "@services/billing/frontend/api";
 import { fetchCensus, fetchVitals, postVitals } from "@services/clinical-records/frontend/api";
@@ -42,8 +42,9 @@ import type {
 type DataMode = "api" | "mock";
 
 // the services publish to each other over RabbitMQ; the browser just re-reads
-// every so often to pick up what other staff changed
-const REFRESH_INTERVAL_MS = 10_000;
+// every so often to pick up what other staff changed, and to notice a
+// service that stopped or came back without anyone reloading the page
+const REFRESH_INTERVAL_MS = 5_000;
 
 // What each portal reads. A pharmacist's screen never waits on (or gets a
 // 403 from) Clinical Records, and IT's screens load their own data.
@@ -96,6 +97,8 @@ export interface LoadStep {
 
 interface DataContextValue {
   mode: DataMode;
+  // re-read everything now (opening a tab calls this, so it's never stale)
+  refreshNow: () => void;
   // true until the first load after sign-in finishes (WorkspaceLoader)
   isLoading: boolean;
   // per-service progress of that first load, for the loading screen
@@ -337,12 +340,36 @@ export function DataProvider({ children }: DataProviderProps) {
     [lastSeen],
   );
 
+  // one refresh at a time; a slow service shouldn't pile up requests behind it
+  const isRefreshing = useRef(false);
+  const refreshNow = useCallback(() => {
+    if (mode !== "api" || isRefreshing.current) return;
+    isRefreshing.current = true;
+    void loadFromServices().finally(() => {
+      isRefreshing.current = false;
+    });
+  }, [mode, loadFromServices]);
+
   useEffect(() => {
     if (mode !== "api") return;
-    void loadFromServices(true);
-    const timer = setInterval(() => void loadFromServices(), REFRESH_INTERVAL_MS);
-    return () => clearInterval(timer);
-  }, [mode, loadFromServices]);
+    isRefreshing.current = true;
+    void loadFromServices(true).finally(() => {
+      isRefreshing.current = false;
+    });
+    const timer = setInterval(refreshNow, REFRESH_INTERVAL_MS);
+    // browsers slow timers down in background tabs, so check straight away
+    // when someone comes back to the window
+    const onReturn = () => {
+      if (document.visibilityState === "visible") refreshNow();
+    };
+    document.addEventListener("visibilitychange", onReturn);
+    window.addEventListener("focus", refreshNow);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onReturn);
+      window.removeEventListener("focus", refreshNow);
+    };
+  }, [mode, loadFromServices, refreshNow]);
 
   async function recordVitals(
     patientId: string,
@@ -560,6 +587,7 @@ export function DataProvider({ children }: DataProviderProps) {
     <DataContext.Provider
       value={{
         mode,
+        refreshNow,
         isLoading,
         loadSteps,
         offlineServices,

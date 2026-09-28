@@ -22,6 +22,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DemoTour } from "@/components/DemoTour";
 import { DemoDataBanner } from "@/components/DemoDataBanner";
 import { LoadingScreen } from "@/components/LoadingScreen";
+import { RefreshOnTabChange } from "@/components/RefreshOnTabChange";
 import { ServiceOfflineNotice } from "@/components/ServiceOfflineNotice";
 import { WorkspaceLoader } from "@/components/WorkspaceLoader";
 import { Sidebar } from "@/components/Sidebar";
@@ -340,6 +341,7 @@ export function App() {
   return (
     <DataProvider>
       <WorkspaceLoader roleLabel={ROLE_LABELS[role]} />
+      <RefreshOnTabChange tab={activeTab} />
       <div className="min-h-screen bg-background text-foreground">
         <Sidebar
           role={role}

@@ -34,9 +34,10 @@ plugins:
 services:
   # Short timeouts on purpose: Kong's defaults (60s, 5 retries) left the app
   # waiting a full minute on a stopped container before reporting it down.
+  # 2s connect x 2 tries means a stopped service shows as offline within ~4s.
   - name: identity
     url: http://identity:3000
-    connect_timeout: 3000
+    connect_timeout: 2000
     read_timeout: 15000
     write_timeout: 15000
     retries: 1
@@ -55,7 +56,7 @@ services:
               run_on_preflight: false
   - name: clinical-records
     url: http://clinical-records:3000
-    connect_timeout: 3000
+    connect_timeout: 2000
     read_timeout: 15000
     write_timeout: 15000
     retries: 1
@@ -74,7 +75,7 @@ services:
               run_on_preflight: false
   - name: scheduling
     url: http://scheduling:3000
-    connect_timeout: 3000
+    connect_timeout: 2000
     read_timeout: 15000
     write_timeout: 15000
     retries: 1
@@ -93,7 +94,7 @@ services:
               run_on_preflight: false
   - name: orders-diagnostics
     url: http://orders-diagnostics:3000
-    connect_timeout: 3000
+    connect_timeout: 2000
     read_timeout: 15000
     write_timeout: 15000
     retries: 1
@@ -112,7 +113,7 @@ services:
               run_on_preflight: false
   - name: billing
     url: http://billing:3000
-    connect_timeout: 3000
+    connect_timeout: 2000
     read_timeout: 15000
     write_timeout: 15000
     retries: 1
@@ -131,7 +132,7 @@ services:
               run_on_preflight: false
   - name: interoperability
     url: http://interoperability:3000
-    connect_timeout: 3000
+    connect_timeout: 2000
     read_timeout: 15000
     write_timeout: 15000
     retries: 1
@@ -150,7 +151,7 @@ services:
               run_on_preflight: false
   - name: notifications
     url: http://notifications:3000
-    connect_timeout: 3000
+    connect_timeout: 2000
     read_timeout: 15000
     write_timeout: 15000
     retries: 1
@@ -169,7 +170,7 @@ services:
               run_on_preflight: false
   - name: audit-log
     url: http://audit-log:3000
-    connect_timeout: 3000
+    connect_timeout: 2000
     read_timeout: 15000
     write_timeout: 15000
     retries: 1

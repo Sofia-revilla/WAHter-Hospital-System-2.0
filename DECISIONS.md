@@ -525,3 +525,15 @@ The pre-change build is tagged `prompt-build-v1` (also still on `main`) so it ca
 - Found while switching to Supabase: Kong cached the services' old container IPs after they
   were recreated, so requests went to whichever service had taken that IP (odd 404s, failed
   logins). `KONG_DNS_VALID_TTL=10` makes Kong re-resolve names every 10 seconds.
+
+### D-048: Stopped or restarted services show up without reloading
+- The portal re-reads its data every 5s (it was 10s). It also re-reads straight away when a tab
+  is opened, and when the browser window or tab comes back into focus, since browsers slow timers
+  in background tabs. Only one refresh runs at a time.
+- The Architecture tab polls /health every 5s, and also re-checks when the window gets focus.
+- Kong's connect timeout is down to 2s (1 retry), so a stopped container shows as offline within
+  about 4s. A restarted one clears on the next refresh after its own boot, about 20s with
+  Supabase, since it reconnects and checks its migrations.
+- `restart: unless-stopped` already restarts a service that crashes. One stopped on purpose
+  (`docker compose stop`) stays down until it's started again, which is what the
+  fault-isolation demo needs.

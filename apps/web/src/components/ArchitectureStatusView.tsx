@@ -14,7 +14,7 @@ import { Power, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiGet, currentSession, isApiMode, SERVICE_NAMES, type ServiceName } from "@/lib/api";
 
-const HEALTH_POLL_MS = 10_000;
+const HEALTH_POLL_MS = 5_000;
 
 interface ServiceHealth {
   service: string;
@@ -250,9 +250,17 @@ export function ArchitectureStatusView() {
       });
     void poll();
     const timer = setInterval(() => void poll(), HEALTH_POLL_MS);
+    // background tabs run timers slowly; check as soon as the window is back
+    const onReturn = () => {
+      if (document.visibilityState === "visible") void poll();
+    };
+    document.addEventListener("visibilitychange", onReturn);
+    window.addEventListener("focus", onReturn);
     return () => {
       cancelled = true;
       clearInterval(timer);
+      document.removeEventListener("visibilitychange", onReturn);
+      window.removeEventListener("focus", onReturn);
     };
   }, []);
 
