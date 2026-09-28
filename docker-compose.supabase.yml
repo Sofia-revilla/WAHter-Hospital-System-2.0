@@ -1,0 +1,60 @@
+# Same stack, but every service keeps its data on Supabase instead of the local
+# postgres container. Run `npm run supabase:setup` once first, then
+# `npm run up:supabase`. Plain `docker compose up` still uses the local database.
+#
+# Supabase's session pooler takes logins as <role>.<project-ref>, so each
+# service still signs in as its own role and only sees its own schema.
+
+x-supabase: &supabase
+  depends_on: !override
+    rabbitmq:
+      condition: service_healthy
+
+services:
+  identity:
+    <<: *supabase
+    environment:
+      DATABASE_URL: postgres://identity_svc.${SUPABASE_PROJECT_REF:?run npm run supabase:setup}:${SUPABASE_IDENTITY_DB_PASSWORD:?run npm run supabase:setup}@${SUPABASE_POOLER_HOST}:5432/postgres
+      DATABASE_SSL: require
+
+  clinical-records:
+    <<: *supabase
+    environment:
+      DATABASE_URL: postgres://clinical_records_svc.${SUPABASE_PROJECT_REF:?run npm run supabase:setup}:${SUPABASE_CLINICAL_RECORDS_DB_PASSWORD:?run npm run supabase:setup}@${SUPABASE_POOLER_HOST}:5432/postgres
+      DATABASE_SSL: require
+
+  scheduling:
+    <<: *supabase
+    environment:
+      DATABASE_URL: postgres://scheduling_svc.${SUPABASE_PROJECT_REF:?run npm run supabase:setup}:${SUPABASE_SCHEDULING_DB_PASSWORD:?run npm run supabase:setup}@${SUPABASE_POOLER_HOST}:5432/postgres
+      DATABASE_SSL: require
+
+  orders-diagnostics:
+    <<: *supabase
+    environment:
+      DATABASE_URL: postgres://orders_diagnostics_svc.${SUPABASE_PROJECT_REF:?run npm run supabase:setup}:${SUPABASE_ORDERS_DIAGNOSTICS_DB_PASSWORD:?run npm run supabase:setup}@${SUPABASE_POOLER_HOST}:5432/postgres
+      DATABASE_SSL: require
+
+  billing:
+    <<: *supabase
+    environment:
+      DATABASE_URL: postgres://billing_svc.${SUPABASE_PROJECT_REF:?run npm run supabase:setup}:${SUPABASE_BILLING_DB_PASSWORD:?run npm run supabase:setup}@${SUPABASE_POOLER_HOST}:5432/postgres
+      DATABASE_SSL: require
+
+  interoperability:
+    <<: *supabase
+    environment:
+      DATABASE_URL: postgres://interoperability_svc.${SUPABASE_PROJECT_REF:?run npm run supabase:setup}:${SUPABASE_INTEROPERABILITY_DB_PASSWORD:?run npm run supabase:setup}@${SUPABASE_POOLER_HOST}:5432/postgres
+      DATABASE_SSL: require
+
+  notifications:
+    <<: *supabase
+    environment:
+      DATABASE_URL: postgres://notifications_svc.${SUPABASE_PROJECT_REF:?run npm run supabase:setup}:${SUPABASE_NOTIFICATIONS_DB_PASSWORD:?run npm run supabase:setup}@${SUPABASE_POOLER_HOST}:5432/postgres
+      DATABASE_SSL: require
+
+  audit-log:
+    <<: *supabase
+    environment:
+      DATABASE_URL: postgres://audit_log_svc.${SUPABASE_PROJECT_REF:?run npm run supabase:setup}:${SUPABASE_AUDIT_LOG_DB_PASSWORD:?run npm run supabase:setup}@${SUPABASE_POOLER_HOST}:5432/postgres
+      DATABASE_SSL: require

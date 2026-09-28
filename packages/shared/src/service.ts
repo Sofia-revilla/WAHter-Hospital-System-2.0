@@ -88,6 +88,7 @@ export class WahServiceModule {
               connectionString: requireEnv("DATABASE_URL"),
               migrationsDir: options.migrationsDir,
               seed: process.env.SEED_DATABASE !== "false",
+              ssl: process.env.DATABASE_SSL === "require" ? "require" : undefined,
             });
             await database.connect();
             return database;

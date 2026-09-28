@@ -111,6 +111,22 @@ tunnel or Docker is off, the site still works: sign-in falls back to the built-i
 banner says so. Before exposing the stack, set a new random `JWT_SECRET` in `.env`; the prototype
 passwords are public, so anyone with the link can sign in (the data is fictional).
 
+## Using Supabase for the database (optional)
+
+By default the services keep their data in the local Postgres container. They can use a Supabase
+project instead. It's the same design: one schema and one login per service, on Supabase's hosted
+PostgreSQL.
+
+1. In Supabase, open the project → **Connect** → **Session pooler** and copy the URI. Replace
+   `[YOUR-PASSWORD]` with the database password.
+2. Paste it into `.env` as `SUPABASE_DB_URL=...` (never commit `.env`).
+3. `npm run supabase:setup` creates the 8 schemas and logins, and saves their passwords to `.env`.
+4. `npm run up:supabase` starts the stack on Supabase. On first start, each service creates its
+   tables and seeds the fictional data.
+
+To go back to the local database: `docker compose up -d`. The two databases are separate, so
+data doesn't carry over between them.
+
 ## Running only the web app (no Docker)
 
 ```bash

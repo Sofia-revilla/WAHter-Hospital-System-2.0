@@ -17,6 +17,10 @@ export interface DatabaseOptions {
   migrationsDir: string;
   // seed.sql runs once, on an empty database, and only when this is true
   seed: boolean;
+  // Supabase requires TLS. Its certificate chain isn't in Node's trust
+  // store, so "require" means encrypted but not verified, like libpq's
+  // sslmode=require. Unset for the local container, which has no TLS.
+  ssl?: "require";
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -25,7 +29,11 @@ export class Database {
   private readonly pool: Pool;
 
   constructor(private readonly options: DatabaseOptions) {
-    this.pool = new Pool({ connectionString: options.connectionString, max: 5 });
+    this.pool = new Pool({
+      connectionString: options.connectionString,
+      max: 5,
+      ssl: options.ssl === "require" ? { rejectUnauthorized: false } : undefined,
+    });
   }
 
   // Compose starts every container at once, so Postgres may still be booting

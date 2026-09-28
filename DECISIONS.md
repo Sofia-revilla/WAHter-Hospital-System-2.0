@@ -504,3 +504,21 @@ The pre-change build is tagged `prompt-build-v1` (also still on `main`) so it ca
 - Before exposing the stack, the example `JWT_SECRET` in `.env` gets replaced with a random one.
   The database and RabbitMQ ports stay bound to localhost, so only nginx (the app and /api) goes
   through the tunnel.
+
+### D-047: Supabase as an optional home for the databases
+- The services can keep their data on a Supabase project instead of the local Postgres container
+  (`docker-compose.supabase.yml`, `npm run up:supabase`). It's still PostgreSQL with one schema
+  and one login per service, so TABLE IX's schema-per-service design and the master prompt's "one
+  Postgres, no cross-schema access" still hold. Only where the database runs changes.
+- Services connect through Supabase's Session pooler as `<role>.<project-ref>`. We use the pooler
+  because the direct connection is IPv6-only on the free plan, which Docker Desktop on Windows
+  can't reach. We use session mode (port 5432), not transaction mode, so the migration runner's
+  multi-statement transactions work.
+- TLS is on (`DATABASE_SSL=require`). The connection is encrypted, but the certificate isn't
+  verified, since Supabase's CA isn't in Node's trust store. That's acceptable for fictional
+  prototype data; pin the Supabase CA before any real use.
+- `npm run supabase:setup` creates the schemas and logins with fresh random passwords, and writes
+  them only to the local `.env`. It's safe to re-run.
+- This doesn't replace the tunnel: the services, Kong, and RabbitMQ still run on the laptop.
+  Supabase only makes the data outlive the laptop's Docker volume, and it's a step toward hosting
+  everything for the final demo.
