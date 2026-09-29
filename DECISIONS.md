@@ -558,3 +558,14 @@ The pre-change build is tagged `prompt-build-v1` (also still on `main`) so it ca
   itself when the services come back (5s refresh, focus, and tab changes, D-048).
 - `NEXT_PUBLIC_API_URL` on Vercel has to be set for **Production**. Set only for Development,
   the live build had no API address and ran entirely on sample data.
+
+### D-051: The tunnel address lives in the repo, not the Vercel dashboard
+- The quick tunnel gets a new address on every restart, and the laptop sleeping ends it.
+  Updating the Vercel variable by hand each time broke twice (a stale address, and the variable
+  set for Development only).
+- Now `npm run tunnel` starts cloudflared as a detached process, waits until the address really
+  answers, writes it to `apps/web/demo-tunnel.json`, and pushes that one file. On Vercel,
+  next.config.ts reads the file and bakes it in as `NEXT_PUBLIC_DEMO_API_URL`, which beats
+  `NEXT_PUBLIC_API_URL`. Local and Docker builds ignore the file (they check `VERCEL=1`).
+- The tunnel points at 127.0.0.1:8080, not localhost, because cloudflared tried IPv6 (::1) first.
+- The old Vercel variable is now just a fallback and can be deleted.

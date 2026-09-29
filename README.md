@@ -95,24 +95,20 @@ earlier version, since the Pharmacist and Billing portals changed the starting t
 
 ## Showing the live services on the Vercel site (demo day)
 
-The Vercel site normally runs on built-in demo data. For a demo, it can use the Docker stack on
-your laptop through a Cloudflare tunnel:
+The Vercel site can use the Docker stack on your laptop through a Cloudflare tunnel:
 
-1. Start Docker Desktop, then `docker compose up -d` and wait until everything is healthy. For
-   demos, use this local database rather than Supabase: it's faster, and a stopped service
-   comes back in a few seconds.
-2. Start the tunnel (needs [cloudflared](https://github.com/cloudflare/cloudflared/releases)):
-   `npm run tunnel`. It prints an address like `https://something-random.trycloudflare.com`.
-3. In Vercel → the project → **Settings → Environment Variables**, set
-   `NEXT_PUBLIC_API_URL` to that address plus `/api`, then **Deployments → ⋯ → Redeploy**.
-4. Open the Vercel site. Logins, data, and stopping containers now behave exactly like
-   http://localhost:8080.
+1. Start Docker Desktop, then `docker compose up -d` and wait until everything is healthy.
+2. Run `npm run tunnel` (needs [cloudflared](https://github.com/cloudflare/cloudflared/releases);
+   set `CLOUDFLARED_PATH` in `.env` if it isn't on your PATH). It starts the tunnel in the
+   background, waits until it answers, writes the address to `apps/web/demo-tunnel.json`, and
+   pushes that file. Vercel redeploys on its own within about a minute; no dashboard steps.
+3. Open the Vercel site. Stopping and starting containers shows up there within seconds.
 
-The free tunnel address changes every time it starts, so repeat steps 2–3 each demo day. If the
-tunnel or Docker is off, the site says "The hospital services are offline" and offers
-**Use demo data instead** as a deliberate choice. If Docker stops while someone is signed in, the
-portal shows "The hospital system is offline" and recovers by itself once it's back. Before exposing the stack, set a new random `JWT_SECRET` in `.env`; the prototype
-passwords are public, so anyone with the link can sign in (the data is fictional).
+The free tunnel gets a new address each time it starts, including after the laptop sleeps, so
+run `npm run tunnel` again whenever that happens. If Docker or the tunnel is off, the site says
+"The hospital services are offline" and offers demo data as a choice, never automatically.
+Before exposing the stack, set a random `JWT_SECRET` in `.env`; the prototype passwords are
+public, so anyone with the link can sign in (the data is fictional).
 
 ## Using Supabase for the database (optional)
 

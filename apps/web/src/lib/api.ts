@@ -2,11 +2,13 @@ import type { StaffRole } from "@/types";
 
 // Shared plumbing for the per-service API clients in services/<name>/frontend/api.ts.
 // Talks to the services through the gateway (nginx -> Kong -> service).
-// NEXT_PUBLIC_API_URL is "/api" inside Docker Compose. When it's unset, as on
-// the Vercel preview, isApiMode is false and every screen keeps using the
-// mock data in constants.ts, so the hosted demo works without a backend.
+// NEXT_PUBLIC_API_URL is "/api" inside Docker Compose. On Vercel,
+// NEXT_PUBLIC_DEMO_API_URL (from demo-tunnel.json, see next.config.ts) points
+// at the demo tunnel and wins. With neither set, isApiMode is false and every
+// screen keeps using the mock data in constants.ts.
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "";
+const API_URL =
+  (process.env.NEXT_PUBLIC_DEMO_API_URL || process.env.NEXT_PUBLIC_API_URL)?.replace(/\/$/, "") ?? "";
 
 export const isApiMode = API_URL !== "";
 
