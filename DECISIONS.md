@@ -569,3 +569,8 @@ The pre-change build is tagged `prompt-build-v1` (also still on `main`) so it ca
   `NEXT_PUBLIC_API_URL`. Local and Docker builds ignore the file (they check `VERCEL=1`).
 - The tunnel points at 127.0.0.1:8080, not localhost, because cloudflared tried IPv6 (::1) first.
 - The old Vercel variable is now just a fallback and can be deleted.
+- Kong's CORS list now takes a regex for the project's Vercel links: the main address plus each
+  deployment and preview link (`wahter-hospital-system-<id>-….vercel.app`). With only the main
+  address allowed, opening a deployment link showed the system as offline even though it was up.
+  Use the main address for demos anyway: a deployment link is a fixed snapshot and keeps
+  whatever tunnel address it was built with.

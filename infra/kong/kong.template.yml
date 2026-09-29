@@ -17,7 +17,13 @@ plugins:
   # pointed at this stack through the demo tunnel (see README)
   - name: cors
     config:
-      origins: ["http://localhost:3000", "http://localhost:3001", "http://localhost:8080", "https://wahter-hospital-system.vercel.app"]
+      # the last entry is a regex: the main Vercel address plus every
+      # deployment and preview link (wahter-hospital-system-<id>-....vercel.app)
+      origins:
+        - "http://localhost:3000"
+        - "http://localhost:3001"
+        - "http://localhost:8080"
+        - 'https://wahter-hospital-system(-[a-z0-9-]+)?\.vercel\.app'
       methods: [GET, POST, PATCH, OPTIONS]
       headers: [Authorization, Content-Type]
       max_age: 3600
