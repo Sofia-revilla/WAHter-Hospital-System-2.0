@@ -1,36 +1,107 @@
-import { apiGet, apiPost, setSession, type Session } from "@/lib/api";
+import { apiGet, apiPost, apiRequest, setSession, type Session } from "@/lib/api";
 import type { Provider, StaffRole } from "@/types";
 
 // Calls to the Access & Provider Registry (services/access-provider-registry/backend)
 
-export async function login(role: StaffRole, name: string, password: string) {
-  const session = await apiPost<Session>("access-provider-registry", "/auth/login", { role, name, password });
+// ─── signing in: password, then the emailed access key ───
+
+export interface AccessKeyChallenge {
+  challengeId: string;
+  // masked, e.g. "a*******@wahter.local"
+  sentTo: string;
+  expiresInSeconds: number;
+}
+
+export const startLogin = (role: StaffRole, username: string, password: string) =>
+  apiPost<AccessKeyChallenge>("access-provider-registry", "/auth/login", { role, username, password });
+
+export async function verifyAccessKey(challengeId: string, code: string) {
+  const session = await apiPost<Session>("access-provider-registry", "/auth/verify", { challengeId, code });
   setSession(session);
   return session.user;
 }
 
-export async function signup(role: StaffRole, name: string, license: string, password: string) {
-  const session = await apiPost<Session>("access-provider-registry", "/auth/signup", {
-    role,
-    name,
-    license,
-    password,
-  });
+// Try Demo; the server refuses unless demo accounts are turned on
+export async function demoLogin(role: StaffRole) {
+  const session = await apiPost<Session>("access-provider-registry", "/auth/demo", { role });
   setSession(session);
   return session.user;
 }
 
-export interface StaffAccountResponse {
+// US-41: sign-outs are audited, so the server hears about them
+export const logout = () => apiPost<void>("access-provider-registry", "/auth/logout", {});
+
+// ─── Users and Roles (System Administrator, UC-08) ───
+
+export interface AccountRecord {
   id: string;
+  staffId: string;
+  username: string;
+  email: string;
   name: string;
   role: StaffRole;
   department: string;
-  status: "Active" | "Deactivated";
+  license: string | null;
+  status: "Active" | "Disabled";
+  isLocked: boolean;
+  failedAttempts: number;
   lastLoginAt: string | null;
+  createdAt: string;
 }
 
-// System Administrator only (UC-08); the service never returns password hashes
-export const fetchStaffAccounts = () => apiGet<StaffAccountResponse[]>("access-provider-registry", "/staff");
+export interface ApprovalRecord {
+  id: string;
+  kind: "RoleChange" | "Disable";
+  accountId: string;
+  newRole: StaffRole | null;
+  fromRole: StaffRole | null;
+  reason: string;
+  status: "Pending" | "Approved" | "Rejected";
+  requestedById: string;
+  requestedAt: string;
+  decidedById: string | null;
+  decidedAt: string | null;
+  decisionNote: string | null;
+}
+
+export interface NewAccount {
+  name: string;
+  role: StaffRole;
+  department: string;
+  license?: string;
+  username: string;
+  email: string;
+  temporaryPassword: string;
+}
+
+export const fetchAccounts = () => apiGet<AccountRecord[]>("access-provider-registry", "/accounts");
+
+export const createAccount = (account: NewAccount) =>
+  apiPost<AccountRecord>("access-provider-registry", "/accounts", account);
+
+export const updateAccount = (
+  id: string,
+  changes: { name?: string; department?: string; license?: string | null; email?: string },
+) =>
+  apiRequest<AccountRecord>("access-provider-registry", `/accounts/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(changes),
+  });
+
+export const unlockAccount = (id: string) => apiPost<AccountRecord>("access-provider-registry", `/accounts/${id}/unlock`, {});
+
+export const restoreAccount = (id: string) => apiPost<AccountRecord>("access-provider-registry", `/accounts/${id}/restore`, {});
+
+export const requestApproval = (
+  id: string,
+  request: { kind: "RoleChange" | "Disable"; newRole?: StaffRole; reason: string },
+) => apiPost<ApprovalRecord>("access-provider-registry", `/accounts/${id}/approval-requests`, request);
+
+export const fetchApprovals = (status?: ApprovalRecord["status"]) =>
+  apiGet<ApprovalRecord[]>("access-provider-registry", status ? `/approval-requests?status=${status}` : "/approval-requests");
+
+export const decideApproval = (id: string, decision: "approve" | "reject", note?: string) =>
+  apiPost<ApprovalRecord>("access-provider-registry", `/approval-requests/${id}/${decision}`, { note });
 
 // The provider registry: how a provider ID on an order or admission becomes a name
 export const fetchProviders = (role?: StaffRole) =>

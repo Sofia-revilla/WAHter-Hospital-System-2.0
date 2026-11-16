@@ -1,72 +1,129 @@
-import { ConflictException, Injectable, UnauthorizedException } from "@nestjs/common";
+import { createHash, randomInt, randomUUID, timingSafeEqual } from "node:crypto";
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from "@nestjs/common";
 import argon2 from "argon2";
 import { EVENT_TYPES, EventBus, signTokens, verifyToken, type AuthUser, type StaffRole } from "@wahter/shared";
-import { StaffRepository, type StaffRow } from "../staff/staff.repository";
-import type { LoginDto, SignupDto } from "./auth.dto";
+import {
+  ACCESS_KEY_MAX_ATTEMPTS,
+  ACCESS_KEY_TTL_MS,
+  MAX_FAILED_ATTEMPTS,
+  maskEmail,
+  shouldLock,
+} from "../accounts/access-rules";
+import { AccountsRepository, type AccountRow } from "../accounts/accounts.repository";
+import type { DemoLoginDto, LoginDto, VerifyAccessKeyDto } from "./auth.dto";
+import { Mailer } from "./mailer";
 
-const DEPARTMENT_FOR_ROLE: Record<StaffRole, string> = {
-  AdmittingClerk: "Admitting",
-  Physician: "Internal Medicine",
-  Nurse: "Medical Ward",
-  Pharmacist: "Pharmacy",
-  LaboratoryStaff: "Laboratory",
-  RadiologyStaff: "Radiology",
-  BillingStaff: "Billing",
-  HospitalAdministrator: "Administration",
-  SystemAdministrator: "IT Department",
-};
+// The paper's authentication flow (Section IV.C.2a): System Access (pick a
+// portal) → Staff Login (username and password) → Access Key Verification (a
+// six-digit key sent to the account's email). Only the last step issues a token.
 
-// Same Dr./RN prefix rule as the web app's formatDisplayName
-function displayName(rawName: string, role: StaffRole) {
-  const name = rawName.trim();
-  if (role === "Physician" && !name.toLowerCase().startsWith("dr.")) return `Dr. ${name}`;
-  if (role === "Nurse" && !name.toLowerCase().startsWith("rn ")) return `RN ${name}`;
-  return name;
+// The same answer for "no such user" and "wrong password", so the login form
+// can't be used to find out which usernames exist
+const BAD_CREDENTIALS = "Incorrect username or password.";
+
+// argon2id of a random string nobody knows; only used to even out timing
+const TIMING_DUMMY_HASH =
+  "$argon2id$v=19$m=65536,t=3,p=4$lrTdOybi0jrqX0ank2nDMw$bEJBwF1R2vUSSAYCsnaqiLZvQQKgsScZseZvfF9MV/M";
+
+function hashCode(code: string) {
+  return createHash("sha256").update(code).digest("hex");
 }
+
+function sameHash(a: string, b: string) {
+  return a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
+
+const DEMO_USERNAME: Partial<Record<StaffRole, string>> = {
+  Physician: "demo.physician",
+  Nurse: "demo.nurse",
+  Pharmacist: "demo.pharmacist",
+  BillingStaff: "demo.billing",
+  SystemAdministrator: "demo.admin",
+};
 
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly staff: StaffRepository,
+    private readonly accounts: AccountsRepository,
+    private readonly mailer: Mailer,
     private readonly bus: EventBus,
   ) {}
 
-  // A named account signs in with its own password. Anyone else can use the
-  // portal's prototype password from the login screen and gets a session
-  // under the name they typed, tied to the portal's demo account ID so the
-  // audit trail still points at a real row.
-  // TODO(Phase 10): drop the prototype fallback once every tester has a named account.
-  async login({ role, name, password }: LoginDto) {
-    const account = await this.staff.findByRoleAndName(role, name);
+  // Step 2: check the password, then email the access key
+  async login({ role, username, password }: LoginDto) {
+    const account = await this.accounts.findByUsername(username);
+    if (!account || account.is_demo) {
+      // still pay for one hash check, so a missing username doesn't answer faster
+      await argon2.verify(TIMING_DUMMY_HASH, password).catch(() => false);
+      this.publishFailure(username, null, "Unknown username");
+      throw new UnauthorizedException(BAD_CREDENTIALS);
+    }
+    this.refuseIfBlocked(account);
 
-    if (account) {
-      if (account.status !== "Active") throw new UnauthorizedException("This account is deactivated.");
-      if (!(await this.passwordMatches(account, password))) {
-        throw new UnauthorizedException("Incorrect password for this portal.");
-      }
-      return this.startSession(account, { id: account.id, name: account.name, role });
+    if (!(await argon2.verify(account.password_hash, password))) {
+      await this.countFailure(account, "Wrong password");
+      throw new UnauthorizedException(BAD_CREDENTIALS);
+    }
+    // checked after the password, so a wrong portal doesn't confirm the username exists
+    if (account.role !== role) {
+      this.publishFailure(username, account.id, `Tried the ${role} portal`);
+      throw new ForbiddenException("This account doesn't belong to that portal. Go back and pick yours.");
     }
 
-    const prototype = await this.staff.findPrototypeAccount(role);
-    if (!prototype || !(await this.passwordMatches(prototype, password))) {
-      throw new UnauthorizedException("Incorrect password for this portal.");
+    const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
+    const challengeId = randomUUID();
+    await this.accounts.createChallenge({
+      id: challengeId,
+      accountId: account.id,
+      role: account.role,
+      codeHash: hashCode(code),
+      expiresAt: new Date(Date.now() + ACCESS_KEY_TTL_MS),
+    });
+    try {
+      await this.mailer.sendAccessKey(account.email, account.name, code, ACCESS_KEY_TTL_MS / 60_000);
+    } catch {
+      throw new ServiceUnavailableException("Couldn't send your access key. Try again in a moment.");
     }
-    return this.startSession(prototype, { id: prototype.id, name: displayName(name, role), role });
+    return { challengeId, sentTo: maskEmail(account.email), expiresInSeconds: ACCESS_KEY_TTL_MS / 1000 };
   }
 
-  async signup({ role, name, license, password }: SignupDto) {
-    const fullName = displayName(name, role);
-    if (await this.staff.findByRoleAndName(role, fullName)) {
-      throw new ConflictException("There's already an account with that name on this portal.");
+  // Step 3: the access key. A wrong key counts toward the same lockout as a
+  // wrong password.
+  async verify({ challengeId, code }: VerifyAccessKeyDto) {
+    const challenge = await this.accounts.findChallenge(challengeId);
+    if (!challenge || challenge.consumed_at) throw new NotFoundException("That sign-in has expired. Start again.");
+    const account = await this.accounts.findById(challenge.account_id);
+    if (!account) throw new NotFoundException("That sign-in has expired. Start again.");
+    this.refuseIfBlocked(account);
+
+    if (challenge.expires_at.getTime() < Date.now() || challenge.attempts >= ACCESS_KEY_MAX_ATTEMPTS) {
+      throw new UnauthorizedException("That access key has expired. Go back and sign in again for a new one.");
     }
-    const account = await this.staff.create({
-      name: fullName,
-      role,
-      department: DEPARTMENT_FOR_ROLE[role],
-      license,
-      passwordHash: await argon2.hash(password, { type: argon2.argon2id }),
-    });
-    return this.startSession(account!, { id: account!.id, name: account!.name, role });
+    if (!sameHash(hashCode(code), challenge.code_hash)) {
+      await this.accounts.countChallengeAttempt(challenge.id);
+      await this.countFailure(account, "Wrong access key");
+      throw new UnauthorizedException("That access key doesn't match. Check the latest email and try again.");
+    }
+    if (!(await this.accounts.consumeChallenge(challenge.id))) {
+      throw new UnauthorizedException("That access key was already used. Sign in again.");
+    }
+    return this.startSession(account);
+  }
+
+  // Try Demo: a fixed demo account per portal, no password or access key.
+  // Off unless the server is started with DEMO_ACCOUNTS_ENABLED=true.
+  async demoLogin({ role }: DemoLoginDto) {
+    if (process.env.DEMO_ACCOUNTS_ENABLED !== "true") throw new ForbiddenException("Demo mode is turned off.");
+    const username = DEMO_USERNAME[role];
+    const account = username ? await this.accounts.findByUsername(username) : null;
+    if (!account || !account.is_demo) throw new NotFoundException(`No demo account for ${role}.`);
+    return this.startSession(account);
   }
 
   async refresh(refreshToken: string) {
@@ -76,20 +133,47 @@ export class AuthService {
     } catch {
       throw new UnauthorizedException("Session expired. Please sign in again.");
     }
-    // a deactivated account shouldn't keep a week-long session alive
-    const account = await this.staff.findById(user.id);
-    if (!account || account.status !== "Active") throw new UnauthorizedException("This account is deactivated.");
-    return { user, ...signTokens(user) };
+    // a disabled, locked, or re-roled account doesn't keep a week-long session
+    const account = await this.accounts.findByStaffId(user.id);
+    if (!account || account.status !== "Active" || account.locked_at || account.role !== user.role) {
+      throw new UnauthorizedException("Your access has changed. Please sign in again.");
+    }
+    const session = { id: account.staff_id, name: account.name, role: account.role };
+    return { user: session, ...signTokens(session) };
   }
 
-  private async passwordMatches(account: StaffRow, password: string) {
-    if (!account.password_hash) return false;
-    return argon2.verify(account.password_hash, password);
+  async logout(user: AuthUser) {
+    const account = await this.accounts.findByStaffId(user.id);
+    if (account) this.bus.publish(EVENT_TYPES.loggedOut, { accountId: account.id }, user);
   }
 
-  private async startSession(account: StaffRow, user: AuthUser) {
-    await this.staff.touchLastLogin(account.id);
-    this.bus.publish(EVENT_TYPES.loginSucceeded, { accountId: account.id, role: user.role }, user);
+  private refuseIfBlocked(account: AccountRow) {
+    if (account.status !== "Active") throw new ForbiddenException("This account is disabled.");
+    if (account.locked_at) {
+      throw new ForbiddenException(
+        `This account is locked after ${MAX_FAILED_ATTEMPTS} failed sign-ins. Ask a System Administrator to unlock it.`,
+      );
+    }
+  }
+
+  private async countFailure(account: AccountRow, reason: string) {
+    const { failed_attempts: failedAttempts } = await this.accounts.recordFailure(account.id, MAX_FAILED_ATTEMPTS);
+    this.publishFailure(account.username, account.id, reason);
+    // exactly at the limit: the attempt that locked it, announced once
+    if (shouldLock(failedAttempts) && failedAttempts === MAX_FAILED_ATTEMPTS) {
+      this.bus.publish(EVENT_TYPES.accountLocked, { accountId: account.id, failedAttempts });
+    }
+  }
+
+  private publishFailure(username: string, accountId: string | null, reason: string) {
+    this.bus.publish(EVENT_TYPES.loginFailed, { username: username.trim().slice(0, 64), reason, accountId });
+  }
+
+  private async startSession(account: AccountRow) {
+    await this.accounts.recordSuccess(account.id);
+    // the provider ID is the user ID everywhere else (orders, charts, audit)
+    const user = { id: account.staff_id, name: account.name, role: account.role };
+    this.bus.publish(EVENT_TYPES.loginSucceeded, { accountId: account.id, role: account.role }, user);
     return { user, ...signTokens(user) };
   }
 }

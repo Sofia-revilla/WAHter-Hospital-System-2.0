@@ -16,17 +16,21 @@ The image is built from `infra/docker/service.Dockerfile` with `SERVICE=access-p
 
 ## Backend
 
-- Database schema `access`: `staff`
+- Database schema `access`: `staff` (provider registry), `accounts`, `login_challenges`, `approval_requests`
 - Endpoints (through Kong, under `/api/access-provider-registry`):
-  - `POST /auth/login`, `/auth/signup`, `/auth/refresh` (no token)
-  - `GET /staff` (System Administrator)
+  - `POST /auth/login`, `/auth/verify`, `/auth/refresh`, `/auth/demo` (no token); `POST /auth/logout`
+  - `GET/POST /accounts`, `PATCH /accounts/:id`, `POST /accounts/:id/unlock`, `/restore`,
+    `/approval-requests`; `GET /approval-requests`, `POST /approval-requests/:id/approve`, `/reject`
+    (System Administrator)
   - `GET /providers?role=` (every staff role, and other services)
   - `GET /health` and API docs at `/docs`
-- Publishes: `access.login.succeeded`
+- Publishes: `access.login.succeeded`, `access.login.failed`, `access.login.ended`, `access.account.*`
+  (created, updated, disabled, restored, locked, unlocked), `access.role.changed`, `access.approval.*`
 - Listens for: nothing
 
 ## Frontend
 
-- `LoginScreen.tsx`: the login overlay
+- `LoginScreen.tsx`: System Access, Staff Login, Access Key Verification
 - `ProfileView.tsx`: the **Profile** tab (every portal)
-- `StaffAccessView.tsx`: **Staff & Access** (System Administrator), with the audit panel from `audit-log/frontend`
+- `UsersRolesView.tsx`: **Users and Roles** (System Administrator)
+- `ProviderRegistryView.tsx`: **Provider Registry** (System Administrator)

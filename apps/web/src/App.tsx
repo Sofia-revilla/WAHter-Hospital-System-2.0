@@ -14,7 +14,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react"; // not 'framer-motion', the package got renamed in v11
 import { ChevronDown, LayoutDashboard, LogOut, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { clearSession, restoreSession } from "@/lib/api";
+import { clearSession, currentSession, restoreSession } from "@/lib/api";
 import { formatDisplayName } from "@/lib/staff";
 import { DataProvider } from "@/context/DataContext";
 import { ArchitectureStatusView } from "@/components/ArchitectureStatusView";
@@ -27,7 +27,16 @@ import { WorkspaceLoader } from "@/components/WorkspaceLoader";
 import { Sidebar } from "@/components/Sidebar";
 // Each tab's screen belongs to the service that owns its data (services/<name>/frontend)
 import { DashboardView, PatientsView } from "@services/clinical-care/frontend";
-import { LoginScreen, ProfileView, StaffAccessView, type LoginHandler } from "@services/access-provider-registry/frontend";
+import {
+  IS_DEMO_ENABLED,
+  LoginScreen,
+  ProfileView,
+  ProviderRegistryView,
+  UsersRolesView,
+  type LoginHandler,
+} from "@services/access-provider-registry/frontend";
+import { logout } from "@services/access-provider-registry/frontend/api";
+import { AuditLogView } from "@services/audit-log/frontend";
 import { NotificationBell } from "@services/notifications/frontend";
 import { LaboratoryView } from "@services/diagnostics/frontend";
 import { PharmacyView, PrescriptionView } from "@services/pharmacy/frontend";
@@ -279,7 +288,7 @@ export function App() {
     setUserName(name);
     setUserDept(dept ?? DEFAULT_DEPARTMENT[role]);
     setUserLicense(license ?? "Not on file");
-    setIsDemoMode(!!demo);
+    setIsDemoMode(IS_DEMO_ENABLED && !!demo);
     setDemoStep(0);
     // each portal opens on its first tab
     setActiveTab(ROLE_TABS[role][0]);
@@ -321,8 +330,12 @@ export function App() {
         return <BillingView role={role} />;
       case "architecture":
         return <ArchitectureStatusView />;
-      case "staff":
-        return <StaffAccessView adminName={displayName} />;
+      case "users":
+        return <UsersRolesView adminId={currentSession()?.user.id ?? ""} />;
+      case "providers":
+        return <ProviderRegistryView />;
+      case "audit":
+        return <AuditLogView />;
       case "profile":
         return (
           <ProfileView
@@ -403,6 +416,9 @@ export function App() {
           onCancel={() => setIsConfirmingSignOut(false)}
           onConfirm={() => {
             setIsConfirmingSignOut(false);
+            // tell the server first (US-41 logs sign-outs); signing out still
+            // works if it can't be reached
+            void logout().catch(() => undefined);
             clearSession();
             saveProfile(null);
             setUserRole(null);

@@ -158,15 +158,30 @@ export interface StaffAccount {
   lastLogin: string;
 }
 
-export type AuditAction = "LOGIN" | "VIEW" | "CREATE" | "UPDATE" | "EXPORT" | "AUDIT_QUERY";
+export const AUDIT_ACTIONS = [
+  "LOGIN",
+  "LOGIN_FAILED",
+  "LOGOUT",
+  "ACCESS_DENIED",
+  "VIEW",
+  "CREATE",
+  "UPDATE",
+  "DELETE",
+  "EXPORT",
+  "AUDIT_QUERY",
+] as const;
+
+export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 
 export interface AuditEntry {
   id: string;
   time: string;
+  actorId: string | null;
   actor: string;
   // the role's label at the time, or "System" for things no person did
   role: string;
   action: AuditAction;
+  outcome: "Success" | "Failure" | "Denied";
   // what was touched, by ID only (never clinical details)
   resource: string;
 }

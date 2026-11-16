@@ -10,9 +10,10 @@ import {
   type OnApplicationShutdown,
   type Type,
 } from "@nestjs/common";
-import { APP_GUARD, NestFactory } from "@nestjs/core";
+import { APP_GUARD, APP_INTERCEPTOR, NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
-import { JwtAuthGuard, Public } from "./auth";
+import { AuditViewInterceptor } from "./audit-view";
+import { JwtAuthGuard, Public, SERVICE_NAME } from "./auth";
 import { Database } from "./database";
 import { EventBus } from "./event-bus";
 import { ServiceClient } from "./service-client";
@@ -21,8 +22,6 @@ import { ServiceClient } from "./service-client";
 // auth guard, /health, and OpenAPI docs. A service's own module only has to
 // list its controllers and providers (the three layers from the paper:
 // REST controller -> service -> repository).
-
-export const SERVICE_NAME = "WAH_SERVICE_NAME";
 
 export interface ServiceOptions {
   // short name, also the URL prefix behind Kong: /api/<name>/...
@@ -107,6 +106,7 @@ export class WahServiceModule {
         },
         { provide: ServiceClient, useValue: new ServiceClient(options.name) },
         { provide: APP_GUARD, useClass: JwtAuthGuard },
+        { provide: APP_INTERCEPTOR, useClass: AuditViewInterceptor },
         {
           provide: ShutdownHooks,
           inject: [Database, EventBus],

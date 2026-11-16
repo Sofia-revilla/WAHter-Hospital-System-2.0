@@ -55,8 +55,8 @@ const REQUEST_DELAY_MS = 800;
 
 // Read from the real service list, so adding a service updates every count here
 const SERVICE_COUNT = SERVICE_NAMES.length;
-// postgres, rabbitmq, kong, web, nginx
-const INFRA_CONTAINERS = 5;
+// postgres, rabbitmq, kong, web, nginx, mailpit (the local inbox for access keys)
+const INFRA_CONTAINERS = 6;
 const CONTAINER_COUNT = SERVICE_COUNT + INFRA_CONTAINERS;
 
 const INITIAL_LOGS: LogEntry[] = [

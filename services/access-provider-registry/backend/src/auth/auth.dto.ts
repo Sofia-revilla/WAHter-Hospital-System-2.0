@@ -1,40 +1,37 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsIn, IsString, Matches, MinLength } from "class-validator";
+import { IsIn, IsString, IsUUID, Matches, MinLength } from "class-validator";
 import { STAFF_ROLES, type StaffRole } from "@wahter/shared";
 
 export class LoginDto {
+  // the portal picked on the System Access page; the account has to belong to it
   @ApiProperty({ enum: STAFF_ROLES })
   @IsIn(STAFF_ROLES)
   role: StaffRole;
 
-  @ApiProperty({ example: "Andrea Mendoza" })
+  @ApiProperty({ example: "amendoza" })
   @IsString()
   @MinLength(2)
-  name: string;
+  username: string;
 
   @ApiProperty({ example: "doctor2026" })
   @IsString()
   password: string;
 }
 
-export class SignupDto {
+export class VerifyAccessKeyDto {
+  @ApiProperty({ description: "challengeId from POST /auth/login" })
+  @IsUUID()
+  challengeId: string;
+
+  @ApiProperty({ example: "482913" })
+  @Matches(/^\d{6}$/, { message: "The access key is six digits." })
+  code: string;
+}
+
+export class DemoLoginDto {
   @ApiProperty({ enum: STAFF_ROLES })
   @IsIn(STAFF_ROLES)
   role: StaffRole;
-
-  @ApiProperty({ example: "Sarah Johnson" })
-  @IsString()
-  @MinLength(2)
-  name: string;
-
-  @ApiProperty({ example: "MED-1234-ABCD" })
-  @Matches(/^MED-[A-Z0-9]{4}-[A-Z0-9]{4}$/, { message: "License must look like MED-XXXX-XXXX" })
-  license: string;
-
-  @ApiProperty({ minLength: 8 })
-  @IsString()
-  @MinLength(8)
-  password: string;
 }
 
 export class RefreshDto {

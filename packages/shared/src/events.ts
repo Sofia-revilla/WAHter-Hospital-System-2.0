@@ -15,6 +15,19 @@ export const DEAD_LETTER_QUEUE = "wah.events.dead-letter";
 export const EVENT_TYPES = {
   // Access & Provider Registry
   loginSucceeded: "access.login.succeeded",
+  loginFailed: "access.login.failed",
+  loggedOut: "access.login.ended",
+  accountCreated: "access.account.created",
+  accountUpdated: "access.account.updated",
+  accountDisabled: "access.account.disabled",
+  accountRestored: "access.account.restored",
+  accountLocked: "access.account.locked",
+  accountUnlocked: "access.account.unlocked",
+  roleChanged: "access.role.changed",
+  approvalRequested: "access.approval.requested",
+  approvalDecided: "access.approval.decided",
+  // Kong turned a call away (no token, wrong role); see audit-log's gateway consumer
+  gatewayDenied: "gateway.request.denied",
   // Patient Registry (the brief names these three without a service prefix)
   patientRegistered: "patient.registered",
   // Patient Flow
@@ -38,12 +51,50 @@ export const EVENT_TYPES = {
   reportGenerated: "reporting.report.generated",
 } as const;
 
-export type EventType = (typeof EVENT_TYPES)[keyof typeof EVENT_TYPES];
+// Two events every service can publish under its own name (US-41): someone
+// opened a clinical or financial record, or a service's role guard said no.
+export type RecordViewedEvent = `${string}.record.viewed`;
+export type RequestDeniedEvent = `${string}.request.denied`;
+
+export const recordViewedEvent = (service: string): RecordViewedEvent => `${service}.record.viewed`;
+export const requestDeniedEvent = (service: string): RequestDeniedEvent => `${service}.request.denied`;
+
+export type EventType = (typeof EVENT_TYPES)[keyof typeof EVENT_TYPES] | RecordViewedEvent | RequestDeniedEvent;
 
 export type RiskLevel = "Low" | "Medium" | "High";
 
+export interface RecordViewedPayload {
+  // what kind of record, e.g. "Patient chart", "Billing account"
+  record: string;
+  recordId: string;
+  // the patient it belongs to, when there is one
+  patientId?: string;
+}
+
+export interface RequestDeniedPayload {
+  method: string;
+  path: string;
+  status: 401 | 403;
+  reason: string;
+}
+
 export interface EventPayloads {
+  [type: RecordViewedEvent]: RecordViewedPayload;
+  [type: RequestDeniedEvent]: RequestDeniedPayload;
   "access.login.succeeded": { accountId: string; role: string };
+  // username only; the attempt may not match any account
+  "access.login.failed": { username: string; reason: string; accountId: string | null };
+  "access.login.ended": { accountId: string };
+  "access.account.created": { accountId: string; staffId: string; role: string };
+  "access.account.updated": { accountId: string; fields: string[] };
+  "access.account.disabled": { accountId: string; requestId: string };
+  "access.account.restored": { accountId: string };
+  "access.account.locked": { accountId: string; failedAttempts: number };
+  "access.account.unlocked": { accountId: string };
+  "access.role.changed": { accountId: string; fromRole: string; toRole: string; requestId: string };
+  "access.approval.requested": { requestId: string; kind: string; accountId: string };
+  "access.approval.decided": { requestId: string; kind: string; accountId: string; decision: "Approved" | "Rejected" };
+  "gateway.request.denied": RequestDeniedPayload & { service: string };
   "patient.registered": { patientId: string };
   "flow.patient.admitted": {
     patientId: string;

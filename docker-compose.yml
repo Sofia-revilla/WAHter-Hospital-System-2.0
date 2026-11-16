@@ -64,6 +64,15 @@ services:
       timeout: 5s
       retries: 12
 
+  # Local stand-in for the hospital's mail server: catches the access keys
+  # (the paper's Access Key Verification step). Read them at
+  # http://localhost:8025; nothing is ever sent out.
+  mailpit:
+    image: axllent/mailpit:v1.21.8
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8025:8025"
+
   # ─── the ten services (paper TABLE IV) ───
 
   access-provider-registry:
@@ -72,6 +81,10 @@ services:
     environment:
       <<: *bus
       DATABASE_URL: postgres://access_provider_registry_svc:${ACCESS_PROVIDER_REGISTRY_DB_PASSWORD}@postgres:5432/wahter
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      # Try Demo's no-password accounts; off unless ENABLE_DEMO=true in .env
+      DEMO_ACCOUNTS_ENABLED: ${ENABLE_DEMO:-false}
 
   patient-registry:
     <<: *service
@@ -135,6 +148,7 @@ services:
     environment:
       <<: *bus
       DATABASE_URL: postgres://audit_log_svc:${AUDIT_LOG_DB_PASSWORD}@postgres:5432/wahter
+      GATEWAY_LOG_SECRET: ${GATEWAY_LOG_SECRET:?copy .env.example to .env}
 
   # ─── edge ───
 
@@ -157,6 +171,7 @@ services:
       KONG_DNS_NOT_FOUND_TTL: "5"
       KONG_DNS_ERROR_TTL: "1"
       JWT_SECRET: ${JWT_SECRET}
+      GATEWAY_LOG_SECRET: ${GATEWAY_LOG_SECRET}
     volumes:
       - ./infra/kong:/etc/kong/wahter:ro
     depends_on:

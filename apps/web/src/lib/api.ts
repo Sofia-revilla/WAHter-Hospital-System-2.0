@@ -207,6 +207,43 @@ export async function apiRequest<T>(service: ServiceName, path: string, init: Re
   return body as T;
 }
 
+// For file downloads (CSV, PDF, XML): same auth and refresh as apiRequest,
+// but hands back the raw file and its suggested name
+export async function apiDownload(service: ServiceName, path: string) {
+  let response: Response;
+  try {
+    response = await send(service, path, {}, session?.accessToken ?? null);
+    if (response.status === 401 && session && (await refreshSession())) {
+      response = await send(service, path, {}, session!.accessToken);
+    }
+  } catch {
+    throw unavailable(service, 0);
+  }
+  if (response.status >= 502) throw unavailable(service, response.status);
+  if (!response.ok) {
+    let body: unknown = null;
+    try {
+      body = await response.json();
+    } catch {
+      // not JSON; the status says enough
+    }
+    throw new ApiError(response.status, messageFrom(body, `Download failed (${response.status})`), body);
+  }
+  const disposition = response.headers.get("content-disposition") ?? "";
+  const filename = /filename="([^"]+)"/.exec(disposition)?.[1] ?? "download";
+  return { blob: await response.blob(), filename, headers: response.headers };
+}
+
+// Hands a downloaded file to the browser's Save dialog
+export function saveFile(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export const apiGet = <T>(service: ServiceName, path: string) => apiRequest<T>(service, path);
 
 export const apiPost = <T>(service: ServiceName, path: string, payload: unknown) =>

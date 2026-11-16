@@ -2,8 +2,10 @@
 // Adding a tab means one entry in TABS and adding its id to the roles that need it.
 
 import {
+  Activity,
   Bed,
-  Database,
+  BadgeCheck,
+  ScrollText,
   FlaskConical,
   LayoutDashboard,
   Pill,
@@ -26,7 +28,9 @@ export type TabId =
   | "rooms"
   | "billing"
   | "architecture"
-  | "staff"
+  | "users"
+  | "providers"
+  | "audit"
   | "profile";
 
 interface TabConfig {
@@ -83,15 +87,27 @@ export const TABS: Record<TabId, TabConfig> = {
     services: ["billing-revenue-cycle", "patient-registry"],
   },
   architecture: {
-    label: "Architecture",
-    icon: Database,
-    description: "Service health, the event bus, and the access sandbox.",
+    label: "System Health",
+    icon: Activity,
+    description: "Live health of the ten services, the event bus, and the access sandbox.",
     services: [],
   },
-  staff: {
-    label: "Staff & Access",
+  users: {
+    label: "Users and Roles",
     icon: ShieldCheck,
-    description: "Staff accounts, roles, and the audit log.",
+    description: "Create, change, disable, and restore staff accounts; approve role changes.",
+    services: [],
+  },
+  providers: {
+    label: "Provider Registry",
+    icon: BadgeCheck,
+    description: "Every provider, their role, department, and PRC license.",
+    services: [],
+  },
+  audit: {
+    label: "Audit Log",
+    icon: ScrollText,
+    description: "Search and export the append-only audit trail.",
     services: [],
   },
   profile: {
@@ -120,7 +136,9 @@ export const ROLE_TABS: Record<StaffRole, TabId[]> = {
   HospitalAdministrator: [],
   // No clinical modules and no patient data (RA 10173), and no inventory tab
   // (paper Limitation d)
-  SystemAdministrator: ["architecture", "staff", "profile"],
+  // TODO(Phase 3): Wards Rooms and Beds; (Phase 2) Identity Review; (Phase 4)
+  // Correction Requests; (Phase 10) Data Exchange
+  SystemAdministrator: ["users", "providers", "audit", "architecture", "profile"],
 };
 
 export const PORTAL_ROLES = (Object.keys(ROLE_TABS) as StaffRole[]).filter((role) => ROLE_TABS[role].length > 0);

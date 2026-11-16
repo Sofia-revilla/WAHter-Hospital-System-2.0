@@ -1,7 +1,9 @@
 // WAHter — LoginScreen.tsx
-// Full-screen login overlay with five modes: select, login, signup, verify, demo
-// (demo is hidden for now, see SHOW_TRY_DEMO). Login and signup both need the
-// Data Privacy Notice (RA 10173) accepted before they submit.
+// The paper's authentication flow: System Access (pick a portal) → Staff Login
+// (username, password, and the Data Privacy Notice, RA 10173) → Access Key
+// Verification (a six-digit key emailed to the account). There's no public
+// sign-up: the System Administrator creates accounts (UC-08). Try Demo only
+// shows when NEXT_PUBLIC_ENABLE_DEMO is "true".
 // Login and signup go to the Access & Provider Registry through Kong and get
 // a real JWT. There's no offline or mock sign-in: if the services can't be
 // reached, the screen says so and keeps checking until they're back.
@@ -15,13 +17,11 @@ import {
   Activity,
   ArrowLeft,
   BarChart3,
-  Building2,
   CloudOff,
   Database,
   Eye,
   EyeOff,
   FlaskConical,
-  IdCard,
   KeyRound,
   Mail,
   Pill,
@@ -36,10 +36,10 @@ import {
 import { cn } from "@/lib/utils";
 import { ApiError, gatewayReachable } from "@/lib/api";
 import { PORTAL_ROLES } from "@/navigation";
-import { login, signup } from "./api";
-import { ROLE_LABELS, type StaffRole } from "@/types";
+import { demoLogin, startLogin, verifyAccessKey, type AccessKeyChallenge } from "./api";
+import { type StaffRole } from "@/types";
 
-type LoginMode = "select" | "login" | "signup" | "verify" | "demo";
+type LoginMode = "select" | "login" | "verify" | "demo";
 
 export type LoginHandler = (
   role: StaffRole,
@@ -49,13 +49,12 @@ export type LoginHandler = (
   demo?: boolean,
 ) => void;
 
-const LICENSE_PATTERN = /^MED-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
-const MIN_PASSWORD_LENGTH = 8;
 // how often the login screen re-checks while the system is offline
 const OFFLINE_RECHECK_MS = 4000;
-// Try Demo is turned off for now. The demo mode and guided tour are still
-// built, so flipping this back to true brings the button back.
-const SHOW_TRY_DEMO = false;
+// Try Demo and the guided tours are off unless the build turns them on. The
+// server has its own switch (DEMO_ACCOUNTS_ENABLED), so hiding the button
+// isn't the only thing keeping the demo accounts closed.
+export const IS_DEMO_ENABLED = process.env.NEXT_PUBLIC_ENABLE_DEMO === "true";
 
 // What we tell staff before they sign in or create an account. Kept short on
 // purpose; the full privacy manual belongs to the hospital's DPO, not the login page.
@@ -92,15 +91,19 @@ const PRIVACY_NOTICE_SECTIONS = [
   },
 ];
 
-// Prototype passwords per portal, shown on the form so anyone can try it.
-// Not secrets: the Access & Provider Registry seeds its demo accounts with
-// these same values (services/access-provider-registry/backend/db/seed.sql).
-const PROTOTYPE_PASSWORDS: Partial<Record<StaffRole, string>> = {
-  Physician: "doctor2026",
-  Nurse: "nurse2026",
-  Pharmacist: "pharmacy2026",
-  BillingStaff: "billing2026",
-  SystemAdministrator: "admin2026",
+// One fictional login per portal, shown on the form so anyone can try it.
+// Not secrets: the Access & Provider Registry seeds these same accounts
+// (services/access-provider-registry/backend/db/seed.sql).
+const PROTOTYPE_LOGINS: Record<StaffRole, { username: string; password: string }> = {
+  AdmittingClerk: { username: "jpascual", password: "clerk2026" },
+  Physician: { username: "amendoza", password: "doctor2026" },
+  Nurse: { username: "cbautista", password: "nurse2026" },
+  Pharmacist: { username: "gvillanueva", password: "pharmacy2026" },
+  LaboratoryStaff: { username: "lramos", password: "lab2026" },
+  RadiologyStaff: { username: "psantos", password: "radiology2026" },
+  BillingStaff: { username: "maquino", password: "billing2026" },
+  HospitalAdministrator: { username: "rcastillo", password: "hospadmin2026" },
+  SystemAdministrator: { username: "areyes", password: "admin2026" },
 };
 
 // Full class strings (not built with template literals) so Tailwind's scanner
@@ -427,12 +430,10 @@ interface LoginScreenProps {
 export function LoginScreen({ onLogin }: LoginScreenProps) {
   const [mode, setMode] = useState<LoginMode>("select");
   const [role, setRole] = useState<StaffRole>("Physician");
-  const [name, setName] = useState("");
-  const [department, setDepartment] = useState("");
-  const [license, setLicense] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [challenge, setChallenge] = useState<AccessKeyChallenge | null>(null);
   const [otp, setOtp] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -442,15 +443,13 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   const [isSystemOffline, setIsSystemOffline] = useState(false);
   // what "Try again" should redo: a normal sign-in, or a demo for this role
   const [pendingDemoRole, setPendingDemoRole] = useState<StaffRole | null>(null);
-  // one agreement per visit covers both forms, so switching from login to
-  // "Create account" doesn't make them tick it again
   const [hasAcceptedPrivacy, setHasAcceptedPrivacy] = useState(false);
   const [isPrivacyNoticeOpen, setIsPrivacyNoticeOpen] = useState(false);
 
   function goTo(nextMode: LoginMode) {
     setError(null);
     setPassword("");
-    setConfirmPassword("");
+    setOtp("");
     setIsPasswordVisible(false);
     setMode(nextMode);
   }
@@ -462,58 +461,59 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!name.trim()) {
-      setError("Please enter your full name.");
+    if (!username.trim()) {
+      setError("Please enter your username.");
       return;
     }
     if (!password) {
       setError("Please enter your password.");
       return;
     }
-    if (mode === "signup") {
-      if (!LICENSE_PATTERN.test(license)) {
-        setError("License / Employee ID must look like MED-XXXX-XXXX.");
-        return;
-      }
-      if (password.length < MIN_PASSWORD_LENGTH) {
-        setError(`Password needs at least ${MIN_PASSWORD_LENGTH} characters.`);
-        return;
-      }
-      if (password !== confirmPassword) {
-        setError("The two passwords don't match.");
-        return;
-      }
-    }
     if (!hasAcceptedPrivacy) {
       setError("Please read and agree to the Data Privacy Notice first.");
       return;
     }
-
-    await signInThroughIdentity();
+    await sendPassword();
   }
 
-  async function signInThroughIdentity() {
+  // Step 2 of the flow: the password. On success the server emails the key.
+  async function sendPassword() {
     setError(null);
     setIsBackOnline(false);
     setIsLoading(true);
     try {
-      const user =
-        mode === "signup"
-          ? await signup(role, name.trim(), license, password)
-          : await login(role, name.trim(), password);
-      if (mode === "signup") {
-        onLogin(role, user.name, department.trim() || undefined, license);
-      } else {
-        onLogin(role, user.name);
-      }
+      setChallenge(await startLogin(role, username.trim(), password));
+      setOtp("");
+      setMode("verify");
     } catch (caught) {
-      if (caught instanceof ApiError && caught.isServiceDown && !(await gatewayReachable())) {
-        setPendingDemoRole(null);
-        setIsSystemOffline(true);
-        return;
-      }
+      if (await showOfflineIfDown(caught, null)) return;
       setError(caught instanceof ApiError ? caught.message : "Couldn't sign in. Try again.");
       setPassword("");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  // Step 3: the access key from the email
+  async function handleVerify(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (otp.length !== 6) {
+      setError("Enter the full 6-digit access key.");
+      return;
+    }
+    if (!challenge) {
+      goTo("login");
+      return;
+    }
+    setError(null);
+    setIsLoading(true);
+    try {
+      const user = await verifyAccessKey(challenge.challengeId, otp);
+      onLogin(role, user.name);
+    } catch (caught) {
+      if (await showOfflineIfDown(caught, null)) return;
+      setError(caught instanceof ApiError ? caught.message : "Couldn't check the access key. Try again.");
+      setOtp("");
     } finally {
       setIsLoading(false);
     }
@@ -522,26 +522,23 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   // Try Demo signs in as the portal's demo account, so the tour runs on the
   // live services too
   async function startDemo(demoRole: StaffRole) {
-    const demoName = ROLE_STYLES[demoRole].demoName;
     setError(null);
     try {
-      const user = await login(demoRole, demoName, PROTOTYPE_PASSWORDS[demoRole] ?? "");
+      const user = await demoLogin(demoRole);
       onLogin(demoRole, user.name, undefined, undefined, true);
     } catch (caught) {
-      if (!(await gatewayReachable())) {
-        setPendingDemoRole(demoRole);
-        setIsSystemOffline(true);
-        return;
-      }
+      if (await showOfflineIfDown(caught, demoRole)) return;
       setError(caught instanceof ApiError ? caught.message : "Couldn't start the demo. Try again.");
     }
   }
 
-  // TODO(Phase 1): send and check a real access key (UC-08, paper's
-  // authentication flow). Not reachable from the UI until then.
-  function handleVerify(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError(otp.length === 6 ? "Access key verification isn't connected yet." : "Enter the full 6-digit access key.");
+  async function showOfflineIfDown(caught: unknown, demoRole: StaffRole | null) {
+    if (caught instanceof ApiError && caught.isServiceDown && !(await gatewayReachable())) {
+      setPendingDemoRole(demoRole);
+      setIsSystemOffline(true);
+      return true;
+    }
+    return false;
   }
 
   // While the "offline" message is up, keep checking. As soon as the system
@@ -561,7 +558,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   async function retry() {
     setIsSystemOffline(false);
     if (pendingDemoRole) await startDemo(pendingDemoRole);
-    else await signInThroughIdentity();
+    else await sendPassword();
   }
 
   const offlineNotice = isSystemOffline && (
@@ -592,7 +589,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   );
 
   const style = ROLE_STYLES[role];
-  const verifyEmail = `${(name.trim() || "staff").toLowerCase().replace(/[^a-z0-9]+/g, ".")}@wahter.local`;
+  const prototype = PROTOTYPE_LOGINS[role];
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center overflow-y-auto bg-background p-4 md:p-8">
@@ -668,7 +665,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                     <h2 className="text-3xl font-black">System Access</h2>
                     <p className="mt-1 text-text-muted">Select your portal to begin</p>
 
-                    {/* five portals: two columns, the IT portal spans the last row */}
+                    {/* two columns; an odd one out spans the last row */}
                     <div className="mt-8 grid gap-3 sm:grid-cols-2">
                       {ROLES.map((roleOption) => {
                         const roleStyle = ROLE_STYLES[roleOption];
@@ -707,15 +704,11 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                       })}
                     </div>
 
-                    <div className="mt-8 flex items-center justify-between">
-                      <button
-                        type="button"
-                        onClick={() => goTo("signup")}
-                        className="text-sm font-semibold text-wah-purple hover:underline"
-                      >
-                        Create New Staff Account
-                      </button>
-                      {SHOW_TRY_DEMO && (
+                    <div className="mt-8 flex items-center justify-between gap-4">
+                      <p className="text-xs text-text-muted">
+                        New staff? Your System Administrator creates your account.
+                      </p>
+                      {IS_DEMO_ENABLED && (
                         <button
                           type="button"
                           onClick={() => goTo("demo")}
@@ -747,7 +740,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                   </div>
                 )}
 
-                {(mode === "login" || mode === "signup") && (
+                {mode === "login" && (
                   <form onSubmit={handleSubmit} noValidate>
                     <BackButton onClick={() => goTo("select")} />
                     <span
@@ -756,73 +749,31 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                         style.chip,
                       )}
                     >
-                      {mode === "login" ? style.portal : ROLE_LABELS[role]}
+                      {style.portal}
                     </span>
-                    <h2 className="mt-4 text-3xl font-black">
-                      {mode === "login" ? "Staff Login" : "New Staff"}
-                    </h2>
-                    <p className="mt-1 text-text-muted">Enter your assigned medical credentials</p>
+                    <h2 className="mt-4 text-3xl font-black">Staff Login</h2>
+                    <p className="mt-1 text-text-muted">Enter the username and password your administrator gave you</p>
 
                     <div className="mt-8 space-y-5">
-                      {mode === "signup" && (
-                        <div className="grid grid-cols-2 gap-4">
-                          <label className="block space-y-2">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">
-                              Staff Role
-                            </span>
-                            <select
-                              value={role}
-                              onChange={(event) => setRole(event.target.value as StaffRole)}
-                              className={cn(inputClass, "px-4")}
-                            >
-                              {ROLES.map((roleOption) => (
-                                <option key={roleOption} value={roleOption}>
-                                  {ROLE_LABELS[roleOption]}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                          <Field label="Department" icon={Building2}>
-                            <input
-                              value={department}
-                              onChange={(event) => setDepartment(event.target.value)}
-                              placeholder="e.g. Internal Medicine"
-                              className={cn(inputClass, "pl-12")}
-                            />
-                          </Field>
-                        </div>
-                      )}
-
-                      <Field label="Full Name" icon={Users}>
+                      <Field label="Username" icon={Users}>
                         <input
-                          value={name}
-                          onChange={(event) => setName(event.target.value)}
-                          placeholder={style.placeholder}
-                          autoComplete="name"
+                          value={username}
+                          onChange={(event) => setUsername(event.target.value)}
+                          placeholder={`e.g. ${prototype.username}`}
+                          autoComplete="username"
+                          autoCapitalize="none"
+                          spellCheck={false}
                           className={cn(inputClass, "pl-12")}
                         />
                       </Field>
-
-                      {mode === "signup" && (
-                        <Field label="License / Employee ID" icon={IdCard}>
-                          <input
-                            value={license}
-                            // uppercase as they type so "med-1234-5678" still passes the pattern
-                            onChange={(event) => setLicense(event.target.value.toUpperCase())}
-                            placeholder="MED-XXXX-XXXX"
-                            maxLength={13}
-                            className={cn(inputClass, "pl-12 font-mono")}
-                          />
-                        </Field>
-                      )}
 
                       <Field label="Password" icon={KeyRound}>
                         <input
                           type={isPasswordVisible ? "text" : "password"}
                           value={password}
                           onChange={(event) => setPassword(event.target.value)}
-                          placeholder={mode === "signup" ? "At least 8 characters" : "Enter your password"}
-                          autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                          placeholder="Enter your password"
+                          autoComplete="current-password"
                           className={cn(inputClass, "pl-12 pr-12")}
                         />
                         <button
@@ -835,25 +786,11 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                         </button>
                       </Field>
 
-                      {mode === "signup" && (
-                        <Field label="Confirm Password" icon={KeyRound}>
-                          <input
-                            type={isPasswordVisible ? "text" : "password"}
-                            value={confirmPassword}
-                            onChange={(event) => setConfirmPassword(event.target.value)}
-                            placeholder="Type it again"
-                            autoComplete="new-password"
-                            className={cn(inputClass, "pl-12")}
-                          />
-                        </Field>
-                      )}
-
-                      {mode === "login" && (
-                        <p className="text-xs text-text-muted">
-                          Prototype sign-in: the {ROLE_LABELS[role]} password is{" "}
-                          <code className="rounded bg-glass-bg px-1 font-mono">{PROTOTYPE_PASSWORDS[role] ?? "(ask the System Administrator)"}</code>
-                        </p>
-                      )}
+                      <p className="text-xs text-text-muted">
+                        Prototype sign-in for this portal: username{" "}
+                        <code className="rounded bg-glass-bg px-1 font-mono">{prototype.username}</code>, password{" "}
+                        <code className="rounded bg-glass-bg px-1 font-mono">{prototype.password}</code>
+                      </p>
 
                       <label className="flex cursor-pointer items-start gap-3 text-xs text-text-muted">
                         <input
@@ -877,10 +814,8 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                             className="font-semibold text-wah-purple hover:underline"
                           >
                             Data Privacy Notice
-                          </button>
-                          {mode === "signup"
-                            ? " and consent to WAHter processing my personal information for my staff account."
-                            : " and will keep patient information confidential."}
+                          </button>{" "}
+                          and will keep patient information confidential.
                         </span>
                       </label>
 
@@ -888,24 +823,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                       {offlineNotice}
                       {backOnlineNotice}
 
-                      <SubmitButton
-                        isLoading={isLoading}
-                        colorClass={style.submit}
-                        label={mode === "login" ? "Enter Portal" : "Create Account"}
-                      />
-
-                      {mode === "login" && (
-                        <p className="text-center text-sm text-text-muted">
-                          New employee?{" "}
-                          <button
-                            type="button"
-                            onClick={() => goTo("signup")}
-                            className="font-semibold text-wah-purple hover:underline"
-                          >
-                            Create account
-                          </button>
-                        </p>
-                      )}
+                      <SubmitButton isLoading={isLoading} colorClass={style.submit} label="Continue" />
                     </div>
                   </form>
                 )}
@@ -922,6 +840,10 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                       <ShieldCheck size={12} /> Security Verification Gate
                     </span>
                     <h2 className="mt-4 text-3xl font-black">Access Key Verification</h2>
+                    <p className="mt-1 text-text-muted">
+                      We emailed a six-digit access key. It works once and expires in{" "}
+                      {Math.round((challenge?.expiresInSeconds ?? 300) / 60)} minutes.
+                    </p>
 
                     <div className="mt-6 flex items-center gap-3 rounded-xl bg-wah-purple/10 p-4">
                       <span className="relative flex h-2.5 w-2.5">
@@ -929,7 +851,7 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                         <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-wah-neon" />
                       </span>
                       <Mail size={18} className="text-wah-neon" />
-                      <span className="truncate font-mono text-sm">{verifyEmail}</span>
+                      <span className="truncate font-mono text-sm">{challenge?.sentTo ?? "your email"}</span>
                     </div>
 
                     <input
@@ -944,17 +866,21 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                       className={cn(inputClass, "mt-6 text-center font-mono text-2xl tracking-[0.5em]")}
                     />
 
-                    {error && (
-                      <p className="mt-4 animate-bounce text-center text-sm font-bold text-rose-500">
-                        🚨 {error}
-                      </p>
-                    )}
+                    <p className="mt-3 text-center text-xs text-text-muted">
+                      Local setup: the inbox is Mailpit at{" "}
+                      <a href="http://localhost:8025" target="_blank" rel="noreferrer" className="font-semibold text-wah-purple hover:underline">
+                        localhost:8025
+                      </a>
+                    </p>
+
+                    {error && <p className="mt-4 text-center text-sm font-bold text-rose-500">{error}</p>}
+                    {offlineNotice}
 
                     <div className="mt-6">
                       <SubmitButton
                         isLoading={isLoading}
                         colorClass="bg-wah-purple"
-                        label="Verify OTP & Enter System"
+                        label="Verify Access Key & Enter"
                       />
                     </div>
                   </form>

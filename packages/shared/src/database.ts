@@ -2,6 +2,8 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Pool, type PoolClient, type QueryResultRow } from "pg";
 
+export type { PoolClient };
+
 // One Postgres instance, one schema per service (paper TABLE IX). Each
 // service logs in as its own database user whose search_path is its schema
 // and who has no grants anywhere else (see infra/postgres/init), so a

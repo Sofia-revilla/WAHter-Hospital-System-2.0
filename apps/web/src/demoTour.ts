@@ -111,13 +111,18 @@ export const DEMO_STEPS: Record<StaffRole, DemoStep[]> = {
   SystemAdministrator: [
     {
       tab: "architecture",
-      title: "System Architecture",
+      title: "System Health",
       desc: "See the stack at a glance: service status, a sandbox to test role-based access through the gateway, each service's database schema, and the event bus.",
     },
     {
-      tab: "staff",
-      title: "Staff & Access",
-      desc: "Manage staff accounts and roles, and search or export the audit log. The IT portal never shows patient clinical data.",
+      tab: "users",
+      title: "Users and Roles",
+      desc: "Create staff accounts, unlock locked ones, and send role changes or deactivations to a second administrator for approval. This portal never shows patient clinical data.",
+    },
+    {
+      tab: "audit",
+      title: "Audit Log",
+      desc: "Search the append-only trail by user, date, and action, page through it, and export a CSV. Searches and exports are logged too.",
     },
     {
       tab: "profile",
@@ -177,11 +182,17 @@ export const TAB_FEATURES: Record<TabId, string[]> = {
     "Account running totals",
     "Charges from bus events",
   ],
-  staff: [
-    "Staff accounts & roles",
+  users: [
+    "Create staff accounts",
     "Second approval for role changes",
-    "Searchable audit log",
-    "Audit CSV export",
+    "Unlock after failed sign-ins",
+    "Last admin can't be removed",
+  ],
+  providers: ["Provider registry", "PRC licenses", "Filter by role"],
+  audit: [
+    "Search by user, date, action",
+    "Paged results",
+    "Server-side CSV export",
     "Searches are logged too",
   ],
   architecture: [
@@ -209,6 +220,8 @@ export const TAB_EMOJI: Record<TabId, string> = {
   rooms: "🛏️",
   architecture: "🖥️",
   billing: "💳",
-  staff: "🛡️",
+  users: "🛡️",
+  providers: "🪪",
+  audit: "📜",
   profile: "👤",
 };

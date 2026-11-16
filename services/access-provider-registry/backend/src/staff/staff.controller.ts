@@ -3,29 +3,6 @@ import { ApiBearerAuth, ApiQuery, ApiTags } from "@nestjs/swagger";
 import { isStaffRole, Roles, STAFF_ROLES } from "@wahter/shared";
 import { StaffRepository } from "./staff.repository";
 
-@ApiTags("staff")
-@ApiBearerAuth()
-@Controller("staff")
-export class StaffController {
-  constructor(private readonly staff: StaffRepository) {}
-
-  // UC-08: only the System Administrator manages accounts. Password hashes
-  // never leave this service.
-  @Roles("SystemAdministrator")
-  @Get()
-  async list() {
-    const rows = await this.staff.findAll();
-    return rows.map((row) => ({
-      id: row.id,
-      name: row.name,
-      role: row.role,
-      department: row.department,
-      status: row.status,
-      lastLoginAt: row.last_login_at,
-    }));
-  }
-}
-
 // The provider registry (comment matrix 1 and 3). Other services keep only a
 // provider ID and look the name up here, e.g. the attending physician picker
 // on the admission form.
