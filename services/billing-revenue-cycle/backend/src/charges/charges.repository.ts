@@ -56,13 +56,31 @@ export class ChargesRepository {
   }
 
   // One row per patient: running total, item count, and unpriced items left
+  // One row per patient with an open account or any charge: running total,
+  // item count, and unpriced items left. An account with no charges yet
+  // still shows, dated when it opened.
   accounts() {
     return this.database.query<AccountRow>(
-      `SELECT c.patient_id, sum(c.amount) AS total, count(*) AS items,
-              count(*) FILTER (WHERE c.is_unpriced) AS unpriced, max(c.posted_at) AS last_posted_at
-         FROM charges c
-        GROUP BY c.patient_id
-        ORDER BY max(c.posted_at) DESC`,
+      `SELECT ids.patient_id,
+              coalesce(sum(c.amount), 0) AS total,
+              count(c.id) AS items,
+              count(c.id) FILTER (WHERE c.is_unpriced) AS unpriced,
+              coalesce(max(c.posted_at),
+                       (SELECT max(opened_at) FROM patient_accounts a WHERE a.patient_id = ids.patient_id)) AS last_posted_at
+         FROM (SELECT patient_id FROM charges UNION SELECT patient_id FROM patient_accounts) ids
+         LEFT JOIN charges c ON c.patient_id = ids.patient_id
+        GROUP BY ids.patient_id
+        ORDER BY last_posted_at DESC`,
+    );
+  }
+
+  // ON CONFLICT on the admission: a redelivered event doesn't open a second one
+  async openAccount(patientId: string, admissionId: string, openedAt: string) {
+    await this.database.query(
+      `INSERT INTO patient_accounts (id, patient_id, admission_id, opened_at)
+       VALUES ('ACCT-' || lpad(nextval('patient_account_number')::text, 6, '0'), $1, $2, $3)
+       ON CONFLICT (admission_id) DO NOTHING`,
+      [patientId, admissionId, openedAt],
     );
   }
 

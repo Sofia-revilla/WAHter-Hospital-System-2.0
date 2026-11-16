@@ -36,7 +36,12 @@ export const EVENT_TYPES = {
   identityReviewResolved: "patient.review.resolved",
   // Patient Flow
   patientAdmitted: "flow.patient.admitted",
+  bedAssigned: "flow.bed.assigned",
   patientTransferred: "flow.patient.transferred",
+  bedStatusChanged: "flow.bed.status-changed",
+  wardConfigured: "flow.ward.configured",
+  appointmentBooked: "flow.appointment.booked",
+  appointmentUpdated: "flow.appointment.updated",
   // Clinical Care
   vitalsRecorded: "clinical.vitals.recorded",
   mewsAlert: "clinical.mews.alert",
@@ -115,22 +120,31 @@ export interface EventPayloads {
     status: "Pending" | "Sent" | "Rejected";
     error: string | null;
   };
+  // the admitting diagnosis stays in Patient Flow; consumers that need it ask
   "flow.patient.admitted": {
     patientId: string;
     admissionId: string;
     wardId: string;
-    bedIndex: number;
+    bedId: string;
+    // the ward's clinical department, where Clinical Care opens the encounter
+    department: string;
     admissionType: string;
     attendingPhysicianId: string;
   };
+  "flow.bed.assigned": { bedId: string; bedCode: string; wardId: string; patientId: string; admissionId: string };
   "flow.patient.transferred": {
     patientId: string;
     admissionId: string;
-    fromWardId: string;
-    fromBedIndex: number;
+    fromBedId: string;
+    toBedId: string;
     wardId: string;
-    bedIndex: number;
+    department: string;
   };
+  // set by hand on the Wards, Rooms and Beds screen (cleaning, maintenance)
+  "flow.bed.status-changed": { bedId: string; fromStatus: string; toStatus: string };
+  "flow.ward.configured": { wardId: string; change: string };
+  "flow.appointment.booked": { appointmentId: string; patientId: string; physicianId: string; department: string };
+  "flow.appointment.updated": { appointmentId: string; patientId: string; status: string; queueNumber: number | null };
   "clinical.vitals.recorded": { vitalsId: string; patientId: string; mewsScore: number; risk: RiskLevel };
   "clinical.mews.alert": MewsAlertPayload;
   "notifications.alert.acknowledged": { alertId: string; patientId: string; isFalseAlarm: boolean };

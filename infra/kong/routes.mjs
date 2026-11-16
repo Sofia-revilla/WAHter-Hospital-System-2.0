@@ -74,10 +74,20 @@ export const ROUTES = [
   // UC-08 4b: only the System Administrator resolves them
   { service: "patient-registry", name: "identity-reviews", methods: ["GET", "POST"], path: "/api/patient-registry/identity-reviews", roles: ["SystemAdministrator"] },
 
-  // ─── Patient Flow (UC-02) ───
-  { service: "patient-flow", name: "wards", methods: ["GET"], path: "/api/patient-flow/wards", roles: ["AdmittingClerk", ...BEDSIDE] },
+  // ─── Patient Flow (UC-02, US-6 to US-9, US-44) ───
+  // US-9: the board with who is in each bed
+  { service: "patient-flow", name: "bed-board", methods: ["GET"], path: "/api/patient-flow/bed-board", roles: ["AdmittingClerk", ...BEDSIDE] },
+  // the layout without patients, which the System Administrator may see too
+  { service: "patient-flow", name: "wards", methods: ["GET"], path: "/api/patient-flow/wards", roles: ["AdmittingClerk", ...BEDSIDE, "SystemAdministrator"] },
   { service: "patient-flow", name: "admissions-read", methods: ["GET"], path: "/api/patient-flow/admissions", roles: ["AdmittingClerk", ...BEDSIDE] },
   { service: "patient-flow", name: "admissions-write", methods: ["POST"], path: "/api/patient-flow/admissions", roles: ["AdmittingClerk", "Nurse"] },
+  // US-8: only the nurse transfers
+  { service: "patient-flow", name: "transfer", methods: ["POST"], path: "~/api/patient-flow/admissions/[^/]+/transfer$", sample: "/api/patient-flow/admissions/ADM-00001/transfer", roles: ["Nurse"] },
+  // "Manage scheduling and referrals": the Admitting Clerk's
+  { service: "patient-flow", name: "appointments", methods: ["GET", "POST"], path: "/api/patient-flow/appointments", roles: ["AdmittingClerk"] },
+  { service: "patient-flow", name: "queue", methods: ["GET"], path: "/api/patient-flow/queue", roles: ["AdmittingClerk"] },
+  // US-44: ward, room, and bed setup
+  { service: "patient-flow", name: "ward-setup", methods: ["GET", "POST", "PATCH"], path: "/api/patient-flow/config", roles: ["SystemAdministrator"] },
   // for other services only (Interoperability & Reporting), never from a browser
   { service: "patient-flow", name: "admissions-history", methods: ["GET"], path: "/api/patient-flow/admissions/history", internalOnly: true },
 

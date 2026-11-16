@@ -30,6 +30,13 @@ export class EncountersRepository {
     );
   }
 
+  async moveDepartment(patientId: string, department: string) {
+    await this.database.query(
+      "UPDATE encounters SET department = $2 WHERE patient_id = $1 AND discharged_at IS NULL",
+      [patientId, department],
+    );
+  }
+
   // From flow.patient.admitted: the admission opens the clinical encounter.
   // Department starts as the ward's service until a physician reassigns it.
   // ON CONFLICT: a replayed event, or a patient who already has one open.

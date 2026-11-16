@@ -31,6 +31,11 @@ const ACTION_FOR_EVENT: Record<string, [AuditAction, AuditOutcome]> = {
   [EVENT_TYPES.exchangeUpdated]: ["UPDATE", "Success"],
   [EVENT_TYPES.patientAdmitted]: ["CREATE", "Success"],
   [EVENT_TYPES.patientTransferred]: ["UPDATE", "Success"],
+  [EVENT_TYPES.bedAssigned]: ["UPDATE", "Success"],
+  [EVENT_TYPES.bedStatusChanged]: ["UPDATE", "Success"],
+  [EVENT_TYPES.wardConfigured]: ["UPDATE", "Success"],
+  [EVENT_TYPES.appointmentBooked]: ["CREATE", "Success"],
+  [EVENT_TYPES.appointmentUpdated]: ["UPDATE", "Success"],
   [EVENT_TYPES.vitalsRecorded]: ["CREATE", "Success"],
   [EVENT_TYPES.mewsAlert]: ["CREATE", "Success"],
   [EVENT_TYPES.alertAcknowledged]: ["UPDATE", "Success"],
@@ -99,8 +104,19 @@ export function resourceFor(event: EventEnvelope) {
     case EVENT_TYPES.exchangeUpdated:
       return `${data.resourceType} ${data.resourceId} to WAH Systems: ${data.status} (${data.transactionId})`;
     case EVENT_TYPES.patientAdmitted:
+      return `Admission ${data.admissionId} (${data.patientId}) to ${data.bedId}`;
     case EVENT_TYPES.patientTransferred:
-      return `Admission ${data.admissionId} (${data.patientId})`;
+      return `Admission ${data.admissionId} (${data.patientId}) moved ${data.fromBedId} → ${data.toBedId}`;
+    case EVENT_TYPES.bedAssigned:
+      return `Bed ${data.bedCode} assigned to ${data.patientId} (${data.admissionId})`;
+    case EVENT_TYPES.bedStatusChanged:
+      return `Bed ${data.bedId}: ${data.fromStatus} → ${data.toStatus}`;
+    case EVENT_TYPES.wardConfigured:
+      return `Ward ${data.wardId}: ${data.change}`;
+    case EVENT_TYPES.appointmentBooked:
+      return `Appointment ${data.appointmentId} for ${data.patientId}`;
+    case EVENT_TYPES.appointmentUpdated:
+      return `Appointment ${data.appointmentId} (${data.patientId}): ${data.status}${data.queueNumber ? `, queue #${data.queueNumber}` : ""}`;
     case EVENT_TYPES.vitalsRecorded:
       return `Vitals ${data.vitalsId} for ${data.patientId}`;
     case EVENT_TYPES.mewsAlert:

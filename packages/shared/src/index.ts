@@ -1,9 +1,10 @@
 // Server-side entry point for the services. The web app only imports the
-// "@wahter/shared/mews", "/events", and "/roles" subpaths, so Nest, pg, and
+// "@wahter/shared/mews", "/events", "/roles", and "/departments" subpaths, so Nest, pg, and
 // amqplib never end up in the browser bundle.
 export * from "./audit-view";
 export * from "./auth";
 export * from "./database";
+export * from "./departments";
 export * from "./event-bus";
 export * from "./events";
 export * from "./roles";

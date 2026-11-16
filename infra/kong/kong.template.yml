@@ -255,6 +255,20 @@ services:
       - name: patient-flow-public
         paths: [/api/patient-flow/health, /api/patient-flow/docs]
         strip_path: false
+      - name: patient-flow-bed-board
+        methods: [GET, OPTIONS]
+        paths: ['/api/patient-flow/bed-board']
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              key_claim_name: rk
+              claims_to_verify: [exp]
+              run_on_preflight: false
+          - name: acl
+            config:
+              allow: [AdmittingClerk, Physician, Nurse]
+              hide_groups_header: true
       - name: patient-flow-wards
         methods: [GET, OPTIONS]
         paths: ['/api/patient-flow/wards']
@@ -267,7 +281,7 @@ services:
               run_on_preflight: false
           - name: acl
             config:
-              allow: [AdmittingClerk, Physician, Nurse]
+              allow: [AdmittingClerk, Physician, Nurse, SystemAdministrator]
               hide_groups_header: true
       - name: patient-flow-admissions-read
         methods: [GET, OPTIONS]
@@ -296,6 +310,63 @@ services:
           - name: acl
             config:
               allow: [AdmittingClerk, Nurse]
+              hide_groups_header: true
+      - name: patient-flow-transfer
+        methods: [POST, OPTIONS]
+        paths: ['~/api/patient-flow/admissions/[^/]+/transfer$']
+        strip_path: false
+        regex_priority: 10
+        plugins:
+          - name: jwt
+            config:
+              key_claim_name: rk
+              claims_to_verify: [exp]
+              run_on_preflight: false
+          - name: acl
+            config:
+              allow: [Nurse]
+              hide_groups_header: true
+      - name: patient-flow-appointments
+        methods: [GET, POST, OPTIONS]
+        paths: ['/api/patient-flow/appointments']
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              key_claim_name: rk
+              claims_to_verify: [exp]
+              run_on_preflight: false
+          - name: acl
+            config:
+              allow: [AdmittingClerk]
+              hide_groups_header: true
+      - name: patient-flow-queue
+        methods: [GET, OPTIONS]
+        paths: ['/api/patient-flow/queue']
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              key_claim_name: rk
+              claims_to_verify: [exp]
+              run_on_preflight: false
+          - name: acl
+            config:
+              allow: [AdmittingClerk]
+              hide_groups_header: true
+      - name: patient-flow-ward-setup
+        methods: [GET, POST, PATCH, OPTIONS]
+        paths: ['/api/patient-flow/config']
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              key_claim_name: rk
+              claims_to_verify: [exp]
+              run_on_preflight: false
+          - name: acl
+            config:
+              allow: [SystemAdministrator]
               hide_groups_header: true
       - name: patient-flow-admissions-history
         methods: [GET, OPTIONS]

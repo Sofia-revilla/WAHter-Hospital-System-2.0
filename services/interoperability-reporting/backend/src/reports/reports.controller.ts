@@ -81,7 +81,11 @@ export class ReportsController {
     }
 
     const perWard = new Map<string, number>();
-    for (const admission of admissions) perWard.set(admission.wardId, (perWard.get(admission.wardId) ?? 0) + 1);
+    for (const admission of admissions) {
+      // a discharged stay no longer has a bed, so it counts under "Discharged"
+      const ward = admission.wardId ?? "Discharged";
+      perWard.set(ward, (perWard.get(ward) ?? 0) + 1);
+    }
     const payload = {
       rows: [...perWard.entries()]
         .sort(([a], [b]) => a.localeCompare(b))

@@ -21,6 +21,11 @@ export class ChargeCaptureConsumer implements OnModuleInit {
   }
 
   private async capture(event: EventEnvelope) {
+    // an admission also opens the account for the stay (Phase 3)
+    if (event.type === EVENT_TYPES.patientAdmitted) {
+      const data = event.data as EventPayloads["flow.patient.admitted"];
+      await this.charges.openAccount(data.patientId, data.admissionId, event.occurredAt);
+    }
     const line = this.lineFor(event);
     if (!line) return;
 

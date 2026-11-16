@@ -21,6 +21,10 @@
     "./roles": {
       "types": "./dist/roles.d.ts",
       "default": "./dist/roles.js"
+    },
+    "./departments": {
+      "types": "./dist/departments.d.ts",
+      "default": "./dist/departments.js"
     }
   },
   "scripts": {

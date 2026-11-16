@@ -27,10 +27,12 @@ export interface PatientRecord {
 export interface AdmissionRecord {
   admissionId: string;
   patientId: string;
-  wardId: string;
+  wardId: string | null;
+  bedCode: string | null;
   admissionType: string;
-  assignedAt: string;
-  endedAt: string | null;
+  admittedAt: string;
+  status: string;
+  dischargedAt: string | null;
 }
 
 // our own identifier system for MPI numbers
@@ -117,15 +119,15 @@ export function toFhirEncounter(admission: AdmissionRecord) {
   return {
     resourceType: "Encounter",
     id: admission.admissionId,
-    status: admission.endedAt ? "finished" : "in-progress",
+    status: admission.dischargedAt ? "finished" : "in-progress",
     class: {
       system: "http://terminology.hl7.org/CodeSystem/v3-ActCode",
       code: "IMP",
       display: "inpatient encounter",
     },
     subject: { reference: `Patient/${admission.patientId}` },
-    period: { start: admission.assignedAt, ...(admission.endedAt ? { end: admission.endedAt } : {}) },
-    location: [{ location: { display: `Ward ${admission.wardId}` } }],
+    period: { start: admission.admittedAt, ...(admission.dischargedAt ? { end: admission.dischargedAt } : {}) },
+    ...(admission.bedCode ? { location: [{ location: { display: `Bed ${admission.bedCode}` } }] } : {}),
   };
 }
 

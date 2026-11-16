@@ -33,3 +33,9 @@ INSERT INTO charges (id, patient_id, code, description, quantity, unit_amount, a
   ('CHG-000009', 'WAH-2026-00003', 'MD-LOS50', 'Losartan 50mg tablet', 10, 12.00, 120.00, false, gen_random_uuid(), 'pharmacy.medication.dispensed', now() - interval '23 hours'),
   ('CHG-000010', 'WAH-2026-00002', 'MD-PCM500', 'Paracetamol 500mg tablet', 10, 3.50, 35.00, false, gen_random_uuid(), 'pharmacy.medication.dispensed', now() - interval '3 hours'),
   ('CHG-000011', 'WAH-2026-00001', NULL, 'Nebulization kit', 1, 0.00, 0.00, true, gen_random_uuid(), 'pharmacy.medication.dispensed', now() - interval '6 hours');
+
+-- the open account for each seeded inpatient's stay (Patient Flow's seed admissions)
+INSERT INTO patient_accounts (id, patient_id, admission_id, opened_at)
+SELECT 'ACCT-' || lpad(n::text, 6, '0'), 'WAH-2026-' || lpad(n::text, 5, '0'), 'ADM-' || lpad(n::text, 5, '0'), now() - interval '4 days'
+  FROM generate_series(1, 12) AS n;
+SELECT setval('patient_account_number', 12);
