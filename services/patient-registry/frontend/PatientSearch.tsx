@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ApiError } from "@/lib/api";
@@ -22,8 +22,9 @@ export function PatientSearch({ onSelect, selectedId }: PatientSearchProps) {
   const [error, setError] = useState<string | null>(null);
   const [isSearching, setIsSearching] = useState(false);
 
-  async function search(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  // not a <form>: this search also sits inside the admit and booking forms,
+  // and a form nested in a form makes the browser submit the page itself
+  async function search() {
     if (query.trim().length < 2) {
       setError("Type at least two characters.");
       return;
@@ -41,21 +42,26 @@ export function PatientSearch({ onSelect, selectedId }: PatientSearchProps) {
 
   return (
     <div className="space-y-3">
-      <form onSubmit={search} className="flex gap-2" role="search">
+      <div className="flex gap-2" role="search">
         <label className="relative flex-1">
           <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter") return;
+              event.preventDefault();
+              void search();
+            }}
             placeholder="MPI number, PhilHealth PIN, birth date (YYYY-MM-DD), or name"
             aria-label="Search the patient registry"
             className={cn(fieldClass, "pl-9")}
           />
         </label>
-        <button type="submit" disabled={isSearching} className="rounded-lg bg-wah-purple px-4 text-sm font-semibold text-white">
+        <button type="button" onClick={() => void search()} disabled={isSearching} className="rounded-lg bg-wah-purple px-4 text-sm font-semibold text-white">
           {isSearching ? "Searching…" : "Search"}
         </button>
-      </form>
+      </div>
       {error && <p className="text-sm text-rose-600">{error}</p>}
 
       {results && (
