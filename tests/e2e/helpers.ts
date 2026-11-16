@@ -14,9 +14,12 @@ export const LOGINS = {
   nurse: { role: "Nurse", portal: "Nurse's Portal", username: "cbautista", password: "nurse2026" },
 } as const;
 
-// a username nobody else in this run (or earlier runs) has
+// A name nobody else in this run (or earlier runs) has. Random letters, not a
+// timestamp: names made seconds apart look alike to the duplicate matcher
+// (UC-01 6a), so tests run on a database with old runs' patients would trip it.
 export function uniqueName(prefix: string) {
-  return `${prefix}${Date.now().toString(36)}${Math.floor(Math.random() * 1000)}`;
+  const letters = Array.from({ length: 10 }, () => String.fromCharCode(97 + Math.floor(Math.random() * 26))).join("");
+  return `${prefix}${letters}`;
 }
 
 interface MailpitMessage {
