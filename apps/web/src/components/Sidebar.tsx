@@ -12,7 +12,7 @@ export function Logo() {
   return (
     <Image
       src="/wahter-logo.png"
-      alt="WAHter logo"
+      alt="WAH logo"
       width={56}
       height={56}
       priority
