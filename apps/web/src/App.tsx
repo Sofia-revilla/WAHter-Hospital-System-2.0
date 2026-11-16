@@ -37,6 +37,7 @@ import {
 } from "@services/access-provider-registry/frontend";
 import { logout } from "@services/access-provider-registry/frontend/api";
 import { AuditLogView } from "@services/audit-log/frontend";
+import { IdentityReviewView, PatientSearchView, RegistrationView } from "@services/patient-registry/frontend";
 import { NotificationBell } from "@services/notifications/frontend";
 import { LaboratoryView } from "@services/diagnostics/frontend";
 import { PharmacyView, PrescriptionView } from "@services/pharmacy/frontend";
@@ -334,6 +335,12 @@ export function App() {
         return <UsersRolesView adminId={currentSession()?.user.id ?? ""} />;
       case "providers":
         return <ProviderRegistryView />;
+      case "registration":
+        return <RegistrationView />;
+      case "patient-search":
+        return <PatientSearchView role={role} />;
+      case "identity-review":
+        return <IdentityReviewView />;
       case "audit":
         return <AuditLogView />;
       case "profile":

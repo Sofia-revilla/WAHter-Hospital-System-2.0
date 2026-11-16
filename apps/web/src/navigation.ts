@@ -6,6 +6,9 @@ import {
   Bed,
   BadgeCheck,
   ScrollText,
+  Search,
+  UserPlus,
+  UserSearch,
   FlaskConical,
   LayoutDashboard,
   Pill,
@@ -28,6 +31,9 @@ export type TabId =
   | "rooms"
   | "billing"
   | "architecture"
+  | "registration"
+  | "patient-search"
+  | "identity-review"
   | "users"
   | "providers"
   | "audit"
@@ -92,6 +98,24 @@ export const TABS: Record<TabId, TabConfig> = {
     description: "Live health of the ten services, the event bus, and the access sandbox.",
     services: [],
   },
+  registration: {
+    label: "Registration",
+    icon: UserPlus,
+    description: "Search the patient registry, then register or update a patient.",
+    services: ["patient-registry"],
+  },
+  "patient-search": {
+    label: "Patient Search",
+    icon: Search,
+    description: "Find a patient by MPI number, PhilHealth PIN, birth date, or name.",
+    services: ["patient-registry"],
+  },
+  "identity-review": {
+    label: "Identity Review",
+    icon: UserSearch,
+    description: "Possible duplicate patient records to merge or keep apart.",
+    services: [],
+  },
   users: {
     label: "Users and Roles",
     icon: ShieldCheck,
@@ -121,24 +145,26 @@ export const TABS: Record<TabId, TabConfig> = {
 // An empty list means the role's portal isn't built yet; those roles don't
 // show up on the login screen (see PORTAL_ROLES).
 export const ROLE_TABS: Record<StaffRole, TabId[]> = {
-  // TODO(Phase 2): Registration, Patient Search, Scheduling and Queue, Admission and Bed Board
-  AdmittingClerk: [],
+  // UC-01. TODO(Phase 3): Scheduling and Queue, Admission and Bed Board
+  AdmittingClerk: ["registration", "patient-search", "profile"],
   Physician: ["dashboard", "patients", "prescription", "pharmacy", "lab", "rooms", "profile"],
-  Nurse: ["dashboard", "patients", "pharmacy", "rooms", "lab", "profile"],
+  // the Nurse is UC-01's secondary actor, so she can register too
+  Nurse: ["dashboard", "patients", "registration", "pharmacy", "rooms", "lab", "profile"],
   // dispensing is the pharmacist's only use case, so the portal is the worklist
   Pharmacist: ["pharmacy", "profile"],
   // TODO(Phase 6): the Ancillary portal (worklist, result entry, release)
   LaboratoryStaff: [],
   RadiologyStaff: [],
   // UC-06: billing staff see accounts and charges, never clinical tabs
-  BillingStaff: ["billing", "profile"],
+  // US-5: billing looks patients up to match them to an invoice
+  BillingStaff: ["billing", "patient-search", "profile"],
   // TODO(Phase 9): Hospital Reports and DOH Exports
   HospitalAdministrator: [],
   // No clinical modules and no patient data (RA 10173), and no inventory tab
   // (paper Limitation d)
-  // TODO(Phase 3): Wards Rooms and Beds; (Phase 2) Identity Review; (Phase 4)
-  // Correction Requests; (Phase 10) Data Exchange
-  SystemAdministrator: ["users", "providers", "audit", "architecture", "profile"],
+  // TODO(Phase 3): Wards Rooms and Beds; (Phase 4) Correction Requests;
+  // (Phase 10) Data Exchange
+  SystemAdministrator: ["users", "providers", "identity-review", "audit", "architecture", "profile"],
 };
 
 export const PORTAL_ROLES = (Object.keys(ROLE_TABS) as StaffRole[]).filter((role) => ROLE_TABS[role].length > 0);

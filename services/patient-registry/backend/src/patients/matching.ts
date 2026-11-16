@@ -32,8 +32,9 @@ export function normalizeName(name: string) {
   return name
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z\s]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
+    // a hyphen or a period separates words ("Dela-Cruz", "Ma.Santos")
+    .replace(/[^a-z\s]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }

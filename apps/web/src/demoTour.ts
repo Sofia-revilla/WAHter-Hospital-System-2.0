@@ -189,6 +189,9 @@ export const TAB_FEATURES: Record<TabId, string[]> = {
     "Last admin can't be removed",
   ],
   providers: ["Provider registry", "PRC licenses", "Filter by role"],
+  registration: ["Search before registering", "Field-by-field checks", "Duplicate matching", "Flag for review"],
+  "patient-search": ["MPI, PIN, birth date, or name", "Identity profile", "WAH Systems status"],
+  "identity-review": ["Side-by-side records", "Merge or keep apart", "Reason goes to the audit trail"],
   audit: [
     "Search by user, date, action",
     "Paged results",
@@ -222,6 +225,9 @@ export const TAB_EMOJI: Record<TabId, string> = {
   billing: "💳",
   users: "🛡️",
   providers: "🪪",
+  registration: "📝",
+  "patient-search": "🔎",
+  "identity-review": "🧩",
   audit: "📜",
   profile: "👤",
 };
