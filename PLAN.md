@@ -99,7 +99,12 @@ version stays paused until every phase passes locally. One commit per finished i
   (sure vs possible), flag for review, Identity Review with merge history, Billing search,
   WAH Systems exchange with Pending/retry through Interoperability & Reporting and a local
   WAH Systems stand-in (D-063 to D-066)
-- [ ] **3**: Patient Flow: scheduling, admission, bed board (UC-02, US-6 to US-9)
+- [x] **3**: Patient Flow (UC-02, US-6 to US-9, US-44): rooms and beds with Available/Occupied/
+  Cleaning/Maintenance, one admission per stay, the bed lock (two users, one bed: one wins, the
+  other gets ranked free beds), nurse transfers with a reason, bed status log, live bed board
+  (physician view only), scheduling from free physician slots, check-in queue numbers, admit from
+  a booking, ward/room/bed setup for the System Administrator, billing account opened on
+  admission (D-067 to D-070)
 - [ ] **4**: Clinical Care and MEWS (UC-03, US-10 to US-17, US-30 to US-32)
 - [ ] **5**: Pharmacy, dispensing only (UC-04, US-13, US-18 to US-20)
 - [ ] **6**: Diagnostics and the Ancillary portal (UC-05, US-21 to US-29, US-31)

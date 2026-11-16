@@ -726,3 +726,43 @@ The pre-change build is tagged `prompt-build-v1` (also still on `main`) so it ca
   (US-5); Physicians can report a possible duplicate (US-4). The System Administrator sees patient
   identity only on Identity Review, and only the two records being compared.
 
+### D-067: Beds, admissions, and the bed lock (UC-02, US-6 to US-9)
+- Patient Flow now has wards → rooms → beds. A bed is Available, Occupied, Cleaning, or
+  Maintenance. Ward capacity and census are counted from the beds, not stored.
+- One `admissions` row per stay (Admitted → ReadyForDischarge → Discharged) points at its current
+  bed; `bed_assignments` keeps every bed it used, with at most one open assignment per bed
+  (partial unique index). Every bed status change goes to `bed_status_log` with who and why.
+- The lock: a bed is claimed with `UPDATE beds ... WHERE status = 'Available'`, so when two users
+  pick the same bed at the same moment exactly one wins. The other gets a 409 with up to six free
+  beds ranked same ward, then same department, then same ward type (UC-02 6a/6b). Tested with
+  two simultaneous requests: one 201, one 409.
+- Admission checks the patient with the Patient Registry and that the attending physician is an
+  active Physician in the Provider Registry. A patient can't be admitted twice at once.
+- Transfers (US-8) are the Nurse's: same admission, new bed, a required reason; the old bed is
+  freed and both changes are logged. Clinical Care moves the encounter to the new ward's
+  department from `flow.patient.transferred`.
+- The bed board is live for the Admitting Clerk and Nurse (admit), Nurse (transfer), and
+  Physician (view only, per the update brief). The Smart Referral card was removed from it; that
+  belongs to Phase 10 (UC-09).
+
+### D-068: Scheduling and the queue
+- The Admitting Clerk books a department, physician, and time from that physician's free slots
+  (30 minutes, 08:00 to 17:00 Philippine time, Monday to Saturday). Those hours are placeholders
+  until the hospital gives its schedule. One booking per physician per slot; a clash returns the
+  slots still free.
+- Check-in gives a queue number per department per day (an advisory lock keeps two check-ins
+  from getting the same number). The queue shows who's next per department.
+- Admitting from a booking uses admission type "Scheduled" and completes the booking, so the
+  patient leaves the queue. Outpatient consultations themselves are out of scope (OPD).
+
+### D-069: Ward, room, and bed setup (US-44)
+- The System Administrator adds wards (with a department), rooms, and beds, and takes a bed out
+  for Cleaning or Maintenance with a reason. An occupied bed can't be taken out. The layout this
+  portal reads has no occupants (RA 10173); the bed board itself is closed to it at Kong.
+- Departments are one list in `packages/shared/src/departments.ts`, used by wards, scheduling,
+  and Clinical Care.
+- No Operating Room (user decision, November 2026).
+
+### D-070: Billing opens the account on admission
+- `flow.patient.admitted` now opens a patient account in Billing (`patient_accounts`), so an
+  account exists before the first charge. The seed opens accounts for the twelve seeded stays.

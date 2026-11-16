@@ -1,8 +1,9 @@
 # Patient Flow service
 
-Wards, beds, admission with the bed lock, and transfers. Scheduling, the queue, and the discharge process come in later phases (comment matrix 2: discharge lives here).
+Wards, rooms, and beds; admission with the bed lock; transfers; scheduling and the queue. The
+discharge process comes in Phase 7 (comment matrix 2: discharge lives here).
 
-Use cases: UC-02 Manage Patient Scheduling and Admission
+Use cases: UC-02 Manage Patient Scheduling and Admission (US-6 to US-9, US-44)
 
 ```
 services/patient-flow/
@@ -16,16 +17,31 @@ The image is built from `infra/docker/service.Dockerfile` with `SERVICE=patient-
 
 ## Backend
 
-- Database schema `patient_flow`: `wards`, `admissions`
+- Database schema `patient_flow`: `wards`, `rooms`, `beds`, `admissions`, `bed_assignments`,
+  `bed_status_log`, `appointments`
+- `src/flow-rules.ts`: free slots and alternative beds, unit tested in `flow-rules.test.ts`
 - Endpoints (through Kong, under `/api/patient-flow`):
-  - `GET /wards`, `GET /admissions` (Admitting Clerk, Physician, Nurse)
-  - `POST /admissions` (Admitting Clerk, Nurse): checks the patient with the Patient Registry first
-  - `GET /admissions/history` (other services only)
+  - `GET /bed-board` (Admitting Clerk, Physician, Nurse): wards → rooms → beds with occupants
+  - `GET /wards` (also System Administrator): the layout, no occupants
+  - `GET /admissions`, `GET /admissions/:id` (Admitting Clerk, Physician, Nurse)
+  - `POST /admissions` (Admitting Clerk, Nurse): checks the patient and physician first; 409 with
+    free beds when the bed was taken
+  - `POST /admissions/:id/transfer` (Nurse): new bed and a reason
+  - `GET /appointments`, `GET /appointments/availability`, `POST /appointments`,
+    `POST /appointments/:id/check-in`, `POST /appointments/:id/status`, `GET /queue` (Admitting Clerk)
+  - `/config/...` (System Administrator): add wards, rooms, beds; set a bed's status; bed history
+  - `GET /admissions/history` (other services only, closed at Kong)
   - `GET /health` and API docs at `/docs`
-- Publishes: `flow.patient.admitted`, `flow.patient.transferred`
+- Publishes: `flow.patient.admitted`, `flow.bed.assigned`, `flow.patient.transferred`,
+  `flow.bed.status-changed`, `flow.ward.configured`, `flow.appointment.booked`,
+  `flow.appointment.updated`
 - Listens for: nothing
 
 ## Frontend
 
-- `BedManagementView.tsx`: the **Bed Management** tab
-- `AdmitDialog.tsx`: admit and transfer; the attending physician comes from the provider registry
+- `BedManagementView.tsx`: the **Bed Management** tab (live bed board)
+- `AdmitDialog.tsx`: admit and assign a bed; the patient comes from the Patient Registry, the
+  attending physician from the Provider Registry
+- `TransferDialog.tsx`: the nurse's transfer, with a reason
+- `SchedulingView.tsx`: the **Scheduling and Queue** tab (Admitting Clerk)
+- `WardSetupView.tsx`: the **Wards, Rooms and Beds** tab (System Administrator)

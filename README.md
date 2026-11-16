@@ -134,19 +134,22 @@ the server's demo accounts on.
 Role names follow the use case diagram and live in one file, `packages/shared/src/roles.ts`.
 
 - **Admitting Clerk**: Registration (search first, then register with field-by-field checks and
-  duplicate matching; flag unclear cases for review), Patient Search, Profile
+  duplicate matching; flag unclear cases for review), Patient Search, Scheduling and Queue (book
+  from a physician's free times, check in for a queue number, admit from a booking), Bed
+  Management (live bed board; admit into a free bed), Profile
 
 - **Physician**: Dashboard, Patients, E-Prescribing, Pharmacy (view), Laboratory (order tests),
-  Bed Management, Profile
+  Bed Management (view only), Profile
 - **Nurse**: Dashboard, Patients (chart vitals with MEWS), Registration (UC-01's secondary actor),
-  Pharmacy (view), Bed Management (admit/transfer), Laboratory (view), Profile
+  Pharmacy (view), Bed Management (admit, and transfer with a reason), Laboratory (view), Profile
 - **Pharmacist**: Pharmacy (dispense physician orders, partial fills, controlled drugs blocked
   until step-up approval exists), Profile
 - **Billing Staff**: Billing (every captured charge per patient, price flagged items with a logged
   reason), Patient Search (US-5, read-only), Profile
 - **System Administrator**: Users and Roles (create, edit, unlock, restore; role changes and
   disabling need a second administrator; the last active administrator can't be removed),
-  Provider Registry, Identity Review (merge possible duplicate patients or keep them apart; the only
+  Provider Registry, Wards Rooms and Beds (set up the layout; cleaning or maintenance with a
+  reason; no occupants shown), Identity Review (merge possible duplicate patients or keep them apart; the only
   place this portal sees patient identity), Audit Log (search by user, date, and action; paged; CSV export), System
   Health (live health of all ten services), Profile. No patient data (RA 10173).
 
