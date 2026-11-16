@@ -85,21 +85,44 @@ from before the ten-service split, since the schemas changed.
 There's no mock or offline mode any more: the web app always reads the live services. If they
 can't be reached, the login screen says so and keeps checking until they're back.
 
+## Tests
+
+```bash
+npm test               # unit tests for business logic (no Docker needed)
+npm run test:gateway   # Kong's role check on every route (stack running)
+npm run test:e2e       # end-to-end, one or more per use case (stack running)
+```
+
+`npm run test:e2e` needs Playwright's browser once: `npx playwright install chromium`.
+
+Kong's routes and the roles allowed on each live in `infra/kong/routes.mjs`. After changing it,
+run `npm run kong:generate` and restart Kong (`docker compose restart kong`).
+
 ## Signing in
 
-Pick a portal and sign in with its prototype password. These are public demo values, not secrets.
+The paper's flow: pick a portal (System Access), enter a username and password (Staff Login), then
+type the six-digit access key that was emailed to the account (Access Key Verification). Locally
+the email lands in **Mailpit at http://localhost:8025**; nothing is really sent.
 
-| Portal | Password |
-| --- | --- |
-| Physician's Portal | `doctor2026` |
-| Nurse's Portal | `nurse2026` |
-| Pharmacy Portal | `pharmacy2026` |
-| Billing Portal | `billing2026` |
-| System Admin Portal | `admin2026` |
+The prototype logins below are public demo values, not secrets. There's no public sign-up: the
+System Administrator creates accounts.
 
-The Admitting Clerk, Ancillary (Laboratory and Radiology), and Hospital Administrator portals are
-being added in the current update (see PLAN.md). A refresh keeps you signed in; signing out or
-closing the tab ends it.
+| Portal | Username | Password |
+| --- | --- | --- |
+| Physician's Portal | `amendoza` | `doctor2026` |
+| Nurse's Portal | `cbautista` | `nurse2026` |
+| Pharmacy Portal | `gvillanueva` | `pharmacy2026` |
+| Billing Portal | `maquino` | `billing2026` |
+| System Admin Portal | `areyes` (second admin: `blim`) | `admin2026` |
+
+Five wrong passwords or access keys in a row lock the account until a System Administrator
+unlocks it. The Admitting Clerk (`jpascual` / `clerk2026`), Ancillary (`lramos` / `lab2026`,
+`psantos` / `radiology2026`), and Hospital Administrator (`rcastillo` / `hospadmin2026`) portals
+appear on the login screen once their phases add their screens (see PLAN.md). A refresh keeps you
+signed in; signing out or closing the tab ends it.
+
+Try Demo and the guided tours are off. `ENABLE_DEMO=true` in `.env` turns both the button and
+the server's demo accounts on.
 
 ## What each role sees
 
@@ -113,8 +136,10 @@ Role names follow the use case diagram and live in one file, `packages/shared/sr
   until step-up approval exists), Profile
 - **Billing Staff**: Billing (every captured charge per patient, price flagged items with a logged
   reason), Profile
-- **System Administrator**: Architecture (live health of all ten services), Staff & Access
-  (accounts and audit log), Profile. No patient data (RA 10173).
+- **System Administrator**: Users and Roles (create, edit, unlock, restore; role changes and
+  disabling need a second administrator; the last active administrator can't be removed),
+  Provider Registry, Audit Log (search by user, date, and action; paged; CSV export), System
+  Health (live health of all ten services), Profile. No patient data (RA 10173).
 
 MEWS is decision support only. It never replaces clinical judgment.
 

@@ -630,3 +630,60 @@ The pre-change build is tagged `prompt-build-v1` (also still on `main`) so it ca
   Demo stay in the code behind a flag (Phase 1 wires `NEXT_PUBLIC_ENABLE_DEMO`).
 - The Patients tab used to alternate Male/Female by row as a placeholder; it now shows the sex
   from the Patient Registry. The placeholder diagnosis and room text stay until Phases 3 and 4.
+
+### D-057: Logins are separate from the provider registry
+- `access.staff` stays the provider registry (who works here, role, department, PRC license).
+  `access.accounts` is how one of them signs in (username, email, password hash, status,
+  lockout). Disabling a login keeps the person in the registry, so old orders still resolve.
+- Login is by username now, not "portal + full name", and the prototype fallback (any name with
+  the portal password) is gone. The token's user ID is the provider ID, as before.
+- The demo accounts are real rows marked `is_demo` and only sign in when the server has
+  `DEMO_ACCOUNTS_ENABLED=true` (`ENABLE_DEMO` in .env, which also shows the button).
+
+### D-058: Access Key Verification goes to a real (local) inbox
+- After the password, a six-digit key is emailed and has to be typed in (the paper's third
+  screen). It's random, stored only as a hash, works once, expires in five minutes, and allows
+  three tries. A wrong key counts toward the same lockout as a wrong password.
+- Locally the email goes to Mailpit (a fake SMTP inbox at http://localhost:8025), so nothing
+  leaves the machine. `SMTP_HOST` points it at a real server later. The e2e tests read keys from
+  Mailpit's API.
+
+### D-059: Lockout and the second administrator
+- Five consecutive failures lock the account; only a System Administrator unlocks it. The count
+  and the lock change in one UPDATE, so simultaneous guesses can't slip past the limit.
+- Role changes and disabling become approval requests. A different System Administrator
+  approves; nobody decides on their own account; the requester may withdraw (reject) their own
+  request, otherwise with exactly two administrators a request about one of them could never be
+  closed. One open request per account (a partial unique index).
+- The last-active-administrator rule (UC-08 3a) is checked when the request is made and again,
+  with the account rows locked, when it's approved. With the other two rules in place it mostly
+  can't be reached from the screen, but it stays as the database-backed guarantee.
+
+### D-060: Kong checks the role, not just the token
+- One Kong consumer per role, found by a new `rk` claim in the token, each in an ACL group named
+  after the role. Every route has an allow list. `infra/kong/routes.mjs` is the single table;
+  `npm run kong:generate` writes kong.template.yml from it, and the gateway tests read the same
+  table, so they can't drift. Paths nobody listed get Kong's 404 (no catch-all routes).
+- `/api/patient-flow/admissions/history` is for other services only and is closed at Kong
+  (request-termination 404); services reach it directly on wah-net.
+
+### D-061: What the audit trail records now
+- Every entry has an outcome (Success, Failure, Denied). New actions: LOGIN_FAILED, LOGOUT,
+  ACCESS_DENIED, DELETE.
+- Denied access is caught in two places: a service's role guard publishes
+  `<service>.request.denied`, and Kong's http-log plugin reports every request (batched) to an
+  internal Audit Log endpoint that keeps only the 401s and 403s. That endpoint has no Kong route
+  and checks a shared secret (`GATEWAY_LOG_SECRET`). The token in the log is used only to say
+  who it was, never stored.
+- Views (US-41) are logged with `@AuditView` on the endpoints that open one record (a patient
+  record, one patient's vitals, one billing account), not on the lists the screens re-read every
+  5 seconds. The same person opening the same record within 5 minutes counts once.
+- Search is by user (name or staff ID), action, and date range (Philippine time), 25 per page.
+  The CSV is built by the service from everything that matches (up to 50,000 rows), quotes every
+  field, defuses spreadsheet formulas, and the export itself is logged.
+
+### D-062: Tests
+- Vitest for unit tests (`*.test.ts` next to the code; excluded from the service builds), a
+  Vitest gateway suite that calls every route with no token, a forged token, every wrong role,
+  and every allowed role, and Playwright for end-to-end tests per use case. The gateway and e2e
+  suites need the stack running and use the local `.env` and Mailpit, so they're localhost only.
