@@ -766,3 +766,11 @@ The pre-change build is tagged `prompt-build-v1` (also still on `main`) so it ca
 ### D-070: Billing opens the account on admission
 - `flow.patient.admitted` now opens a patient account in Billing (`patient_accounts`), so an
   account exists before the first charge. The seed opens accounts for the twelve seeded stays.
+
+### D-071: The update goes out as a private Vercel preview
+- While the update is in progress, it's published by pushing the `system-update-10-services`
+  branch, not main. Vercel builds it as a preview deployment, which Deployment Protection keeps
+  behind the team's Vercel login; it's shared with Vercel's Share link. The public production
+  site stays on the old prototype until the team decides to merge.
+- `npm run tunnel` now pushes the branch you're on (never main by default) and checks the
+  renamed `/api/access-provider-registry/health`.

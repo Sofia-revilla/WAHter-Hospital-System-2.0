@@ -2,8 +2,10 @@
 //   1. starts a Cloudflare quick tunnel to the local stack on :8080, as its
 //      own background process so closing this terminal doesn't stop it
 //   2. waits until the new public address actually answers
-//   3. writes it to apps/web/demo-tunnel.json and pushes that one file, so
-//      Vercel rebuilds pointing at it (no dashboard steps)
+//   3. writes it to apps/web/demo-tunnel.json and pushes that one file to the
+//      branch you're on, so Vercel rebuilds that branch's deployment pointing
+//      at it (no dashboard steps). Pushing a branch other than main gives a
+//      preview deployment, which Vercel keeps behind your team's login.
 //
 // Needs cloudflared (github.com/cloudflare/cloudflared/releases). Set
 // CLOUDFLARED_PATH in .env if it isn't on your PATH.
@@ -29,7 +31,7 @@ function cloudflaredPath() {
 
 async function localStackIsUp() {
   try {
-    const response = await fetch("http://127.0.0.1:8080/api/identity/health", { signal: AbortSignal.timeout(5000) });
+    const response = await fetch("http://127.0.0.1:8080/api/access-provider-registry/health", { signal: AbortSignal.timeout(5000) });
     return response.ok;
   } catch {
     return false;
@@ -67,7 +69,7 @@ let isLive = false;
 for (let attempt = 0; attempt < 30 && !isLive; attempt++) {
   await sleep(3000);
   try {
-    isLive = (await fetch(`${url}/api/identity/health`, { signal: AbortSignal.timeout(10000) })).ok;
+    isLive = (await fetch(`${url}/api/access-provider-registry/health`, { signal: AbortSignal.timeout(10000) })).ok;
   } catch {
     // not routed yet
   }
@@ -81,7 +83,9 @@ writeFileSync(TUNNEL_FILE, `${JSON.stringify({ apiUrl: `${url}/api` }, null, 2)}
 const git = (...args) => execFileSync("git", args, { cwd: ROOT, stdio: "inherit" });
 git("add", "apps/web/demo-tunnel.json");
 git("commit", "-m", "Point the Vercel demo at the current tunnel", "--", "apps/web/demo-tunnel.json");
-git("push", "origin", "HEAD:main");
+// the branch you're on, never main by default: main is the public site
+const branch = execFileSync("git", ["branch", "--show-current"], { cwd: ROOT }).toString().trim();
+git("push", "origin", `HEAD:${branch}`);
 
 console.log(`\nLive at ${url}. Vercel is redeploying; the site uses it in about a minute.`);
 console.log("The tunnel keeps running in the background. Stop it with: taskkill /IM cloudflared.exe /F");
