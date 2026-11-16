@@ -11,12 +11,12 @@ import type { StaffRole } from "@/types";
 export function Logo() {
   return (
     <Image
-      src="/wah-logo.png"
+      src="/wahter-logo.png"
       alt="WAHter logo"
-      width={48}
-      height={48}
+      width={56}
+      height={56}
       priority
-      className="h-12 w-12 shrink-0 rounded-full shadow-xl transition-transform hover:scale-110"
+      className="h-14 w-14 shrink-0 transition-transform hover:scale-110"
     />
   );
 }

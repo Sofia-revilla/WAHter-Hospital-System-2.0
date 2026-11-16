@@ -1,5 +1,7 @@
 // WAHter — LoginScreen.tsx
-// Full-screen login overlay with five modes: select, login, signup, verify, demo.
+// Full-screen login overlay with five modes: select, login, signup, verify, demo
+// (demo is hidden for now, see SHOW_TRY_DEMO). Login and signup both need the
+// Data Privacy Notice (RA 10173) accepted before they submit.
 // With the services configured (isApiMode), login and signup go to the
 // Identity service through Kong and get a real JWT; if the whole system is
 // unreachable it says so and offers demo data. With no services configured
@@ -26,6 +28,7 @@ import {
   ShieldCheck,
   Stethoscope,
   Users,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -50,6 +53,44 @@ const LICENSE_PATTERN = /^MED-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
 const MIN_PASSWORD_LENGTH = 8;
 // how often the login screen re-checks while the system is offline
 const OFFLINE_RECHECK_MS = 4000;
+// Try Demo is turned off for now. The demo mode and guided tour are still
+// built, so flipping this back to true brings the button back.
+const SHOW_TRY_DEMO = false;
+
+// What we tell staff before they sign in or create an account. Kept short on
+// purpose; the full privacy manual belongs to the hospital's DPO, not the login page.
+const PRIVACY_NOTICE_SECTIONS = [
+  {
+    heading: "What we collect",
+    body:
+      "Your name, role, department, license or employee ID, and a record of what you do in " +
+      "WAHter (sign-ins, the records you open or change, and when).",
+  },
+  {
+    heading: "Why we collect it",
+    body:
+      "To confirm who you are, give you only the access your role needs, and keep an " +
+      "audit trail of every action on patient records, as the Data Privacy Act requires.",
+  },
+  {
+    heading: "Patient information",
+    body:
+      "Patient records you see in WAHter are confidential. Use them only for patient care " +
+      "and hospital operations, and don't copy, share, or screenshot them outside the system.",
+  },
+  {
+    heading: "How we protect it",
+    body:
+      "Access is role-based, passwords are stored hashed, and the audit log can't be edited " +
+      "or deleted. Data stays inside the hospital's systems.",
+  },
+  {
+    heading: "Your rights",
+    body:
+      "Under RA 10173 you can ask to see, correct, or object to the use of your personal data. " +
+      "Contact the hospital's Data Protection Officer for any request or concern.",
+  },
+];
 
 // Prototype passwords per portal, shown on the form so anyone can demo it.
 // Not secrets: Identity seeds its demo accounts with these same values
@@ -223,6 +264,111 @@ function SubmitButton({ isLoading, colorClass, label }: SubmitButtonProps) {
   );
 }
 
+// ─── DATA PRIVACY ───
+
+interface PrivacyNoticeProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onAgree: () => void;
+}
+
+function PrivacyNotice({ isOpen, onClose, onAgree }: PrivacyNoticeProps) {
+  useEffect(() => {
+    if (!isOpen) return;
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [isOpen, onClose]);
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onClose}
+          className="fixed inset-0 z-[300] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+        >
+          <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="privacy-notice-title"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 16 }}
+            // clicks inside the card shouldn't reach the backdrop and close it
+            onClick={(event) => event.stopPropagation()}
+            className={cn(
+              "flex max-h-[85vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl",
+              "border border-glass-border bg-card-bg shadow-2xl",
+            )}
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-glass-border p-6">
+              <div>
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-full bg-wah-purple/10 px-3 py-1",
+                    "text-[10px] font-black uppercase tracking-widest text-wah-purple",
+                  )}
+                >
+                  <ShieldCheck size={12} /> RA 10173
+                </span>
+                <h2 id="privacy-notice-title" className="mt-3 text-2xl font-black">
+                  Data Privacy Notice
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close data privacy notice"
+                className="rounded-lg p-1 text-text-muted hover:bg-glass-bg hover:text-foreground"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4 overflow-y-auto p-6 text-sm">
+              <p className="text-text-muted">
+                WAHter handles personal and health information, so we follow the Data Privacy Act
+                of 2012 (RA 10173) and the rules of the National Privacy Commission.
+              </p>
+              {PRIVACY_NOTICE_SECTIONS.map((section) => (
+                <div key={section.heading}>
+                  <p className="font-bold">{section.heading}</p>
+                  <p className="mt-1 text-text-muted">{section.body}</p>
+                </div>
+              ))}
+              <p className="rounded-xl bg-amber-400/10 p-3 text-xs text-amber-700 dark:text-amber-400">
+                This is a student prototype. All patients, staff, and records in it are fictional.
+              </p>
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-glass-border p-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-lg px-4 py-2 text-xs font-black uppercase text-text-muted hover:bg-glass-bg"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={onAgree}
+                className="rounded-lg bg-wah-purple px-4 py-2 text-xs font-black uppercase text-white hover:brightness-110"
+              >
+                I Agree
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 // ─── LOGIN SCREEN ───
 
 interface LoginScreenProps {
@@ -253,6 +399,10 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   const [isSystemOffline, setIsSystemOffline] = useState(false);
   // what to finish once someone picks "Use demo data instead"
   const [pendingDemoRole, setPendingDemoRole] = useState<StaffRole | null>(null);
+  // one agreement per visit covers both forms, so switching from login to
+  // "Create account" doesn't make them tick it again
+  const [hasAcceptedPrivacy, setHasAcceptedPrivacy] = useState(false);
+  const [isPrivacyNoticeOpen, setIsPrivacyNoticeOpen] = useState(false);
 
   function goTo(nextMode: LoginMode) {
     setError(null);
@@ -294,6 +444,10 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
         setError("The two passwords don't match.");
         return;
       }
+    }
+    if (!hasAcceptedPrivacy) {
+      setError("Please read and agree to the Data Privacy Notice first.");
+      return;
     }
 
     if (isApiMode && !useDemoData) {
@@ -486,17 +640,17 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
 
           <div
             className={cn(
-              "relative flex h-20 w-20 rotate-3 items-center justify-center",
+              "relative flex h-28 w-28 rotate-3 items-center justify-center",
               "rounded-xl bg-white/20 backdrop-blur",
             )}
           >
             <Image
-              src="/wah-logo.png"
+              src="/wahter-login-logo.png"
               alt="WAH logo"
-              width={64}
-              height={64}
+              width={96}
+              height={96}
               priority
-              className="h-16 w-16 rounded-full shadow-lg"
+              className="h-24 w-24"
             />
           </div>
 
@@ -580,18 +734,35 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                       >
                         Create New Staff Account
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => goTo("demo")}
-                        className={cn(
-                          "rounded-full border border-amber-400/30 px-4 py-2",
-                          "text-[10px] font-black uppercase tracking-widest text-amber-500",
-                          "transition-colors hover:bg-amber-400/10",
-                        )}
-                      >
-                        Try Demo
-                      </button>
+                      {SHOW_TRY_DEMO && (
+                        <button
+                          type="button"
+                          onClick={() => goTo("demo")}
+                          className={cn(
+                            "rounded-full border border-amber-400/30 px-4 py-2",
+                            "text-[10px] font-black uppercase tracking-widest text-amber-500",
+                            "transition-colors hover:bg-amber-400/10",
+                          )}
+                        >
+                          Try Demo
+                        </button>
+                      )}
                     </div>
+
+                    <p className="mt-6 flex items-start gap-2 text-xs text-text-muted">
+                      <ShieldCheck size={14} className="mt-0.5 shrink-0 text-wah-purple" />
+                      <span>
+                        WAHter handles personal and health information under the Data Privacy Act
+                        (RA 10173).{" "}
+                        <button
+                          type="button"
+                          onClick={() => setIsPrivacyNoticeOpen(true)}
+                          className="font-semibold text-wah-purple hover:underline"
+                        >
+                          Read the Data Privacy Notice
+                        </button>
+                      </span>
+                    </p>
                   </div>
                 )}
 
@@ -703,9 +874,37 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                         </p>
                       )}
 
+                      <label className="flex cursor-pointer items-start gap-3 text-xs text-text-muted">
+                        <input
+                          type="checkbox"
+                          checked={hasAcceptedPrivacy}
+                          onChange={(event) => {
+                            setHasAcceptedPrivacy(event.target.checked);
+                            setError(null);
+                          }}
+                          className="mt-0.5 h-4 w-4 shrink-0 accent-wah-purple"
+                        />
+                        <span>
+                          I have read and agree to the{" "}
+                          <button
+                            type="button"
+                            // keep the click from also toggling the checkbox through the label
+                            onClick={(event) => {
+                              event.preventDefault();
+                              setIsPrivacyNoticeOpen(true);
+                            }}
+                            className="font-semibold text-wah-purple hover:underline"
+                          >
+                            Data Privacy Notice
+                          </button>
+                          {mode === "signup"
+                            ? " and consent to WAHter processing my personal information for my staff account."
+                            : " and will keep patient information confidential."}
+                        </span>
+                      </label>
+
                       {error && <p className="text-sm font-semibold text-rose-500">{error}</p>}
                       {offlineNotice}
-                    {backOnlineNotice}
                       {backOnlineNotice}
 
                       <SubmitButton
@@ -862,6 +1061,16 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
           </div>
         </div>
       </motion.div>
+
+      <PrivacyNotice
+        isOpen={isPrivacyNoticeOpen}
+        onClose={() => setIsPrivacyNoticeOpen(false)}
+        onAgree={() => {
+          setHasAcceptedPrivacy(true);
+          setIsPrivacyNoticeOpen(false);
+          setError(null);
+        }}
+      />
     </div>
   );
 }

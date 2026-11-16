@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="apps/web/public/wah-logo.png" alt="WAH logo" width="96" />
+  <img src="apps/web/public/wahter-logo.png" alt="WAH logo" width="96" />
 </p>
 
 # WAHter (WAH2.0) Hospital System

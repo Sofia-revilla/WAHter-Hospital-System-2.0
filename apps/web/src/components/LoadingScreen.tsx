@@ -24,10 +24,10 @@ export function LoadingScreen({ title, subtitle, progress }: LoadingScreenProps)
           <span className="absolute inset-0 animate-ping rounded-full bg-wah-purple/20" />
           <span className="absolute inset-1 rounded-full bg-card-bg shadow-lg ring-1 ring-wah-purple/20" />
           <Image
-            src="/wah-logo.png"
+            src="/wahter-logo.png"
             alt=""
-            width={56}
-            height={56}
+            width={64}
+            height={64}
             priority
             className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
           />
