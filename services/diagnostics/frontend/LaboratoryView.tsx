@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { can } from "@/lib/staff";
 import { ApiError } from "@/lib/api";
 import { useData } from "@/context/DataContext";
+import { PatientPicker } from "@/components/PatientPicker";
 import type { LabTest, StaffRole } from "@/types";
 import { StatCard } from "@/components/StatCard";
 
@@ -75,19 +76,12 @@ function OrderTestForm({ onOrdered }: OrderTestFormProps) {
         <Plus size={18} className="text-wah-neon" /> Order Test
       </h3>
 
-      <select
-        value={patientId}
-        onChange={(event) => setPatientId(event.target.value)}
-        aria-label="Patient"
-        className={fieldClass}
-      >
-        <option value="">Select a patient…</option>
-        {patients.map((patient) => (
-          <option key={patient.id} value={patient.id}>
-            {patient.name} ({patient.id})
-          </option>
-        ))}
-      </select>
+      <PatientPicker
+        patients={patients}
+        selected={patients.find((patient) => patient.id === patientId) ?? null}
+        onSelect={(patient) => setPatientId(patient?.id ?? "")}
+        label="Patient"
+      />
 
       <input
         value={testName}

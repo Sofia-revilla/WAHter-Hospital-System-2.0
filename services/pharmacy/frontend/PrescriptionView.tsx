@@ -5,6 +5,7 @@ import { CheckCircle2, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ApiError, timeAgo } from "@/lib/api";
 import { useData } from "@/context/DataContext";
+import { PatientPicker } from "@/components/PatientPicker";
 
 interface PrescriptionDraft {
   patientId: string;
@@ -117,21 +118,14 @@ export function PrescriptionView() {
 
           <div className="space-y-5">
             <div className="grid gap-5 md:grid-cols-2">
-              <label className="block space-y-2">
+              <div className="block space-y-2">
                 <span className={labelClass}>Patient Selection</span>
-                <select
-                  value={draft.patientId}
-                  onChange={(event) => updateField("patientId", event.target.value)}
-                  className={inputClass}
-                >
-                  <option value="">Select a patient…</option>
-                  {patients.map((patient) => (
-                    <option key={patient.id} value={patient.id}>
-                      {patient.name} ({patient.id})
-                    </option>
-                  ))}
-                </select>
-              </label>
+                <PatientPicker
+                  patients={patients}
+                  selected={patients.find((patient) => patient.id === draft.patientId) ?? null}
+                  onSelect={(patient) => updateField("patientId", patient?.id ?? "")}
+                />
+              </div>
 
               <label className="block space-y-2">
                 <span className={labelClass}>Medication</span>
