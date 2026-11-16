@@ -73,6 +73,20 @@ services:
     ports:
       - "127.0.0.1:8025:8025"
 
+  # Local stand-in for the external WAH Systems endpoint (UC-01 step 9,
+  # UC-09). Stop it to see exchanges wait as Pending and retry. What it
+  # received: http://localhost:8090/received
+  wah-systems-mock:
+    image: node:22-alpine
+    restart: unless-stopped
+    command: ["node", "/app/server.mjs"]
+    environment:
+      MOCK_TOKEN: ${WAH_SYSTEMS_TOKEN:?copy .env.example to .env}
+    volumes:
+      - ./infra/wah-systems-mock:/app:ro
+    ports:
+      - "127.0.0.1:8090:8090"
+
   # ─── the ten services (paper TABLE IV) ───
 
   access-provider-registry:
@@ -134,6 +148,9 @@ services:
     environment:
       <<: *bus
       DATABASE_URL: postgres://interoperability_reporting_svc:${INTEROPERABILITY_REPORTING_DB_PASSWORD}@postgres:5432/wahter
+      # where identities and (later) clinical data go; the mock locally
+      WAH_SYSTEMS_URL: http://wah-systems-mock:8090
+      WAH_SYSTEMS_TOKEN: ${WAH_SYSTEMS_TOKEN}
 
   notifications:
     <<: *service

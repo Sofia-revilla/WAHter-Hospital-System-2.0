@@ -30,6 +30,10 @@ export const EVENT_TYPES = {
   gatewayDenied: "gateway.request.denied",
   // Patient Registry (the brief names these three without a service prefix)
   patientRegistered: "patient.registered",
+  patientUpdated: "patient.updated",
+  patientMerged: "patient.merged",
+  identityReviewFlagged: "patient.review.flagged",
+  identityReviewResolved: "patient.review.resolved",
   // Patient Flow
   patientAdmitted: "flow.patient.admitted",
   patientTransferred: "flow.patient.transferred",
@@ -49,6 +53,8 @@ export const EVENT_TYPES = {
   chargePriced: "billing.charge.priced",
   // Interoperability & Reporting
   reportGenerated: "reporting.report.generated",
+  // a record's exchange with WAH Systems changed state (UC-01 9a, UC-09)
+  exchangeUpdated: "interop.exchange.updated",
 } as const;
 
 // Two events every service can publish under its own name (US-41): someone
@@ -96,6 +102,19 @@ export interface EventPayloads {
   "access.approval.decided": { requestId: string; kind: string; accountId: string; decision: "Approved" | "Rejected" };
   "gateway.request.denied": RequestDeniedPayload & { service: string };
   "patient.registered": { patientId: string };
+  // field names only, never the values (they're in the registry)
+  "patient.updated": { patientId: string; fields: string[] };
+  // sourceId is folded into targetId; sourceId stays readable and points at it
+  "patient.merged": { sourceId: string; targetId: string; reviewId: string | null };
+  "patient.review.flagged": { reviewId: string; patientId: string; candidateId: string };
+  "patient.review.resolved": { reviewId: string; outcome: "Merged" | "KeptSeparate" };
+  "interop.exchange.updated": {
+    transactionId: string;
+    resourceType: string;
+    resourceId: string;
+    status: "Pending" | "Sent" | "Rejected";
+    error: string | null;
+  };
   "flow.patient.admitted": {
     patientId: string;
     admissionId: string;

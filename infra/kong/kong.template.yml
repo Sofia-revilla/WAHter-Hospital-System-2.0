@@ -203,7 +203,7 @@ services:
               allow: [AdmittingClerk, Physician, Nurse, Pharmacist, LaboratoryStaff, RadiologyStaff, BillingStaff]
               hide_groups_header: true
       - name: patient-registry-patients-write
-        methods: [POST, OPTIONS]
+        methods: [POST, PATCH, OPTIONS]
         paths: ['/api/patient-registry/patients']
         strip_path: false
         plugins:
@@ -215,6 +215,35 @@ services:
           - name: acl
             config:
               allow: [AdmittingClerk, Nurse]
+              hide_groups_header: true
+      - name: patient-registry-duplicate-reports
+        methods: [POST, OPTIONS]
+        paths: ['~/api/patient-registry/patients/[^/]+/duplicate-reports$']
+        strip_path: false
+        regex_priority: 10
+        plugins:
+          - name: jwt
+            config:
+              key_claim_name: rk
+              claims_to_verify: [exp]
+              run_on_preflight: false
+          - name: acl
+            config:
+              allow: [AdmittingClerk, Nurse, Physician]
+              hide_groups_header: true
+      - name: patient-registry-identity-reviews
+        methods: [GET, POST, OPTIONS]
+        paths: ['/api/patient-registry/identity-reviews']
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              key_claim_name: rk
+              claims_to_verify: [exp]
+              run_on_preflight: false
+          - name: acl
+            config:
+              allow: [SystemAdministrator]
               hide_groups_header: true
   - name: patient-flow
     url: http://patient-flow:3000

@@ -65,8 +65,14 @@ export const ROUTES = [
   { service: "access-provider-registry", name: "providers", methods: ["GET"], path: "/api/access-provider-registry/providers", roles: ALL_STAFF },
 
   // ─── Patient Registry (UC-01) ───
+  // reading and searching (US-2, US-5); the System Administrator never sees patients here
   { service: "patient-registry", name: "patients-read", methods: ["GET"], path: "/api/patient-registry/patients", roles: PATIENT_READERS },
-  { service: "patient-registry", name: "patients-write", methods: ["POST"], path: "/api/patient-registry/patients", roles: ["AdmittingClerk", "Nurse"] },
+  // registering, matching, and correcting: the UC-01 actors
+  { service: "patient-registry", name: "patients-write", methods: ["POST", "PATCH"], path: "/api/patient-registry/patients", roles: ["AdmittingClerk", "Nurse"] },
+  // US-3, US-4: flagging two records as maybe the same person
+  { service: "patient-registry", name: "duplicate-reports", methods: ["POST"], path: "~/api/patient-registry/patients/[^/]+/duplicate-reports$", sample: "/api/patient-registry/patients/WAH-2026-00001/duplicate-reports", roles: ["AdmittingClerk", "Nurse", "Physician"] },
+  // UC-08 4b: only the System Administrator resolves them
+  { service: "patient-registry", name: "identity-reviews", methods: ["GET", "POST"], path: "/api/patient-registry/identity-reviews", roles: ["SystemAdministrator"] },
 
   // ─── Patient Flow (UC-02) ───
   { service: "patient-flow", name: "wards", methods: ["GET"], path: "/api/patient-flow/wards", roles: ["AdmittingClerk", ...BEDSIDE] },

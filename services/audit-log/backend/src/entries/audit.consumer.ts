@@ -24,6 +24,11 @@ const ACTION_FOR_EVENT: Record<string, [AuditAction, AuditOutcome]> = {
   [EVENT_TYPES.approvalRequested]: ["CREATE", "Success"],
   [EVENT_TYPES.approvalDecided]: ["UPDATE", "Success"],
   [EVENT_TYPES.patientRegistered]: ["CREATE", "Success"],
+  [EVENT_TYPES.patientUpdated]: ["UPDATE", "Success"],
+  [EVENT_TYPES.patientMerged]: ["UPDATE", "Success"],
+  [EVENT_TYPES.identityReviewFlagged]: ["CREATE", "Success"],
+  [EVENT_TYPES.identityReviewResolved]: ["UPDATE", "Success"],
+  [EVENT_TYPES.exchangeUpdated]: ["UPDATE", "Success"],
   [EVENT_TYPES.patientAdmitted]: ["CREATE", "Success"],
   [EVENT_TYPES.patientTransferred]: ["UPDATE", "Success"],
   [EVENT_TYPES.vitalsRecorded]: ["CREATE", "Success"],
@@ -83,6 +88,16 @@ export function resourceFor(event: EventEnvelope) {
       return `${data.decision} ${data.kind} request ${data.requestId} for ${data.accountId}`;
     case EVENT_TYPES.patientRegistered:
       return `Patient ${data.patientId}`;
+    case EVENT_TYPES.patientUpdated:
+      return `Patient ${data.patientId} (${String((event.data as { fields: string[] }).fields.join(", "))})`;
+    case EVENT_TYPES.patientMerged:
+      return `Merged patient ${data.sourceId} into ${data.targetId}${data.reviewId ? ` (${data.reviewId})` : ""}`;
+    case EVENT_TYPES.identityReviewFlagged:
+      return `Identity review ${data.reviewId}: ${data.patientId} vs ${data.candidateId}`;
+    case EVENT_TYPES.identityReviewResolved:
+      return `Identity review ${data.reviewId}: ${data.outcome}`;
+    case EVENT_TYPES.exchangeUpdated:
+      return `${data.resourceType} ${data.resourceId} to WAH Systems: ${data.status} (${data.transactionId})`;
     case EVENT_TYPES.patientAdmitted:
     case EVENT_TYPES.patientTransferred:
       return `Admission ${data.admissionId} (${data.patientId})`;
@@ -125,7 +140,12 @@ export class AuditConsumer implements OnModuleInit {
     // actor's name is kept here on purpose, unlike everywhere else: an audit
     // record has to say who did it as they were named at the time.
     await this.bus.subscribe("audit-log.all", ["#"], (event) => {
-      const [action, outcome] = classify(event.type);
+      const [action, classified] = classify(event.type);
+      // an exchange that WAH Systems refused, or that has to be retried, shows as a failure
+      const outcome =
+        event.type === EVENT_TYPES.exchangeUpdated && (event.data as { status: string }).status !== "Sent"
+          ? "Failure"
+          : classified;
       // a failed sign-in has no signed-in actor, only the username tried
       const anonymous =
         event.type === EVENT_TYPES.loginFailed

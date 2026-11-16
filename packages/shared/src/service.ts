@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import {
+  BadRequestException,
   Controller,
   Get,
   Inject,
@@ -9,6 +10,7 @@ import {
   type INestApplication,
   type OnApplicationShutdown,
   type Type,
+  type ValidationError,
 } from "@nestjs/common";
 import { APP_GUARD, APP_INTERCEPTOR, NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
@@ -118,6 +120,15 @@ export class WahServiceModule {
   }
 }
 
+// Nested DTOs (an address inside a patient) report as "address.barangay"
+function flatten(errors: ValidationError[], prefix = ""): [string, string][] {
+  return errors.flatMap((error) => {
+    const path = prefix ? `${prefix}.${error.property}` : error.property;
+    const own = Object.values(error.constraints ?? {}).map((text) => [path, text] as [string, string]);
+    return [...own.slice(0, 1), ...flatten(error.children ?? [], path)];
+  });
+}
+
 export interface BootstrapOptions {
   name: string;
   title: string;
@@ -131,7 +142,23 @@ export async function bootstrapService(appModule: Type<unknown>, options: Bootst
   const app: INestApplication = await NestFactory.create(appModule, { bufferLogs: false });
   const prefix = `api/${options.name}`;
   app.setGlobalPrefix(prefix);
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      // Besides Nest's usual message list, say which field each problem is
+      // on, so a form can mark the affected fields (UC-01 extension 5a)
+      exceptionFactory: (errors) => {
+        const problems = flatten(errors);
+        return new BadRequestException({
+          message: problems.map(([, text]) => text),
+          fields: Object.fromEntries(problems),
+          error: "Bad Request",
+          statusCode: 400,
+        });
+      },
+    }),
+  );
   app.enableShutdownHooks();
 
   const document = SwaggerModule.createDocument(
