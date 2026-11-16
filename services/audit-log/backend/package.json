@@ -2,7 +2,7 @@
   "name": "@wahter/audit-log",
   "version": "0.1.0",
   "private": true,
-  "description": "Audit Log Service: Append-only audit trail of every event on the bus (UC-16).",
+  "description": "Audit Log Service: append-only audit trail of every event on the bus (UC-08, US-41 to US-43).",
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",

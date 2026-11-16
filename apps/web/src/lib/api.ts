@@ -4,46 +4,41 @@ import type { StaffRole } from "@/types";
 // Talks to the services through the gateway (nginx -> Kong -> service).
 // NEXT_PUBLIC_API_URL is "/api" inside Docker Compose. On Vercel,
 // NEXT_PUBLIC_DEMO_API_URL (from demo-tunnel.json, see next.config.ts) points
-// at the demo tunnel and wins. With neither set, isApiMode is false and every
-// screen keeps using the mock data in constants.ts.
+// at the demo tunnel and wins. There's no mock mode: every screen reads the
+// live services.
 
 const API_URL =
-  (process.env.NEXT_PUBLIC_DEMO_API_URL || process.env.NEXT_PUBLIC_API_URL)?.replace(/\/$/, "") ?? "";
+  (process.env.NEXT_PUBLIC_DEMO_API_URL || process.env.NEXT_PUBLIC_API_URL || "/api").replace(/\/$/, "");
 
-export const isApiMode = API_URL !== "";
+// The ten services (paper TABLE IV). The names are the URL prefixes behind Kong.
+export const SERVICE_NAMES = [
+  "access-provider-registry",
+  "patient-registry",
+  "patient-flow",
+  "clinical-care",
+  "diagnostics",
+  "pharmacy",
+  "billing-revenue-cycle",
+  "interoperability-reporting",
+  "notifications",
+  "audit-log",
+] as const;
 
-export type ServiceName =
-  | "identity"
-  | "clinical-records"
-  | "scheduling"
-  | "orders-diagnostics"
-  | "billing"
-  | "interoperability"
-  | "notifications"
-  | "audit-log";
+export type ServiceName = (typeof SERVICE_NAMES)[number];
 
 // How each service is named on screen
 export const SERVICE_LABELS: Record<ServiceName, string> = {
-  identity: "Identity",
-  "clinical-records": "Clinical Records",
-  scheduling: "Scheduling",
-  "orders-diagnostics": "Orders & Diagnostics",
-  billing: "Billing",
-  interoperability: "Interoperability",
+  "access-provider-registry": "Access & Provider Registry",
+  "patient-registry": "Patient Registry",
+  "patient-flow": "Patient Flow",
+  "clinical-care": "Clinical Care",
+  diagnostics: "Diagnostics",
+  pharmacy: "Pharmacy",
+  "billing-revenue-cycle": "Billing & Revenue Cycle",
+  "interoperability-reporting": "Interoperability & Reporting",
   notifications: "Notifications",
   "audit-log": "Audit Log",
 };
-
-export const SERVICE_NAMES: ServiceName[] = [
-  "identity",
-  "clinical-records",
-  "scheduling",
-  "orders-diagnostics",
-  "billing",
-  "interoperability",
-  "notifications",
-  "audit-log",
-];
 
 export interface SessionUser {
   id: string;
@@ -168,7 +163,7 @@ async function send(service: ServiceName, path: string, init: RequestInit, token
 async function refreshSession() {
   if (!session) return false;
   const response = await send(
-    "identity",
+    "access-provider-registry",
     "/auth/refresh",
     { method: "POST", body: JSON.stringify({ refreshToken: session.refreshToken }) },
     null,
@@ -223,10 +218,9 @@ export const apiPost = <T>(service: ServiceName, path: string, payload: unknown)
 // Docker off gives network errors or a proxy's HTML error page instead.
 // Real routes on purpose: Kong skips CORS on a path with no route, so the
 // Vercel site couldn't read that reply at all.
-const PROBE_SERVICES: ServiceName[] = ["scheduling", "notifications", "audit-log"];
+const PROBE_SERVICES: ServiceName[] = ["patient-flow", "notifications", "audit-log"];
 
 export async function gatewayReachable() {
-  if (!isApiMode) return false;
   const probes = PROBE_SERVICES.map(async (service) => {
     const response = await fetch(`${API_URL}/${service}/health`, { signal: AbortSignal.timeout(5000) });
     if (!response.headers.get("content-type")?.includes("json")) throw new Error("not the gateway");

@@ -1,21 +1,22 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { ApiError, currentSession, isApiMode, type ServiceName } from "@/lib/api";
-import { fetchCharges, postChargePrice } from "@services/billing/frontend/api";
-import { fetchCensus, fetchVitals, postVitals } from "@services/clinical-records/frontend/api";
-import { fetchAlerts, postAcknowledgement } from "@services/notifications/frontend/api";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { ApiError, currentSession, timeAgo, type ServiceName } from "@/lib/api";
+import { fetchProviders } from "@services/access-provider-registry/frontend/api";
+import { fetchCharges, postChargePrice, type ChargeRecord } from "@services/billing-revenue-cycle/frontend/api";
+import { fetchCensus, fetchVitals, postVitals, type CensusEntry, type VitalsResponse } from "@services/clinical-care/frontend/api";
+import { fetchDiagnosticOrders, postDiagnosticOrder, type DiagnosticOrderRecord } from "@services/diagnostics/frontend/api";
+import { fetchAlerts, postAcknowledgement, type MewsAlertRecord } from "@services/notifications/frontend/api";
+import { fetchAdmissions, fetchWards, postAdmission, type AdmissionRecord } from "@services/patient-flow/frontend/api";
+import { fetchPatientsByIds, type PatientIdentity } from "@services/patient-registry/frontend/api";
 import {
-  fetchDiagnosticOrders,
   fetchFormulary,
   fetchMedicationOrders,
-  postDiagnosticOrder,
   postDispense,
   postMedicationOrder,
-} from "@services/orders-diagnostics/frontend/api";
-import { fetchAdmissions, fetchWards, postAdmission } from "@services/scheduling/frontend/api";
-import { calculateMews, implausibleReadings, type VitalSigns } from "@/lib/mews";
-import { CHARGES, FORMULARY, LAB_TESTS, MEDICATION_ORDERS, PATIENTS, WARDS } from "@/constants";
+  type MedicationOrderRecord,
+} from "@services/pharmacy/frontend/api";
+import type { VitalSigns } from "@/lib/mews";
 import type {
   AdmissionType,
   BedAssignment,
@@ -25,29 +26,29 @@ import type {
   MedicationOrder,
   MewsAlert,
   Patient,
+  Provider,
   StaffRole,
   VitalsRecord,
   Ward,
 } from "@/types";
 
 // The one place the tab screens get data from. Each service's calls live in
-// services/<name>/frontend/api.ts; this file only decides which to use.
+// services/<name>/frontend/api.ts; this file decides what each portal loads
+// and puts the pieces together.
 //
-// Two ways to run, same screens:
-//  - "api": the Docker Compose stack is up, so every list comes from its
-//    service through Kong and every change is a POST to that service.
-//  - "mock": no services (the Vercel preview). Lists start from constants.ts
-//    and changes only live in this component's state until a reload.
-
-type DataMode = "api" | "mock";
+// The services only send reference IDs (comment matrix 3 and 7): a patient
+// ID, a provider ID. The names on screen come from the Patient Registry and
+// the provider registry, looked up here and kept in two small directories.
 
 // the services publish to each other over RabbitMQ; the browser just re-reads
 // every so often to pick up what other staff changed, and to notice a
 // service that stopped or came back without anyone reloading the page
 const REFRESH_INTERVAL_MS = 5_000;
+// the provider list barely changes during a shift
+const PROVIDER_REFRESH_MS = 5 * 60_000;
 
 // What each portal reads. A pharmacist's screen never waits on (or gets a
-// 403 from) Clinical Records, and IT's screens load their own data.
+// 403 from) Clinical Care, and the System Administrator's screens load their own data.
 type LoadKey =
   | "census"
   | "vitals"
@@ -71,23 +72,38 @@ const CLINICAL_LOADS: LoadKey[] = [
 ];
 
 const LOADS_BY_ROLE: Record<StaffRole, LoadKey[]> = {
-  Doctor: CLINICAL_LOADS,
+  AdmittingClerk: [],
+  Physician: CLINICAL_LOADS,
   Nurse: CLINICAL_LOADS,
   Pharmacist: ["medications", "formulary"],
-  Billing: ["charges"],
-  IT: [],
+  LaboratoryStaff: [],
+  RadiologyStaff: [],
+  BillingStaff: ["charges"],
+  HospitalAdministrator: [],
+  SystemAdministrator: [],
 };
 
+// Roles that see patient names. The System Administrator never does (RA 10173).
+const READS_PATIENT_NAMES: StaffRole[] = [
+  "AdmittingClerk",
+  "Physician",
+  "Nurse",
+  "Pharmacist",
+  "LaboratoryStaff",
+  "RadiologyStaff",
+  "BillingStaff",
+];
+
 const SERVICE_FOR_LOAD: Record<LoadKey, ServiceName> = {
-  census: "clinical-records",
-  vitals: "clinical-records",
+  census: "clinical-care",
+  vitals: "clinical-care",
   alerts: "notifications",
-  wards: "scheduling",
-  admissions: "scheduling",
-  diagnostics: "orders-diagnostics",
-  medications: "orders-diagnostics",
-  formulary: "orders-diagnostics",
-  charges: "billing",
+  wards: "patient-flow",
+  admissions: "patient-flow",
+  diagnostics: "diagnostics",
+  medications: "pharmacy",
+  formulary: "pharmacy",
+  charges: "billing-revenue-cycle",
 };
 
 export interface LoadStep {
@@ -96,7 +112,6 @@ export interface LoadStep {
 }
 
 interface DataContextValue {
-  mode: DataMode;
   // re-read everything now (opening a tab calls this, so it's never stale)
   refreshNow: () => void;
   // true until the first load after sign-in finishes (WorkspaceLoader)
@@ -117,21 +132,17 @@ interface DataContextValue {
   mewsAlerts: MewsAlert[];
   bedAssignments: BedAssignment[];
   charges: Charge[];
-  recordVitals: (
-    patientId: string,
-    vitals: VitalSigns,
-    recordedBy: string,
-    confirmedImplausible: boolean,
-  ) => Promise<VitalsRecord>;
-  acknowledgeAlert: (
-    alertId: string,
-    acknowledgement: { by: string; note?: string; isFalseAlarm?: boolean },
-  ) => Promise<void>;
+  // the provider registry, e.g. for the attending physician picker
+  providers: Provider[];
+  patientName: (patientId: string) => string;
+  providerName: (providerId: string | null | undefined) => string;
+  recordVitals: (patientId: string, vitals: VitalSigns, confirmedImplausible: boolean) => Promise<VitalsRecord>;
+  acknowledgeAlert: (alertId: string, acknowledgement: { note?: string; isFalseAlarm?: boolean }) => Promise<void>;
   occupiedBeds: (wardId: string) => number[];
   assignBed: (request: BedRequest) => Promise<{ ok: true } | { ok: false; reason: string }>;
   orderDiagnosticTest: (order: DiagnosticOrderRequest) => Promise<LabTest>;
   prescribe: (order: PrescriptionRequest) => Promise<MedicationOrder>;
-  dispenseMedication: (orderId: string, quantity: number, note?: string, by?: string) => Promise<MedicationOrder>;
+  dispenseMedication: (orderId: string, quantity: number, note?: string) => Promise<MedicationOrder>;
   priceCharge: (chargeId: string, unitAmount: number, reason: string) => Promise<Charge>;
 }
 
@@ -140,8 +151,7 @@ export interface BedRequest {
   wardId: string;
   bedIndex: number;
   admissionType: AdmissionType;
-  attendingPhysician: string;
-  assignedBy: string;
+  attendingPhysicianId: string;
 }
 
 export interface DiagnosticOrderRequest {
@@ -159,7 +169,6 @@ export interface PrescriptionRequest {
   route?: string;
   duration?: string;
   instructions?: string;
-  prescribedBy: string;
 }
 
 export interface OfflineService {
@@ -170,119 +179,98 @@ export interface OfflineService {
 
 const DataContext = createContext<DataContextValue | null>(null);
 
-// ─── MOCK MODE: VITALS & MEWS IN MEMORY ───
-
-let nextRecordNumber = 1;
-
-function buildVitalsRecord(
-  patientId: string,
-  vitals: VitalSigns,
-  recordedBy: string,
-  recordedAt: string,
-): VitalsRecord {
-  const { score, risk } = calculateMews(vitals);
-  return {
-    id: `VS-${String(nextRecordNumber++).padStart(4, "0")}`,
-    patientId,
-    recordedAt,
-    recordedBy,
-    vitals,
-    mewsScore: score,
-    risk,
-    hadImplausibleReading: implausibleReadings(vitals).length > 0,
-  };
+function ageOn(birthDate: string, today = new Date()) {
+  const born = new Date(birthDate);
+  let age = today.getFullYear() - born.getFullYear();
+  const hadBirthday =
+    today.getMonth() > born.getMonth() || (today.getMonth() === born.getMonth() && today.getDate() >= born.getDate());
+  if (!hadBirthday) age -= 1;
+  return age;
 }
 
-function alertFor(record: VitalsRecord, patientName: string): MewsAlert | null {
-  if (record.risk === "Low") return null;
-  return {
-    id: `AL-${record.id}`,
-    vitalsId: record.id,
-    patientId: record.patientId,
-    patientName,
-    mewsScore: record.mewsScore,
-    risk: record.risk,
-    raisedAt: record.recordedAt,
-  };
-}
-
-// Same two charted sets as the Clinical Records seed, so both modes open
-// with the same alerts
-function seedVitals() {
-  const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000).toISOString();
-  const seeds: { patientId: string; vitals: VitalSigns; minutes: number }[] = [
-    {
-      patientId: "WAH-2026-00001",
-      vitals: {
-        respiratoryRate: 24,
-        oxygenSaturation: 91,
-        temperature: 38.6,
-        systolicBp: 95,
-        heartRate: 115,
-        consciousness: "Voice",
-      },
-      minutes: 12,
-    },
-    {
-      patientId: "WAH-2026-00004",
-      vitals: {
-        respiratoryRate: 22,
-        oxygenSaturation: 95,
-        temperature: 37.4,
-        systolicBp: 112,
-        heartRate: 98,
-        consciousness: "Alert",
-      },
-      minutes: 35,
-    },
+// Every patient ID anywhere in what the portal loaded
+function patientIdsIn(raw: RawState) {
+  return [
+    ...raw.census.map((entry) => entry.patientId),
+    ...raw.vitals.map((record) => record.patientId),
+    ...raw.alerts.map((alert) => alert.patientId),
+    ...raw.admissions.map((admission) => admission.patientId),
+    ...raw.diagnostics.map((order) => order.patientId),
+    ...raw.medications.map((order) => order.patientId),
+    ...raw.charges.map((charge) => charge.patientId),
   ];
-
-  const records = seeds.map((seed) =>
-    buildVitalsRecord(seed.patientId, seed.vitals, "RN Demo Nurse", minutesAgo(seed.minutes)),
-  );
-  const alerts = records
-    .map((record) => {
-      const name = PATIENTS.find((patient) => patient.id === record.patientId)?.name ?? record.patientId;
-      return alertFor(record, name);
-    })
-    .filter((alert): alert is MewsAlert => alert !== null);
-
-  return { records, alerts };
 }
+
+interface RawState {
+  census: CensusEntry[];
+  vitals: VitalsResponse[];
+  alerts: MewsAlertRecord[];
+  admissions: AdmissionRecord[];
+  diagnostics: DiagnosticOrderRecord[];
+  medications: MedicationOrderRecord[];
+  charges: ChargeRecord[];
+}
+
+const EMPTY_RAW: RawState = {
+  census: [],
+  vitals: [],
+  alerts: [],
+  admissions: [],
+  diagnostics: [],
+  medications: [],
+  charges: [],
+};
 
 interface DataProviderProps {
   children: ReactNode;
 }
 
 export function DataProvider({ children }: DataProviderProps) {
-  // API mode needs a signed-in session; without one we stay on the mock
-  const mode: DataMode = isApiMode && currentSession() ? "api" : "mock";
-
-  const [seed] = useState(seedVitals);
-  const [patients, setPatients] = useState<Patient[]>(() =>
-    mode === "api"
-      ? []
-      : PATIENTS.map((patient) => {
-          const record = seed.records.find((candidate) => candidate.patientId === patient.id);
-          return record ? { ...patient, mewsScore: record.mewsScore } : patient;
-        }),
-  );
-  const [vitalsRecords, setVitalsRecords] = useState<VitalsRecord[]>(mode === "api" ? [] : seed.records);
-  const [mewsAlerts, setMewsAlerts] = useState<MewsAlert[]>(mode === "api" ? [] : seed.alerts);
-  const [formulary, setFormulary] = useState<FormularyItem[]>(mode === "api" ? [] : FORMULARY);
-  const [labTests, setLabTests] = useState<LabTest[]>(mode === "api" ? [] : LAB_TESTS);
-  const [medicationOrders, setMedicationOrders] = useState<MedicationOrder[]>(
-    mode === "api" ? [] : MEDICATION_ORDERS,
-  );
-  const [wards, setWards] = useState<Ward[]>(mode === "api" ? [] : WARDS);
-  const [bedAssignments, setBedAssignments] = useState<BedAssignment[]>([]);
-  const [charges, setCharges] = useState<Charge[]>(mode === "api" ? [] : CHARGES);
-  const [isLoading, setIsLoading] = useState(mode === "api");
+  const [raw, setRaw] = useState<RawState>(EMPTY_RAW);
+  const [formulary, setFormulary] = useState<FormularyItem[]>([]);
+  const [wards, setWards] = useState<Ward[]>([]);
+  const [identities, setIdentities] = useState<Map<string, PatientIdentity>>(() => new Map());
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [loadSteps, setLoadSteps] = useState<LoadStep[]>([]);
   const [offlineServices, setOfflineServices] = useState<OfflineService[]>([]);
   const [isSystemOffline, setIsSystemOffline] = useState(false);
   // last time each service answered, kept across refreshes
   const [lastSeen] = useState(() => new Map<ServiceName, string>());
+  const providersLoadedAt = useRef(0);
+
+  const setRawKey = useCallback(<K extends keyof RawState>(key: K, value: RawState[K]) => {
+    setRaw((current) => ({ ...current, [key]: value }));
+  }, []);
+
+  // Asks the Patient Registry only for IDs we haven't seen yet. A registry
+  // that's down leaves the IDs showing instead of names, nothing worse.
+  const resolvePatients = useCallback(async (ids: string[]) => {
+    const role = currentSession()?.user.role;
+    if (!role || !READS_PATIENT_NAMES.includes(role)) return;
+    const missing = ids.filter((id) => !identities.has(id));
+    if (missing.length === 0) return;
+    try {
+      const found = await fetchPatientsByIds(missing);
+      setIdentities((current) => {
+        const next = new Map(current);
+        for (const patient of found) next.set(patient.id, patient);
+        return next;
+      });
+    } catch {
+      // shows up as Patient Registry offline on the next refresh's notice
+    }
+  }, [identities]);
+
+  const loadProviders = useCallback(async () => {
+    if (Date.now() - providersLoadedAt.current < PROVIDER_REFRESH_MS) return;
+    try {
+      setProviders(await fetchProviders());
+      providersLoadedAt.current = Date.now();
+    } catch {
+      // names fall back to the provider ID until the registry answers
+    }
+  }, []);
 
   // Every call is independent (allSettled), because a service being down
   // should blank only its own part of the screen (the paper's fault-isolation
@@ -292,16 +280,17 @@ export function DataProvider({ children }: DataProviderProps) {
       const role = currentSession()?.user.role;
       if (!role) return;
 
+      const fresh: Partial<RawState> = {};
       const loaders: Record<LoadKey, () => Promise<void>> = {
-        census: () => fetchCensus().then(setPatients),
-        vitals: () => fetchVitals().then(setVitalsRecords),
-        alerts: () => fetchAlerts().then(setMewsAlerts),
+        census: async () => void (fresh.census = await fetchCensus()),
+        vitals: async () => void (fresh.vitals = await fetchVitals()),
+        alerts: async () => void (fresh.alerts = await fetchAlerts()),
         wards: () => fetchWards().then(setWards),
-        admissions: () => fetchAdmissions().then(setBedAssignments),
-        diagnostics: () => fetchDiagnosticOrders().then(setLabTests),
-        medications: () => fetchMedicationOrders().then(setMedicationOrders),
+        admissions: async () => void (fresh.admissions = await fetchAdmissions()),
+        diagnostics: async () => void (fresh.diagnostics = await fetchDiagnosticOrders()),
+        medications: async () => void (fresh.medications = await fetchMedicationOrders()),
         formulary: () => fetchFormulary().then(setFormulary),
-        charges: () => fetchCharges().then(setCharges),
+        charges: async () => void (fresh.charges = await fetchCharges()),
       };
 
       const keys = LOADS_BY_ROLE[role];
@@ -312,8 +301,9 @@ export function DataProvider({ children }: DataProviderProps) {
       const down = new Set<ServiceName>();
       if (isFirstLoad) setLoadSteps(services.map((service) => ({ service, state: "loading" })));
 
-      await Promise.all(
-        keys.map(async (key) => {
+      await Promise.all([
+        keys.length > 0 ? loadProviders() : Promise.resolve(),
+        ...keys.map(async (key) => {
           const service = SERVICE_FOR_LOAD[key];
           try {
             await loaders[key]();
@@ -331,7 +321,11 @@ export function DataProvider({ children }: DataProviderProps) {
             );
           }
         }),
-      );
+      ]);
+
+      const merged = { ...EMPTY_RAW, ...fresh };
+      setRaw((current) => ({ ...current, ...fresh }));
+      await resolvePatients(patientIdsIn(merged));
 
       const now = new Date().toISOString();
       for (const service of services) {
@@ -341,23 +335,24 @@ export function DataProvider({ children }: DataProviderProps) {
       setIsSystemOffline(services.length > 0 && down.size === services.length);
       setIsLoading(false);
     },
-    [lastSeen],
+    [lastSeen, loadProviders, resolvePatients],
   );
 
   // one refresh at a time; a slow service shouldn't pile up requests behind it
   const isRefreshing = useRef(false);
+  const latestLoad = useRef(loadFromServices);
+  latestLoad.current = loadFromServices;
   const refreshNow = useCallback(() => {
-    if (mode !== "api" || isRefreshing.current) return;
+    if (isRefreshing.current) return;
     isRefreshing.current = true;
-    void loadFromServices().finally(() => {
+    void latestLoad.current().finally(() => {
       isRefreshing.current = false;
     });
-  }, [mode, loadFromServices]);
+  }, []);
 
   useEffect(() => {
-    if (mode !== "api") return;
     isRefreshing.current = true;
-    void loadFromServices(true).finally(() => {
+    void latestLoad.current(true).finally(() => {
       isRefreshing.current = false;
     });
     const timer = setInterval(refreshNow, REFRESH_INTERVAL_MS);
@@ -373,38 +368,113 @@ export function DataProvider({ children }: DataProviderProps) {
       document.removeEventListener("visibilitychange", onReturn);
       window.removeEventListener("focus", refreshNow);
     };
-  }, [mode, loadFromServices, refreshNow]);
+  }, [refreshNow]);
 
-  async function recordVitals(
-    patientId: string,
-    vitals: VitalSigns,
-    recordedBy: string,
-    confirmedImplausible: boolean,
-  ) {
-    if (mode === "api") {
-      // Clinical Records scores MEWS and publishes the alert; we re-read so
-      // the new alert and the patient's updated score both show up
-      const record = await postVitals(patientId, vitals, confirmedImplausible);
-      await loadFromServices();
-      return record;
-    }
+  // ─── names from the two registries ───
 
-    const record = buildVitalsRecord(patientId, vitals, recordedBy, new Date().toISOString());
-    const patientName = patients.find((patient) => patient.id === patientId)?.name ?? patientId;
+  const providerById = useMemo(() => new Map(providers.map((provider) => [provider.id, provider])), [providers]);
 
-    // charting always succeeds; the alert is a side effect, never a blocker (UC-05 6a)
-    setVitalsRecords((current) => [record, ...current]);
-    setPatients((current) =>
-      current.map((patient) =>
-        patient.id === patientId ? { ...patient, mewsScore: record.mewsScore } : patient,
-      ),
-    );
-    const alert = alertFor(record, patientName);
-    if (alert) setMewsAlerts((current) => [alert, ...current]);
-    return record;
+  const patientName = useCallback(
+    (patientId: string) => identities.get(patientId)?.name ?? patientId,
+    [identities],
+  );
+  const providerName = useCallback(
+    (providerId: string | null | undefined) => (providerId ? (providerById.get(providerId)?.name ?? providerId) : ""),
+    [providerById],
+  );
+
+  const toVitals = useCallback(
+    (record: VitalsResponse): VitalsRecord => ({ ...record, recordedBy: providerName(record.recordedById) }),
+    [providerName],
+  );
+  const toLabTest = useCallback(
+    (order: DiagnosticOrderRecord): LabTest => ({
+      id: order.id,
+      patientId: order.patientId,
+      patient: patientName(order.patientId),
+      orderedById: order.orderedById,
+      test: order.test,
+      priority: order.priority,
+      status: order.status,
+      time: timeAgo(order.orderedAt),
+      isCritical: order.isCritical,
+    }),
+    [patientName],
+  );
+  const toMedicationOrder = useCallback(
+    (order: MedicationOrderRecord): MedicationOrder => ({
+      ...order,
+      patientName: patientName(order.patientId),
+      prescribedBy: providerName(order.prescribedById),
+      dispensedBy: order.dispensedById ? providerName(order.dispensedById) : null,
+    }),
+    [patientName, providerName],
+  );
+  const toCharge = useCallback(
+    (charge: ChargeRecord): Charge => ({ ...charge, patientName: patientName(charge.patientId) }),
+    [patientName],
+  );
+
+  const patients = useMemo<Patient[]>(
+    () =>
+      raw.census.map((entry) => {
+        const identity = identities.get(entry.patientId);
+        return {
+          id: entry.patientId,
+          encounterId: entry.encounterId,
+          name: identity?.name ?? entry.patientId,
+          birthDate: identity?.birthDate ?? "",
+          age: identity ? ageOn(identity.birthDate) : 0,
+          gender: identity?.sex ?? "Male",
+          department: entry.department,
+          status: entry.status,
+          mewsScore: entry.mewsScore,
+          admittedAt: entry.admittedAt,
+          // seeded by MPI number, so no patient name ever leaves for the avatar service
+          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(entry.patientId)}`,
+        };
+      }),
+    [raw.census, identities],
+  );
+  const vitalsRecords = useMemo(() => raw.vitals.map(toVitals), [raw.vitals, toVitals]);
+  const mewsAlerts = useMemo<MewsAlert[]>(
+    () =>
+      raw.alerts.map((alert) => ({
+        ...alert,
+        patientName: patientName(alert.patientId),
+        acknowledgedBy: alert.acknowledgedById ? providerName(alert.acknowledgedById) : undefined,
+      })),
+    [raw.alerts, patientName, providerName],
+  );
+  const bedAssignments = useMemo<BedAssignment[]>(
+    () =>
+      raw.admissions.map((admission) => ({
+        patientId: admission.patientId,
+        wardId: admission.wardId,
+        bedIndex: admission.bedIndex,
+        admissionType: admission.admissionType,
+        attendingPhysicianId: admission.attendingPhysicianId,
+        attendingPhysician: providerName(admission.attendingPhysicianId),
+        assignedById: admission.assignedById,
+        assignedBy: providerName(admission.assignedById),
+        assignedAt: admission.assignedAt,
+      })),
+    [raw.admissions, providerName],
+  );
+  const labTests = useMemo(() => raw.diagnostics.map(toLabTest), [raw.diagnostics, toLabTest]);
+  const medicationOrders = useMemo(() => raw.medications.map(toMedicationOrder), [raw.medications, toMedicationOrder]);
+  const charges = useMemo(() => raw.charges.map(toCharge), [raw.charges, toCharge]);
+
+  // ─── changes ───
+
+  async function recordVitals(patientId: string, vitals: VitalSigns, confirmedImplausible: boolean) {
+    // Clinical Care scores MEWS and publishes the alert; we re-read so the
+    // new alert and the patient's updated score both show up
+    const record = await postVitals(patientId, vitals, confirmedImplausible);
+    await loadFromServices();
+    return toVitals(record);
   }
 
-  // ─── beds ───
   // Wards only give a count of beds taken before go-live, so the first
   // `occupied` beds of each grid count as taken by patients we don't have
   // records for. Admissions after that are tracked bed by bed.
@@ -419,178 +489,63 @@ export function DataProvider({ children }: DataProviderProps) {
   }
 
   async function assignBed(request: BedRequest): Promise<{ ok: true } | { ok: false; reason: string }> {
-    if (mode === "api") {
-      try {
-        // Scheduling holds the real bed lock (a unique index), so a bed another
-        // nurse took a second ago comes back as a 409 here
-        await postAdmission({
-          patientId: request.patientId,
-          wardId: request.wardId,
-          bedIndex: request.bedIndex,
-          admissionType: request.admissionType,
-          attendingPhysician: request.attendingPhysician,
-        });
-        await loadFromServices();
-        return { ok: true };
-      } catch (error) {
-        await loadFromServices();
-        return { ok: false, reason: error instanceof ApiError ? error.message : "Couldn't reach Scheduling." };
-      }
+    try {
+      // Patient Flow holds the real bed lock (a unique index), so a bed
+      // another user took a second ago comes back as a 409 here
+      await postAdmission(request);
+      await loadFromServices();
+      return { ok: true };
+    } catch (error) {
+      await loadFromServices();
+      return { ok: false, reason: error instanceof ApiError ? error.message : "Couldn't reach Patient Flow." };
     }
-
-    // mock mode: checked against current state right before writing
-    if (occupiedBeds(request.wardId).includes(request.bedIndex)) {
-      return { ok: false, reason: "That bed was just taken. Please pick another one." };
-    }
-    const ward = wards.find((candidate) => candidate.id === request.wardId);
-    if (!ward || request.bedIndex < 0 || request.bedIndex >= ward.capacity) {
-      return { ok: false, reason: "That bed doesn't exist in this ward." };
-    }
-
-    // one active bed per patient (UC-04 BR-02): a new assignment replaces the old one
-    setBedAssignments((current) => [
-      ...current.filter((assignment) => assignment.patientId !== request.patientId),
-      {
-        patientId: request.patientId,
-        wardId: request.wardId,
-        bedIndex: request.bedIndex,
-        admissionType: request.admissionType,
-        attendingPhysician: request.attendingPhysician,
-        assignedBy: request.assignedBy,
-        assignedAt: new Date().toISOString(),
-      },
-    ]);
-    return { ok: true };
   }
 
-  async function acknowledgeAlert(
-    alertId: string,
-    acknowledgement: { by: string; note?: string; isFalseAlarm?: boolean },
-  ) {
-    if (mode === "api") {
-      try {
-        await postAcknowledgement(alertId, {
-          note: acknowledgement.note,
-          isFalseAlarm: acknowledgement.isFalseAlarm ?? false,
-        });
-      } finally {
-        // on a 409 someone else acknowledged first; re-reading shows who
-        await loadFromServices();
-      }
-      return;
+  async function acknowledgeAlert(alertId: string, acknowledgement: { note?: string; isFalseAlarm?: boolean }) {
+    try {
+      await postAcknowledgement(alertId, {
+        note: acknowledgement.note,
+        isFalseAlarm: acknowledgement.isFalseAlarm ?? false,
+      });
+    } finally {
+      // on a 409 someone else acknowledged first; re-reading shows who
+      await loadFromServices();
     }
-
-    setMewsAlerts((current) =>
-      current.map((alert) =>
-        // already-acknowledged alerts stay as they were (UC-08 BR-03: immutable)
-        alert.id === alertId && !alert.acknowledgedAt
-          ? {
-              ...alert,
-              acknowledgedAt: new Date().toISOString(),
-              acknowledgedBy: acknowledgement.by,
-              note: acknowledgement.note,
-              isFalseAlarm: acknowledgement.isFalseAlarm,
-            }
-          : alert,
-      ),
-    );
   }
 
   async function orderDiagnosticTest(order: DiagnosticOrderRequest) {
-    if (mode === "api") {
-      const test = await postDiagnosticOrder(order);
-      setLabTests((current) => [test, ...current]);
-      return test;
-    }
-
-    const patient = patients.find((candidate) => candidate.id === order.patientId);
-    const prefix = order.kind === "Laboratory" ? "LAB" : "RAD";
-    const test: LabTest = {
-      id: `${prefix}-${5600 + labTests.length}`,
-      patientId: order.patientId,
-      patient: patient?.name ?? order.patientId,
-      test: order.test,
-      priority: order.priority,
-      status: "Pending",
-      time: "just now",
-    };
-    setLabTests((current) => [test, ...current]);
-    return test;
+    const created = await postDiagnosticOrder(order);
+    setRawKey("diagnostics", [created, ...raw.diagnostics]);
+    return toLabTest(created);
   }
 
   async function prescribe(order: PrescriptionRequest) {
-    if (mode === "api") {
-      const created = await postMedicationOrder({
-        patientId: order.patientId,
-        drug: order.drug,
-        dose: order.dose,
-        frequency: order.frequency,
-        route: order.route,
-        duration: order.duration,
-        instructions: order.instructions,
-      });
-      setMedicationOrders((current) => [created, ...current]);
-      return created;
-    }
-
-    const patient = patients.find((candidate) => candidate.id === order.patientId);
-    const created: MedicationOrder = {
-      id: `RX-${1001 + medicationOrders.length}`,
-      patientId: order.patientId,
-      patientName: patient?.name ?? order.patientId,
-      drug: order.drug,
-      dose: order.dose,
-      frequency: order.frequency,
-      route: order.route ?? null,
-      duration: order.duration ?? null,
-      status: "Pending",
-      prescribedBy: order.prescribedBy,
-      orderedAt: new Date().toISOString(),
-    };
-    setMedicationOrders((current) => [created, ...current]);
-    return created;
+    const created = await postMedicationOrder(order);
+    setRawKey("medications", [created, ...raw.medications]);
+    return toMedicationOrder(created);
   }
 
-  async function dispenseMedication(orderId: string, quantity: number, note?: string, by = "Pharmacist") {
-    if (mode === "api") {
-      const dispensed = await postDispense(orderId, quantity, note);
-      setMedicationOrders((current) => current.map((order) => (order.id === orderId ? dispensed : order)));
-      return dispensed;
-    }
-
-    const order = medicationOrders.find((candidate) => candidate.id === orderId);
-    if (!order) throw new Error(`No medication order ${orderId}`);
-    if (order.status !== "Pending") throw new Error("Only a pending order can be dispensed.");
-    if (order.isControlled) throw new Error("Controlled drugs need a second pharmacist's approval.");
-    const dispensed: MedicationOrder = {
-      ...order,
-      status: "Dispensed",
-      dispensedQuantity: quantity,
-      dispensedBy: by,
-      dispensedAt: new Date().toISOString(),
-    };
-    setMedicationOrders((current) => current.map((candidate) => (candidate.id === orderId ? dispensed : candidate)));
-    return dispensed;
+  async function dispenseMedication(orderId: string, quantity: number, note?: string) {
+    const dispensed = await postDispense(orderId, quantity, note);
+    setRawKey(
+      "medications",
+      raw.medications.map((order) => (order.id === orderId ? dispensed : order)),
+    );
+    return toMedicationOrder(dispensed);
   }
 
   async function priceCharge(chargeId: string, unitAmount: number, reason: string) {
-    if (mode === "api") {
-      const priced = await postChargePrice(chargeId, unitAmount, reason);
-      setCharges((current) => current.map((charge) => (charge.id === chargeId ? priced : charge)));
-      return priced;
-    }
-
-    const charge = charges.find((candidate) => candidate.id === chargeId);
-    if (!charge) throw new Error(`No charge ${chargeId}`);
-    const priced: Charge = { ...charge, unitAmount, amount: unitAmount * charge.quantity, isUnpriced: false };
-    setCharges((current) => current.map((candidate) => (candidate.id === chargeId ? priced : candidate)));
-    return priced;
+    const priced = await postChargePrice(chargeId, unitAmount, reason);
+    setRawKey(
+      "charges",
+      raw.charges.map((charge) => (charge.id === chargeId ? priced : charge)),
+    );
+    return toCharge(priced);
   }
 
   return (
     <DataContext.Provider
       value={{
-        mode,
         refreshNow,
         isLoading,
         loadSteps,
@@ -605,6 +560,9 @@ export function DataProvider({ children }: DataProviderProps) {
         mewsAlerts,
         bedAssignments,
         charges,
+        providers,
+        patientName,
+        providerName,
         recordVitals,
         acknowledgeAlert,
         occupiedBeds,

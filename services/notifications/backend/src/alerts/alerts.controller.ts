@@ -23,14 +23,14 @@ class AcknowledgeAlertDto {
 export class AlertsController {
   constructor(private readonly alerts: AlertsService) {}
 
-  @Roles("Doctor", "Nurse")
+  @Roles("Physician", "Nurse")
   @ApiQuery({ name: "limit", required: false })
   @Get()
   list(@Query("limit", new DefaultValuePipe(50), ParseIntPipe) limit: number) {
     return this.alerts.list(Math.min(limit, 200));
   }
 
-  @Roles("Doctor", "Nurse")
+  @Roles("Physician", "Nurse")
   @HttpCode(200)
   @Post(":id/acknowledge")
   acknowledge(@Param("id") id: string, @Body() body: AcknowledgeAlertDto, @CurrentUser() user: AuthUser) {

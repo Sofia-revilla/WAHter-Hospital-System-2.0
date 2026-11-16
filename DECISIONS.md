@@ -574,3 +574,59 @@ The pre-change build is tagged `prompt-build-v1` (also still on `main`) so it ca
   address allowed, opening a deployment link showed the system as offline even though it was up.
   Use the main address for demos anyway: a deployment link is a fixed snapshot and keeps
   whatever tunnel address it was built with.
+
+## System update, November 2026
+
+### D-052: Ten services, following the comment matrix and the updated C4
+- identity → **access-provider-registry** (logins, roles, provider registry) and a new
+  **patient-registry** (MPI). scheduling → **patient-flow**, clinical-records → **clinical-care**,
+  orders-diagnostics → **diagnostics** and a new **pharmacy**, billing → **billing-revenue-cycle**,
+  interoperability → **interoperability-reporting**. Notifications and Audit Log keep their names.
+- Access and the provider registry stay one service, as the C4 and the use case diagram show,
+  even though comment 3 reads as if they could be separate (the paper revision list flags the same choice).
+- The folder name is also the compose service, the Kong prefix (`/api/<name>`), and the npm
+  package (`@wahter/<name>`). Schemas: access, patient_registry, patient_flow, clinical,
+  diagnostics, pharmacy, billing, interop, notifications, audit.
+- One `infra/docker/service.Dockerfile` with a `SERVICE` build arg replaces eight copies. Its first
+  stage collects every workspace's package.json, so `npm ci` stays cached when only code changes.
+- Each service's `001_init.sql` was rewritten as the new baseline instead of adding drop
+  migrations on top. The local database is rebuilt from scratch (`docker compose down -v`, all
+  data is fictional). From Phase 1 on, changes go in new numbered migrations.
+
+### D-053: No copies of patients or providers outside the two registries
+- Comment matrix 3 and 7: Clinical Care, Diagnostics, Pharmacy, Billing, and Interoperability
+  used to keep their own `patients` table filled from `patient.registered`. Those are gone, and so
+  are copied staff names (`recorded_by`, `prescribed_by`, `assigned_by`, `acknowledged_by`, ...).
+  Every table keeps only the `*_id`.
+- `patient.registered` now carries just the patient ID, so nobody can rebuild a copy from the bus.
+- The web app turns IDs into names: DataContext asks `GET /patient-registry/patients?ids=` for
+  IDs it hasn't seen and loads `GET /access-provider-registry/providers` every few minutes.
+- Services that need to check or show an ID call the owning service directly on the Docker
+  network (`ServiceClient` in packages/shared) with a five-minute "System" token, so the
+  receiving guard still runs. Interoperability & Reporting reads patients and admissions this way
+  for FHIR and reports instead of keeping replicas.
+- Admission refuses if the Patient Registry is down (UC-02 includes UC-01). Prescriptions and lab
+  orders go through if it's down and only refuse an ID the registry says doesn't exist, so one
+  service being down doesn't stop another (objective 2).
+- The exception is the Audit Log: it keeps the actor's name and role next to each entry, because
+  an audit record has to say who did it as they were at the time.
+
+### D-054: Role names from the use case diagram, in one file
+- `packages/shared/src/roles.ts` has the nine role keys (AdmittingClerk, Physician, Nurse,
+  Pharmacist, LaboratoryStaff, RadiologyStaff, BillingStaff, HospitalAdministrator,
+  SystemAdministrator) and their labels. Services and the web app both import it
+  (`@wahter/shared/roles`). The paper's "Patient Registrar" and "Doctor" are aliases.
+- A role with no screens yet has an empty tab list in navigation.ts and doesn't show on the
+  login screen (PORTAL_ROLES), so a portal appears by itself once its phase adds tabs.
+
+### D-055: Event names follow service.thing.action
+- e.g. `flow.patient.admitted`, `clinical.mews.alert`, `pharmacy.medication.dispensed`. The two
+  MEWS events became one `clinical.mews.alert` with the risk in the payload. The brief names the
+  registry events `patient.registered/updated/merged`, so those keep that prefix.
+
+### D-056: Mock mode removed
+- The web app always reads the live services (the user's decision, Nov 2026). `constants.ts`,
+  the demo-data banner, and the "Use demo data instead" button are gone. The demo tour and Try
+  Demo stay in the code behind a flag (Phase 1 wires `NEXT_PUBLIC_ENABLE_DEMO`).
+- The Patients tab used to alternate Male/Female by row as a placeholder; it now shows the sex
+  from the Patient Registry. The placeholder diagnosis and room text stay until Phases 3 and 4.

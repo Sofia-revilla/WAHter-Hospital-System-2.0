@@ -44,43 +44,43 @@ export const TABS: Record<TabId, TabConfig> = {
     label: "Dashboard",
     icon: LayoutDashboard,
     description: "Census, bed occupancy, MEWS alerts, and patient risk at a glance.",
-    services: ["clinical-records", "scheduling", "notifications", "orders-diagnostics"],
+    services: ["clinical-care", "patient-flow", "notifications", "diagnostics", "patient-registry"],
   },
   patients: {
     label: "Patients",
     icon: Users,
     description: "Search the patient registry and open inpatient records.",
-    services: ["clinical-records", "scheduling"],
+    services: ["clinical-care", "patient-flow", "patient-registry"],
   },
   prescription: {
     label: "E-Prescribing",
     icon: Receipt,
     description: "Write and e-sign medication orders for admitted patients.",
-    services: ["orders-diagnostics", "clinical-records"],
+    services: ["pharmacy", "clinical-care", "patient-registry"],
   },
   pharmacy: {
     label: "Pharmacy",
     icon: Pill,
     description: "Prescription worklist and medication dispensing.",
-    services: ["orders-diagnostics"],
+    services: ["pharmacy", "patient-registry"],
   },
   lab: {
     label: "Laboratory",
     icon: FlaskConical,
     description: "Lab and radiology requests, results, and turnaround.",
-    services: ["orders-diagnostics", "clinical-records"],
+    services: ["diagnostics", "clinical-care", "patient-registry"],
   },
   rooms: {
     label: "Bed Management",
     icon: Bed,
     description: "Ward occupancy, bed assignment, and smart referral.",
-    services: ["scheduling", "clinical-records"],
+    services: ["patient-flow", "clinical-care", "patient-registry"],
   },
   billing: {
     label: "Billing",
     icon: Wallet,
     description: "Patient accounts, captured charges, and unpriced items.",
-    services: ["billing"],
+    services: ["billing-revenue-cycle", "patient-registry"],
   },
   architecture: {
     label: "Architecture",
@@ -102,17 +102,25 @@ export const TABS: Record<TabId, TabConfig> = {
   },
 };
 
+// An empty list means the role's portal isn't built yet; those roles don't
+// show up on the login screen (see PORTAL_ROLES).
 export const ROLE_TABS: Record<StaffRole, TabId[]> = {
-  // Billing belongs to Billing Staff (and later the Hospital Admin), so the
-  // clinical portals don't get it
-  Doctor: ["dashboard", "patients", "prescription", "pharmacy", "lab", "rooms", "profile"],
+  // TODO(Phase 2): Registration, Patient Search, Scheduling and Queue, Admission and Bed Board
+  AdmittingClerk: [],
+  Physician: ["dashboard", "patients", "prescription", "pharmacy", "lab", "rooms", "profile"],
   Nurse: ["dashboard", "patients", "pharmacy", "rooms", "lab", "profile"],
-  // UC-10 is the pharmacist's only use case, so the portal is the worklist
+  // dispensing is the pharmacist's only use case, so the portal is the worklist
   Pharmacist: ["pharmacy", "profile"],
-  // UC-12/13: billing staff see accounts and charges, never clinical tabs
-  Billing: ["billing", "profile"],
-  // The paper's IT portal has no clinical modules and no patient data
-  // (RA 10173), so IT gets system screens only. No inventory tab either:
-  // no FSA or use case covers stock management.
-  IT: ["architecture", "staff", "profile"],
+  // TODO(Phase 6): the Ancillary portal (worklist, result entry, release)
+  LaboratoryStaff: [],
+  RadiologyStaff: [],
+  // UC-06: billing staff see accounts and charges, never clinical tabs
+  BillingStaff: ["billing", "profile"],
+  // TODO(Phase 9): Hospital Reports and DOH Exports
+  HospitalAdministrator: [],
+  // No clinical modules and no patient data (RA 10173), and no inventory tab
+  // (paper Limitation d)
+  SystemAdministrator: ["architecture", "staff", "profile"],
 };
+
+export const PORTAL_ROLES = (Object.keys(ROLE_TABS) as StaffRole[]).filter((role) => ROLE_TABS[role].length > 0);

@@ -9,30 +9,28 @@ import {
 } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 import jwt from "jsonwebtoken";
+import type { StaffRole } from "./roles";
 
-// Identity signs the tokens; Kong checks the signature at the edge and every
-// service checks it again here. The second check matters because services are
-// also reachable inside the Docker network, where Kong isn't in the way.
+// Access & Provider Registry signs the tokens; Kong checks the signature at
+// the edge and every service checks it again here. The second check matters
+// because services are also reachable inside the Docker network, where Kong
+// isn't in the way.
 
 // Kong's JWT plugin looks up the signing key by this claim (see infra/kong)
-export const TOKEN_ISSUER = "wahter-identity";
+export const TOKEN_ISSUER = "wahter-access";
 
 export const ACCESS_TOKEN_TTL = "8h";
 export const REFRESH_TOKEN_TTL = "7d";
 
-// The portals on the login screen. "Billing" is the paper's Billing Staff.
-// The other paper roles (lab staff, registrar, ...) exist as staff accounts
-// but have no portal yet.
-export type PortalRole = "Doctor" | "Nurse" | "Pharmacist" | "Billing" | "IT";
-
-// Roles an endpoint can name before their portal exists. Nobody holds these
-// in a token yet, so an endpoint limited to them is closed until that portal ships.
-export type FutureRole = "Laboratory Staff" | "Hospital Administrator";
+// "System" is a service calling another service inside the Docker network
+// (for example Pharmacy checking a patient ID with the Patient Registry).
+// Only signServiceToken() makes these; no login can.
+export type CallerRole = StaffRole | "System";
 
 export interface AuthUser {
   id: string;
   name: string;
-  role: PortalRole;
+  role: CallerRole;
 }
 
 interface TokenClaims extends AuthUser {
@@ -61,6 +59,17 @@ export function signTokens(user: AuthUser) {
   };
 }
 
+// Short-lived token for one service calling another directly on the Docker
+// network. Five minutes is plenty for a single request.
+export function signServiceToken(serviceName: string) {
+  const user: AuthUser = { id: `svc:${serviceName}`, name: serviceName, role: "System" };
+  return jwt.sign({ ...user, kind: "access" }, secret(), {
+    issuer: TOKEN_ISSUER,
+    subject: user.id,
+    expiresIn: "5m",
+  });
+}
+
 export function verifyToken(token: string, kind: TokenClaims["kind"]): AuthUser {
   const claims = jwt.verify(token, secret(), { issuer: TOKEN_ISSUER }) as TokenClaims;
   // a refresh token must not work as an access token, or the 8h limit means nothing
@@ -74,8 +83,8 @@ const ROLES = "wah:roles";
 // Endpoints anyone can call: /health, login, and token refresh
 export const Public = () => SetMetadata(IS_PUBLIC, true);
 
-// Which portals may call an endpoint, taken from the use case actors
-export const Roles = (...roles: (PortalRole | FutureRole)[]) => SetMetadata(ROLES, roles);
+// Which roles may call an endpoint, taken from the use case actors
+export const Roles = (...roles: CallerRole[]) => SetMetadata(ROLES, roles);
 
 interface RequestWithUser {
   headers: Record<string, string | undefined>;

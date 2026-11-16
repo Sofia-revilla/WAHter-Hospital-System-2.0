@@ -14,25 +14,25 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react"; // not 'framer-motion', the package got renamed in v11
 import { ChevronDown, LayoutDashboard, LogOut, Moon, Sun } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { clearSession, isApiMode, restoreSession } from "@/lib/api";
+import { clearSession, restoreSession } from "@/lib/api";
 import { formatDisplayName } from "@/lib/staff";
 import { DataProvider } from "@/context/DataContext";
 import { ArchitectureStatusView } from "@/components/ArchitectureStatusView";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { DemoTour } from "@/components/DemoTour";
-import { DemoDataBanner } from "@/components/DemoDataBanner";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { RefreshOnTabChange } from "@/components/RefreshOnTabChange";
 import { ServiceOfflineNotice } from "@/components/ServiceOfflineNotice";
 import { WorkspaceLoader } from "@/components/WorkspaceLoader";
 import { Sidebar } from "@/components/Sidebar";
 // Each tab's screen belongs to the service that owns its data (services/<name>/frontend)
-import { DashboardView, PatientsView } from "@services/clinical-records/frontend";
-import { LoginScreen, ProfileView, StaffAccessView, type LoginHandler } from "@services/identity/frontend";
+import { DashboardView, PatientsView } from "@services/clinical-care/frontend";
+import { LoginScreen, ProfileView, StaffAccessView, type LoginHandler } from "@services/access-provider-registry/frontend";
 import { NotificationBell } from "@services/notifications/frontend";
-import { LaboratoryView, PharmacyView, PrescriptionView } from "@services/orders-diagnostics/frontend";
-import { BedManagementView } from "@services/scheduling/frontend";
-import { BillingView } from "@services/billing/frontend";
+import { LaboratoryView } from "@services/diagnostics/frontend";
+import { PharmacyView, PrescriptionView } from "@services/pharmacy/frontend";
+import { BedManagementView } from "@services/patient-flow/frontend";
+import { BillingView } from "@services/billing-revenue-cycle/frontend";
 import { ROLE_TABS, TABS, type TabId } from "@/navigation";
 import { DEMO_STEPS } from "@/demoTour";
 import { ROLE_LABELS, type StaffRole } from "@/types";
@@ -40,21 +40,29 @@ import { ROLE_LABELS, type StaffRole } from "@/types";
 // ─── 1. HELPERS ───
 
 const ROLE_CHIP: Record<StaffRole, string> = {
-  Doctor: "bg-wah-purple/15 text-wah-purple",
+  AdmittingClerk: "bg-amber-500/15 text-amber-600",
+  Physician: "bg-wah-purple/15 text-wah-purple",
   Nurse: "bg-wah-neon/15 text-wah-neon",
   Pharmacist: "bg-indigo-500/15 text-indigo-500",
-  Billing: "bg-fuchsia-500/15 text-fuchsia-500",
-  IT: "bg-rose-500/15 text-rose-500",
+  LaboratoryStaff: "bg-sky-500/15 text-sky-600",
+  RadiologyStaff: "bg-sky-500/15 text-sky-600",
+  BillingStaff: "bg-fuchsia-500/15 text-fuchsia-500",
+  HospitalAdministrator: "bg-emerald-500/15 text-emerald-600",
+  SystemAdministrator: "bg-rose-500/15 text-rose-500",
 };
 
 // Plain login only asks for a name, so we fill the badge with a default.
 // Signup passes the real department and license instead.
 const DEFAULT_DEPARTMENT: Record<StaffRole, string> = {
-  Doctor: "Internal Medicine",
+  AdmittingClerk: "Admitting",
+  Physician: "Internal Medicine",
   Nurse: "Nursing Service",
   Pharmacist: "Pharmacy",
-  Billing: "Billing Office",
-  IT: "IT Department",
+  LaboratoryStaff: "Laboratory",
+  RadiologyStaff: "Radiology",
+  BillingStaff: "Billing Office",
+  HospitalAdministrator: "Administration",
+  SystemAdministrator: "IT Department",
 };
 
 // What's kept in sessionStorage so a refresh lands back on the same screen.
@@ -228,8 +236,8 @@ export function App() {
   // saved JWT has to come back too; without one we treat it as signed out.
   useEffect(() => {
     const profile = loadSavedProfile();
-    const hasSession = !isApiMode || restoreSession() !== null;
-    if (profile && hasSession && ROLE_TABS[profile.role]) {
+    const hasSession = restoreSession() !== null;
+    if (profile && hasSession && ROLE_TABS[profile.role]?.length) {
       setUserRole(profile.role);
       setUserName(profile.name);
       setUserDept(profile.dept);
@@ -273,7 +281,7 @@ export function App() {
     setUserLicense(license ?? "Not on file");
     setIsDemoMode(!!demo);
     setDemoStep(0);
-    // each portal opens on its first tab (Dashboard, Pharmacy, Billing, Architecture)
+    // each portal opens on its first tab
     setActiveTab(ROLE_TABS[role][0]);
   };
 
@@ -298,17 +306,17 @@ export function App() {
   function renderTab() {
     switch (activeTab) {
       case "dashboard":
-        return <DashboardView isLight={isLight} staffName={displayName} />;
+        return <DashboardView isLight={isLight} />;
       case "patients":
-        return <PatientsView staffName={displayName} />;
+        return <PatientsView />;
       case "prescription":
-        return <PrescriptionView staffName={displayName} />;
+        return <PrescriptionView />;
       case "pharmacy":
-        return <PharmacyView role={role} staffName={displayName} />;
+        return <PharmacyView role={role} />;
       case "lab":
         return <LaboratoryView role={role} />;
       case "rooms":
-        return <BedManagementView role={role} staffName={displayName} />;
+        return <BedManagementView role={role} />;
       case "billing":
         return <BillingView role={role} />;
       case "architecture":
@@ -379,7 +387,6 @@ export function App() {
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.25 }}
               >
-                <DemoDataBanner />
                 <ServiceOfflineNotice services={TABS[activeTab].services} />
                 {renderTab()}
               </motion.div>

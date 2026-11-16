@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Download, Lock, ScrollText, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { isApiMode, currentSession } from "@/lib/api";
-import { AUDIT_LOG } from "@/constants";
+import { currentSession } from "@/lib/api";
 import type { AuditAction, AuditEntry } from "@/types";
 import { logAuditExport, searchAuditLog } from "./api";
 
@@ -56,8 +55,8 @@ interface AuditLogPanelProps {
 // UC-16's audit trail, owned by the Audit Log service. Rows are append-only;
 // there's deliberately no edit or delete anywhere on this panel.
 export function AuditLogPanel({ adminName, onCountChange }: AuditLogPanelProps) {
-  const isLive = isApiMode && currentSession() !== null;
-  const [auditLog, setAuditLog] = useState<AuditEntry[]>(isLive ? [] : AUDIT_LOG);
+  const isLive = currentSession() !== null;
+  const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
   const [query, setQuery] = useState("");
   const [actionFilter, setActionFilter] = useState<(typeof ACTION_FILTERS)[number]>("All");
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -94,7 +93,7 @@ export function AuditLogPanel({ adminName, onCountChange }: AuditLogPanelProps) 
   function logAdminAction(action: AuditAction, resource: string) {
     setAuditLog((current) => [
       {
-        id: `AU-${1013 + current.length - AUDIT_LOG.length}`,
+        id: `AU-local-${current.length + 1}`,
         time: nowTime(),
         actor: adminName,
         role: "System Administrator",

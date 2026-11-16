@@ -11,40 +11,52 @@ x-supabase: &supabase
       condition: service_healthy
 
 services:
-  identity:
+  access-provider-registry:
     <<: *supabase
     environment:
-      DATABASE_URL: postgres://identity_svc.${SUPABASE_PROJECT_REF:?run npm run supabase:setup}:${SUPABASE_IDENTITY_DB_PASSWORD:?run npm run supabase:setup}@${SUPABASE_POOLER_HOST}:5432/postgres
+      DATABASE_URL: postgres://access_provider_registry_svc.${SUPABASE_PROJECT_REF:?run npm run supabase:setup}:${SUPABASE_ACCESS_PROVIDER_REGISTRY_DB_PASSWORD:?run npm run supabase:setup}@${SUPABASE_POOLER_HOST}:5432/postgres
       DATABASE_SSL: require
 
-  clinical-records:
+  patient-registry:
     <<: *supabase
     environment:
-      DATABASE_URL: postgres://clinical_records_svc.${SUPABASE_PROJECT_REF:?run npm run supabase:setup}:${SUPABASE_CLINICAL_RECORDS_DB_PASSWORD:?run npm run supabase:setup}@${SUPABASE_POOLER_HOST}:5432/postgres
+      DATABASE_URL: postgres://patient_registry_svc.${SUPABASE_PROJECT_REF:?run npm run supabase:setup}:${SUPABASE_PATIENT_REGISTRY_DB_PASSWORD:?run npm run supabase:setup}@${SUPABASE_POOLER_HOST}:5432/postgres
       DATABASE_SSL: require
 
-  scheduling:
+  patient-flow:
     <<: *supabase
     environment:
-      DATABASE_URL: postgres://scheduling_svc.${SUPABASE_PROJECT_REF:?run npm run supabase:setup}:${SUPABASE_SCHEDULING_DB_PASSWORD:?run npm run supabase:setup}@${SUPABASE_POOLER_HOST}:5432/postgres
+      DATABASE_URL: postgres://patient_flow_svc.${SUPABASE_PROJECT_REF:?run npm run supabase:setup}:${SUPABASE_PATIENT_FLOW_DB_PASSWORD:?run npm run supabase:setup}@${SUPABASE_POOLER_HOST}:5432/postgres
       DATABASE_SSL: require
 
-  orders-diagnostics:
+  clinical-care:
     <<: *supabase
     environment:
-      DATABASE_URL: postgres://orders_diagnostics_svc.${SUPABASE_PROJECT_REF:?run npm run supabase:setup}:${SUPABASE_ORDERS_DIAGNOSTICS_DB_PASSWORD:?run npm run supabase:setup}@${SUPABASE_POOLER_HOST}:5432/postgres
+      DATABASE_URL: postgres://clinical_care_svc.${SUPABASE_PROJECT_REF:?run npm run supabase:setup}:${SUPABASE_CLINICAL_CARE_DB_PASSWORD:?run npm run supabase:setup}@${SUPABASE_POOLER_HOST}:5432/postgres
       DATABASE_SSL: require
 
-  billing:
+  diagnostics:
     <<: *supabase
     environment:
-      DATABASE_URL: postgres://billing_svc.${SUPABASE_PROJECT_REF:?run npm run supabase:setup}:${SUPABASE_BILLING_DB_PASSWORD:?run npm run supabase:setup}@${SUPABASE_POOLER_HOST}:5432/postgres
+      DATABASE_URL: postgres://diagnostics_svc.${SUPABASE_PROJECT_REF:?run npm run supabase:setup}:${SUPABASE_DIAGNOSTICS_DB_PASSWORD:?run npm run supabase:setup}@${SUPABASE_POOLER_HOST}:5432/postgres
       DATABASE_SSL: require
 
-  interoperability:
+  pharmacy:
     <<: *supabase
     environment:
-      DATABASE_URL: postgres://interoperability_svc.${SUPABASE_PROJECT_REF:?run npm run supabase:setup}:${SUPABASE_INTEROPERABILITY_DB_PASSWORD:?run npm run supabase:setup}@${SUPABASE_POOLER_HOST}:5432/postgres
+      DATABASE_URL: postgres://pharmacy_svc.${SUPABASE_PROJECT_REF:?run npm run supabase:setup}:${SUPABASE_PHARMACY_DB_PASSWORD:?run npm run supabase:setup}@${SUPABASE_POOLER_HOST}:5432/postgres
+      DATABASE_SSL: require
+
+  billing-revenue-cycle:
+    <<: *supabase
+    environment:
+      DATABASE_URL: postgres://billing_revenue_cycle_svc.${SUPABASE_PROJECT_REF:?run npm run supabase:setup}:${SUPABASE_BILLING_REVENUE_CYCLE_DB_PASSWORD:?run npm run supabase:setup}@${SUPABASE_POOLER_HOST}:5432/postgres
+      DATABASE_SSL: require
+
+  interoperability-reporting:
+    <<: *supabase
+    environment:
+      DATABASE_URL: postgres://interoperability_reporting_svc.${SUPABASE_PROJECT_REF:?run npm run supabase:setup}:${SUPABASE_INTEROPERABILITY_REPORTING_DB_PASSWORD:?run npm run supabase:setup}@${SUPABASE_POOLER_HOST}:5432/postgres
       DATABASE_SSL: require
 
   notifications:

@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { ApiError } from "@/lib/api";
 import { useData } from "@/context/DataContext";
 import type { MewsAlert } from "@/types";
-import { MewsChip } from "@services/clinical-records/frontend/MewsChip";
+import { MewsChip } from "@services/clinical-care/frontend/MewsChip";
 
 function minutesSince(iso: string) {
   const minutes = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60_000));
@@ -15,10 +15,9 @@ function minutesSince(iso: string) {
 
 interface AlertRowProps {
   alert: MewsAlert;
-  staffName: string;
 }
 
-function AlertRow({ alert, staffName }: AlertRowProps) {
+function AlertRow({ alert }: AlertRowProps) {
   const { acknowledgeAlert } = useData();
   const [isAcknowledging, setIsAcknowledging] = useState(false);
   const [note, setNote] = useState("");
@@ -28,7 +27,7 @@ function AlertRow({ alert, staffName }: AlertRowProps) {
   async function confirm() {
     setError(null);
     try {
-      await acknowledgeAlert(alert.id, { by: staffName, note: note.trim() || undefined, isFalseAlarm });
+      await acknowledgeAlert(alert.id, { note: note.trim() || undefined, isFalseAlarm });
     } catch (caught) {
       // the alert stays open, so nobody thinks it was handled when it wasn't
       setError(caught instanceof ApiError ? caught.message : "Couldn't save the acknowledgment. Try again.");
@@ -108,13 +107,10 @@ function AlertRow({ alert, staffName }: AlertRowProps) {
   );
 }
 
-interface MewsAlertsPanelProps {
-  staffName: string;
-}
 
 // Active MEWS alerts for the ward (UC-08). Acknowledged ones drop off the list
 // but stay recorded on the alert itself.
-export function MewsAlertsPanel({ staffName }: MewsAlertsPanelProps) {
+export function MewsAlertsPanel() {
   const { mewsAlerts } = useData();
   const active = mewsAlerts.filter((alert) => !alert.acknowledgedAt);
   const acknowledgedCount = mewsAlerts.length - active.length;
@@ -137,7 +133,7 @@ export function MewsAlertsPanel({ staffName }: MewsAlertsPanelProps) {
       ) : (
         <ul className="space-y-3">
           {active.map((alert) => (
-            <AlertRow key={alert.id} alert={alert} staffName={staffName} />
+            <AlertRow key={alert.id} alert={alert} />
           ))}
         </ul>
       )}

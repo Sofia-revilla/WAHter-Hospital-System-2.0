@@ -4,27 +4,26 @@ import type { StaffRole } from "@/types";
 // raw name first so someone who typed "Dr. Reyes" doesn't become "Dr. Dr. Reyes".
 export function formatDisplayName(rawName: string, role: StaffRole) {
   const name = rawName.trim();
-  if (role === "Doctor" && !name.toLowerCase().startsWith("dr.")) return `Dr. ${name}`;
+  if (role === "Physician" && !name.toLowerCase().startsWith("dr.")) return `Dr. ${name}`;
   if (role === "Nurse" && !name.toLowerCase().startsWith("rn ")) return `RN ${name}`;
   return name;
 }
 
-// Who can do what, per the paper's use case actors. Actions owned by roles
-// we haven't built yet (Lab/Radiology staff) are empty here and show up
-// read-only. Add the role to the list once its portal exists.
+// Who can do what, per the use case diagram's actors. The services check the
+// same rules; this only decides which buttons a screen shows.
 const PERMISSIONS = {
-  // UC-10: Pharmacist only
+  // UC-04: Pharmacist only
   dispenseMedication: ["Pharmacist"],
-  // UC-11.1 / 11.2: Ancillary (lab & radiology) staff only
-  processLabResult: [],
-  // UC-12 / UC-13: Billing staff only
-  manageBilling: ["Billing"],
-  // UC-04: Patient Registrar or Nurse
-  admitPatient: ["Nurse"],
-  // UC-11 step 1: the physician places diagnostic orders
-  orderDiagnosticTest: ["Doctor"],
-  // UC-05: Nurse or Physician
-  chartVitals: ["Doctor", "Nurse"],
+  // UC-05: Laboratory and Radiology Staff record results
+  processLabResult: ["LaboratoryStaff", "RadiologyStaff"],
+  // UC-06: Billing Staff only
+  manageBilling: ["BillingStaff"],
+  // UC-02: Admitting Clerk or Nurse
+  admitPatient: ["AdmittingClerk", "Nurse"],
+  // UC-05 steps 1 to 4: the physician places diagnostic orders
+  orderDiagnosticTest: ["Physician"],
+  // UC-03: Nurse or Physician
+  chartVitals: ["Physician", "Nurse"],
 } satisfies Record<string, StaffRole[]>;
 
 export type Permission = keyof typeof PERMISSIONS;

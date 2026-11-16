@@ -1,62 +1,51 @@
 import { Injectable, type OnModuleInit } from "@nestjs/common";
-import { EventBus, type EventEnvelope } from "@wahter/shared";
+import { EVENT_TYPES, EventBus, isStaffRole, ROLE_LABELS, type EventEnvelope } from "@wahter/shared";
 import { EntriesRepository, type AuditAction } from "./entries.repository";
 
-// Tokens carry the portal role; the audit trail shows the paper's user class
-const HOSPITAL_ROLE: Record<string, string> = {
-  Doctor: "Physician",
-  Nurse: "Nurse",
-  Pharmacist: "Pharmacist",
-  Billing: "Billing Staff",
-  IT: "System Administrator",
-};
-
 const ACTION_FOR_EVENT: Record<string, AuditAction> = {
-  "staff.logged-in": "LOGIN",
-  "patient.registered": "CREATE",
-  "patient.admitted": "CREATE",
-  "patient.transferred": "UPDATE",
-  "vitals.recorded": "CREATE",
-  "mews.alert.medium": "CREATE",
-  "mews.alert.high": "CREATE",
-  "alert.acknowledged": "UPDATE",
-  "medication.ordered": "CREATE",
-  "medication.dispensed": "UPDATE",
-  "diagnostic.ordered": "CREATE",
-  "diagnostic.resulted": "UPDATE",
-  "charge.posted": "CREATE",
-  "charge.priced": "UPDATE",
-  "report.generated": "EXPORT",
+  [EVENT_TYPES.loginSucceeded]: "LOGIN",
+  [EVENT_TYPES.patientRegistered]: "CREATE",
+  [EVENT_TYPES.patientAdmitted]: "CREATE",
+  [EVENT_TYPES.patientTransferred]: "UPDATE",
+  [EVENT_TYPES.vitalsRecorded]: "CREATE",
+  [EVENT_TYPES.mewsAlert]: "CREATE",
+  [EVENT_TYPES.alertAcknowledged]: "UPDATE",
+  [EVENT_TYPES.medicationOrdered]: "CREATE",
+  [EVENT_TYPES.medicationDispensed]: "UPDATE",
+  [EVENT_TYPES.diagnosticOrdered]: "CREATE",
+  [EVENT_TYPES.diagnosticResulted]: "UPDATE",
+  [EVENT_TYPES.chargePosted]: "CREATE",
+  [EVENT_TYPES.chargePriced]: "UPDATE",
+  [EVENT_TYPES.reportGenerated]: "EXPORT",
 };
 
 // A short "what was touched" label built from IDs in the payload only
 function resourceFor(event: EventEnvelope) {
   const data = event.data as unknown as Record<string, string | number | undefined>;
   switch (event.type) {
-    case "staff.logged-in":
+    case EVENT_TYPES.loginSucceeded:
       return "Session";
-    case "patient.registered":
+    case EVENT_TYPES.patientRegistered:
       return `Patient ${data.patientId}`;
-    case "patient.admitted":
-    case "patient.transferred":
+    case EVENT_TYPES.patientAdmitted:
+    case EVENT_TYPES.patientTransferred:
       return `Admission ${data.admissionId} (${data.patientId})`;
-    case "vitals.recorded":
+    case EVENT_TYPES.vitalsRecorded:
       return `Vitals ${data.vitalsId} for ${data.patientId}`;
-    case "mews.alert.medium":
-    case "mews.alert.high":
+    case EVENT_TYPES.mewsAlert:
       return `MEWS alert for ${data.patientId}`;
-    case "alert.acknowledged":
+    case EVENT_TYPES.alertAcknowledged:
       return `Alert ${data.alertId}`;
-    case "medication.ordered":
-    case "medication.dispensed":
+    case EVENT_TYPES.medicationOrdered:
+    case EVENT_TYPES.medicationDispensed:
       return `Medication order ${data.orderId}`;
-    case "diagnostic.ordered":
-    case "diagnostic.resulted":
+    case EVENT_TYPES.diagnosticOrdered:
+    case EVENT_TYPES.diagnosticResulted:
       return `Diagnostic order ${data.orderId}`;
-    case "charge.posted":
-    case "charge.priced":
+    case EVENT_TYPES.chargePosted:
+    case EVENT_TYPES.chargePriced:
       return `Charge ${data.chargeId} (${data.patientId})`;
-    case "report.generated":
+    case EVENT_TYPES.reportGenerated:
       return `Report ${data.reportId}`;
     default:
       return event.type;
@@ -71,7 +60,9 @@ export class AuditConsumer implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    // "#" matches every routing key: the audit trail sees everything
+    // "#" matches every routing key: the audit trail sees everything. The
+    // actor's name is kept here on purpose, unlike everywhere else: an audit
+    // record has to say who did it as they were named at the time.
     await this.bus.subscribe("audit-log.all", ["#"], (event) =>
       this.entries.append({
         eventId: event.eventId,
@@ -80,7 +71,7 @@ export class AuditConsumer implements OnModuleInit {
         actorId: event.actor?.id ?? null,
         // no actor means the system did it (escalation, charge capture)
         actorName: event.actor?.name ?? `System (${event.source})`,
-        actorRole: event.actor ? (HOSPITAL_ROLE[event.actor.role] ?? event.actor.role) : "System",
+        actorRole: event.actor && isStaffRole(event.actor.role) ? ROLE_LABELS[event.actor.role] : "System",
         action: ACTION_FOR_EVENT[event.type] ?? "UPDATE",
         resource: resourceFor(event),
         occurredAt: event.occurredAt,

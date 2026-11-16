@@ -1,5 +1,5 @@
 // Guided tour content for demo logins (Try Demo on the login screen).
-// This file and constants.ts are the only places static demo copy lives.
+// This file is the only place static demo copy lives.
 
 import type { TabId } from "./navigation";
 import type { StaffRole } from "./types";
@@ -11,7 +11,11 @@ export interface DemoStep {
 }
 
 export const DEMO_STEPS: Record<StaffRole, DemoStep[]> = {
-  Doctor: [
+  AdmittingClerk: [],
+  LaboratoryStaff: [],
+  RadiologyStaff: [],
+  HospitalAdministrator: [],
+  Physician: [
     {
       tab: "dashboard",
       title: "Hospital Dashboard",
@@ -92,7 +96,7 @@ export const DEMO_STEPS: Record<StaffRole, DemoStep[]> = {
       desc: "Keep your pharmacist profile current: department, license, and your on-duty status.",
     },
   ],
-  Billing: [
+  BillingStaff: [
     {
       tab: "billing",
       title: "Patient Accounts",
@@ -104,7 +108,7 @@ export const DEMO_STEPS: Record<StaffRole, DemoStep[]> = {
       desc: "Keep your billing office profile and on-duty status up to date.",
     },
   ],
-  IT: [
+  SystemAdministrator: [
     {
       tab: "architecture",
       title: "System Architecture",

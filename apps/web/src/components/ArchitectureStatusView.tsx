@@ -1,18 +1,17 @@
 // WAHter — ArchitectureStatusView.tsx
-// IT Admin's architecture monitor, matching the paper's stack (TABLE IX):
-// Nginx → Kong → 8 NestJS services, RabbitMQ, PostgreSQL schema-per-service,
-// Docker Compose. No patient data on this screen (IT portal, RA 10173).
-// With the Docker Compose stack running, the service, bus, and database
-// cards come from each service's live /health. On the offline Vercel
-// preview they're simulated, like the RBAC sandbox and event bus demo below.
-// This tab lives in the web shell, not a service folder: it watches all eight.
+// The System Administrator's architecture monitor, matching the paper's stack:
+// Nginx → Kong → the ten NestJS services, RabbitMQ, PostgreSQL
+// schema-per-service, Docker Compose. No patient data on this screen (RA 10173).
+// The service, bus, and database cards come from each service's live /health;
+// the RBAC sandbox and the event bus demo below are simulations for teaching.
+// This tab lives in the web shell, not a service folder: it watches all ten.
 
 "use client";
 
 import { useEffect, useRef, useState } from "react";
 import { Power, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { apiGet, currentSession, isApiMode, SERVICE_NAMES, type ServiceName } from "@/lib/api";
+import { apiGet, currentSession, SERVICE_LABELS, SERVICE_NAMES, type ServiceName } from "@/lib/api";
 
 const HEALTH_POLL_MS = 5_000;
 
@@ -54,11 +53,17 @@ interface LogEntry {
 const MAX_LOGS = 10;
 const REQUEST_DELAY_MS = 800;
 
+// Read from the real service list, so adding a service updates every count here
+const SERVICE_COUNT = SERVICE_NAMES.length;
+// postgres, rabbitmq, kong, web, nginx
+const INFRA_CONTAINERS = 5;
+const CONTAINER_COUNT = SERVICE_COUNT + INFRA_CONTAINERS;
+
 const INITIAL_LOGS: LogEntry[] = [
-  { id: 1, time: "04:28:15", type: "info", message: "docker compose up: 13 containers on network wah-net" },
-  { id: 2, time: "04:28:17", type: "success", message: "postgres: 8 service schemas ready, one DB user each" },
+  { id: 1, time: "04:28:15", type: "info", message: `docker compose up: ${CONTAINER_COUNT} containers on network wah-net` },
+  { id: 2, time: "04:28:17", type: "success", message: `postgres: ${SERVICE_COUNT} service schemas ready, one DB user each` },
   { id: 3, time: "04:28:18", type: "success", message: "rabbitmq: topic exchange wah.events declared (with DLQ)" },
-  { id: 4, time: "04:28:20", type: "success", message: "kong: DB-less config loaded, 8 routes under /api/*" },
+  { id: 4, time: "04:28:20", type: "success", message: `kong: DB-less config loaded, ${SERVICE_COUNT} services under /api/*` },
 ];
 
 // Demo tokens only. The payload part decodes to a harmless name/role claim
@@ -82,77 +87,92 @@ interface SandboxEndpoint {
   useCase: string;
 }
 
-// The allowed roles mirror the paper's use case actors
+// The allowed roles mirror the use case diagram's actors; the use case
+// numbers are the paper's (UC-01 to UC-09)
 const ENDPOINTS: SandboxEndpoint[] = [
   {
     id: "vitals",
     label: "Chart vital signs",
-    path: "POST /api/clinical-records/vitals",
-    service: "clinical-records",
+    path: "POST /api/clinical-care/vitals",
+    service: "clinical-care",
     schema: "clinical",
     allowed: ["NURSE", "DOCTOR"],
-    useCase: "UC-05",
+    useCase: "UC-03",
   },
   {
     id: "prescribe",
     label: "Prescribe medication",
-    path: "POST /api/orders-diagnostics/medication-orders",
-    service: "orders-diagnostics",
-    schema: "orders",
+    path: "POST /api/pharmacy/medication-orders",
+    service: "pharmacy",
+    schema: "pharmacy",
     allowed: ["DOCTOR"],
-    useCase: "UC-09",
+    useCase: "UC-04",
   },
   {
-    id: "soa",
-    label: "Generate statement of account",
-    path: "POST /api/billing/soa",
-    service: "billing",
+    id: "charges",
+    label: "Price a patient charge",
+    path: "POST /api/billing-revenue-cycle/charges/:id/price",
+    service: "billing-revenue-cycle",
     schema: "billing",
     allowed: [],
-    useCase: "UC-12, Billing Staff only",
+    useCase: "UC-06, Billing Staff only",
   },
 ];
 
 // One row per Functional Service Area (paper TABLE IV), each with its own
 // schema and DB user and no cross-schema foreign keys
-const SERVICE_SCHEMAS = [
+// No service keeps a copy of patient or provider details; the others hold
+// reference IDs and ask the two registries (comment matrix 3 and 7).
+const SERVICE_SCHEMAS: { service: ServiceName; schema: string; owns: string; publishes: string }[] = [
   {
-    service: "identity",
-    schema: "identity",
-    owns: "staff, patients (MPI)",
-    publishes: "staff.logged-in, patient.registered",
+    service: "access-provider-registry",
+    schema: "access",
+    owns: "staff accounts, roles, provider registry",
+    publishes: "access.login.succeeded",
   },
   {
-    service: "clinical-records",
-    schema: "clinical",
-    owns: "patients (copy), encounters, vitals",
-    publishes: "vitals.recorded, mews.alert.medium, mews.alert.high",
+    service: "patient-registry",
+    schema: "patient_registry",
+    owns: "patients (MPI)",
+    publishes: "patient.registered",
   },
   {
-    service: "scheduling",
-    schema: "scheduling",
+    service: "patient-flow",
+    schema: "patient_flow",
     owns: "wards, admissions (bed lock)",
-    publishes: "patient.admitted, patient.transferred",
+    publishes: "flow.patient.admitted, flow.patient.transferred",
   },
   {
-    service: "orders-diagnostics",
-    schema: "orders",
-    owns: "patients (copy), formulary, medication_orders, diagnostic_orders",
-    publishes: "medication.ordered, medication.dispensed, diagnostic.ordered",
+    service: "clinical-care",
+    schema: "clinical",
+    owns: "encounters, vitals",
+    publishes: "clinical.vitals.recorded, clinical.mews.alert",
   },
   {
-    service: "billing",
+    service: "diagnostics",
+    schema: "diagnostics",
+    owns: "diagnostic_orders",
+    publishes: "diagnostics.order.placed",
+  },
+  {
+    service: "pharmacy",
+    schema: "pharmacy",
+    owns: "formulary, medication_orders",
+    publishes: "pharmacy.medication.ordered, pharmacy.medication.dispensed",
+  },
+  {
+    service: "billing-revenue-cycle",
     schema: "billing",
-    owns: "patients (copy), charge_master, charges, charge_adjustments",
-    publishes: "charge.posted, charge.priced",
+    owns: "charge_master, charges, charge_adjustments",
+    publishes: "billing.charge.posted, billing.charge.priced",
   },
   {
-    service: "interoperability",
+    service: "interoperability-reporting",
     schema: "interop",
-    owns: "patients, admissions (copies), report_runs",
-    publishes: "report.generated",
+    owns: "report_runs (reads the rest through APIs)",
+    publishes: "reporting.report.generated",
   },
-  { service: "notifications", schema: "notifications", owns: "alerts", publishes: "alert.acknowledged" },
+  { service: "notifications", schema: "notifications", owns: "alerts", publishes: "notifications.alert.acknowledged" },
   { service: "audit-log", schema: "audit", owns: "entries (append-only)", publishes: "(consumes every event)" },
 ];
 
@@ -241,8 +261,7 @@ export function ArchitectureStatusView() {
   const [liveHealth, setLiveHealth] = useState<HealthMap | null>(null);
 
   useEffect(() => {
-    // on the built-in demo data there's nothing live to poll
-    if (!isApiMode || !currentSession()) return;
+    if (!currentSession()) return;
     let cancelled = false;
     const poll = () =>
       checkAllServices().then((health) => {
@@ -339,11 +358,11 @@ export function ArchitectureStatusView() {
     setPublished((count) => count + 1);
     if (isNotificationsUp) {
       setDelivered((count) => count + 1);
-      addLog("success", "wah.events: vitals.recorded → notifications, audit-log (delivered)");
+      addLog("success", "wah.events: clinical.vitals.recorded → notifications, audit-log (delivered)");
     } else {
       setWaiting((count) => count + 1);
-      addLog("warn", "notifications is down: vitals.recorded is waiting in its queue");
-      addLog("success", "clinical-records kept working, vitals were still saved (fault isolation)");
+      addLog("warn", "notifications is down: clinical.mews.alert is waiting in its queue");
+      addLog("success", "clinical-care kept working, vitals were still saved (fault isolation)");
     }
   }
 
@@ -388,20 +407,22 @@ export function ArchitectureStatusView() {
       status: "Active",
       name: "Kong (DB-less)",
       sub: "JWT check, rate limits, CORS",
-      footer: "Port 8000 • 8 routes",
+      footer: `Port 8000 • ${SERVICE_COUNT} services`,
     },
     {
       label: "Microservices",
       labelClass: "text-rose-500",
       borderClass: "border-l-rose-500",
-      status: liveHealth ? `${upCount} / 8 up` : isNotificationsUp ? "8 / 8 up" : "7 / 8 up",
-      isDown: liveHealth ? upCount < 8 : !isNotificationsUp,
-      name: "NestJS × 8 FSAs",
+      status: liveHealth
+        ? `${upCount} / ${SERVICE_COUNT} up`
+        : `${isNotificationsUp ? SERVICE_COUNT : SERVICE_COUNT - 1} / ${SERVICE_COUNT} up`,
+      isDown: liveHealth ? upCount < SERVICE_COUNT : !isNotificationsUp,
+      name: `NestJS × ${SERVICE_COUNT} FSAs`,
       sub: "One container per service",
       footer: liveHealth
         ? failing.length === 0
           ? "All /health checks OK (live)"
-          : `${failing.join(", ")} /health failing`
+          : `${failing.map((name) => SERVICE_LABELS[name]).join(", ")} /health failing`
         : isNotificationsUp
           ? "All /health checks OK"
           : "notifications /health failing",
@@ -424,7 +445,7 @@ export function ArchitectureStatusView() {
       isDown: Boolean(liveHealth && databaseDown),
       name: "PostgreSQL",
       sub: "Schema per service",
-      footer: "8 schemas • 8 DB users",
+      footer: `${SERVICE_COUNT} schemas • ${SERVICE_COUNT} DB users`,
     },
     {
       label: "Orchestrator",
@@ -433,7 +454,7 @@ export function ArchitectureStatusView() {
       status: "Running",
       name: "Docker Compose",
       sub: "Local deployment",
-      footer: isNotificationsUp ? "13 / 13 containers" : "12 / 13 containers",
+      footer: `${isNotificationsUp ? CONTAINER_COUNT : CONTAINER_COUNT - 1} / ${CONTAINER_COUNT} containers`,
     },
   ];
 
@@ -465,6 +486,41 @@ export function ArchitectureStatusView() {
           <ServiceCard key={service.name} {...service} />
         ))}
       </div>
+
+      {/* one chip per service (paper TABLE IV), from each one's live /health */}
+      <section className="glass rounded-xl p-5">
+        <div className="mb-3 flex items-baseline justify-between gap-3">
+          <h3 className="text-sm font-bold">Functional Service Areas</h3>
+          <span className="text-xs text-text-muted">
+            {liveHealth ? `${upCount} of ${SERVICE_COUNT} answering` : `${SERVICE_COUNT} services`}
+          </span>
+        </div>
+        <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+          {SERVICE_NAMES.map((name) => {
+            const health = liveHealth?.[name];
+            const isUp = health?.status === "up";
+            return (
+              <li
+                key={name}
+                className={cn(
+                  "flex items-center gap-2 rounded-lg border px-3 py-2 text-xs",
+                  !liveHealth && "border-glass-border text-text-muted",
+                  liveHealth && isUp && "border-emerald-500/30 bg-emerald-500/5",
+                  liveHealth && !isUp && "border-amber-500/40 bg-amber-500/5",
+                )}
+              >
+                <span
+                  className={cn(
+                    "h-2 w-2 shrink-0 rounded-full",
+                    !liveHealth ? "bg-slate-400" : isUp ? "bg-emerald-500" : "bg-amber-500",
+                  )}
+                />
+                <span className="truncate font-semibold">{SERVICE_LABELS[name]}</span>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
 
       <div className="grid gap-6 xl:grid-cols-12">
         <div className="min-w-0 space-y-6 xl:col-span-8">

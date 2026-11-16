@@ -6,7 +6,7 @@ import { Bell, BellOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useData } from "@/context/DataContext";
 import type { StaffRole } from "@/types";
-import { MewsChip } from "@services/clinical-records/frontend/MewsChip";
+import { MewsChip } from "@services/clinical-care/frontend/MewsChip";
 
 function timeAgo(iso: string) {
   const minutes = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60_000));
@@ -26,10 +26,9 @@ export function NotificationBell({ role, onOpenAlerts }: NotificationBellProps) 
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // IT has no clinical access (paper: IT portal sees no patient data), so MEWS
-  // alerts never reach its inbox
-  // MEWS alerts go to the bedside roles (UC-08); pharmacy, billing, and IT get none
-  const isBedside = role === "Doctor" || role === "Nurse";
+  // MEWS alerts go to the bedside roles (US-32); pharmacy, billing, and the
+  // System Administrator get none (no patient data, RA 10173)
+  const isBedside = role === "Physician" || role === "Nurse";
   const notifications = isBedside ? mewsAlerts.filter((alert) => !alert.acknowledgedAt) : [];
 
   // close on outside click or Escape, like any other dropdown

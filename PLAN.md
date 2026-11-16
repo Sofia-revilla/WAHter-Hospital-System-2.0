@@ -77,3 +77,25 @@ a build, tests, a commit, and an update to this file.
 
 - [ ] docs/ERD.md: start in Phase 0/1, update whenever a table changes
 - [ ] docs/PHCORE_MAPPING.md: start in Phase 7b
+
+## System update, November 2026 (finals defense follow-up)
+
+Driven by the finals defense comment matrix, the revised paper (Section IV, UC-01 to UC-09,
+US-1 to US-46), and the Package-per-Service use case diagram. Local Docker only; the hosted
+version stays paused until every phase passes locally. One commit per finished item, no push.
+
+- [x] **0**: Ten services (registries split out of Identity, Pharmacy split from Diagnostics),
+  no patient or provider copies outside the registries, roles from the use case diagram in one
+  file, `service.thing.action` events, mock mode removed, architecture page shows all ten (D-052 to D-056)
+- [ ] **1**: Access and security (UC-08, US-41 to US-44)
+- [ ] **2**: Patient Registry and Admitting Clerk portal (UC-01, US-1 to US-5)
+- [ ] **3**: Patient Flow: scheduling, admission, bed board (UC-02, US-6 to US-9)
+- [ ] **4**: Clinical Care and MEWS (UC-03, US-10 to US-17, US-30 to US-32)
+- [ ] **5**: Pharmacy, dispensing only (UC-04, US-13, US-18 to US-20)
+- [ ] **6**: Diagnostics and the Ancillary portal (UC-05, US-21 to US-29, US-31)
+- [ ] **7**: Discharge process (comment matrix 2 and 5)
+- [ ] **8**: Billing and PhilHealth claims (UC-06, US-33 to US-38)
+- [ ] **9**: Hospital reports and DOH exports (UC-07, US-39, US-40)
+- [ ] **10**: Interoperability and Smart Referral (UC-09, US-45, US-46)
+- [ ] **11**: UI cleanup
+- [ ] Hosted update checklist (env vars, migrations, containers, Kong/nginx, resume steps)

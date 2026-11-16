@@ -15,12 +15,14 @@ import pg from "pg";
 const ENV_FILE = new URL("../.env", import.meta.url);
 
 const SERVICES = [
-  ["identity", "identity"],
-  ["clinical-records", "clinical"],
-  ["scheduling", "scheduling"],
-  ["orders-diagnostics", "orders"],
-  ["billing", "billing"],
-  ["interoperability", "interop"],
+  ["access-provider-registry", "access"],
+  ["patient-registry", "patient_registry"],
+  ["patient-flow", "patient_flow"],
+  ["clinical-care", "clinical"],
+  ["diagnostics", "diagnostics"],
+  ["pharmacy", "pharmacy"],
+  ["billing-revenue-cycle", "billing"],
+  ["interoperability-reporting", "interop"],
   ["notifications", "notifications"],
   ["audit-log", "audit"],
 ];

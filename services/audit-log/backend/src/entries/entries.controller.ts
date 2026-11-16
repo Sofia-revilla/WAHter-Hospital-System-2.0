@@ -29,9 +29,9 @@ function toAuditEntry(row: EntryRow) {
 export class EntriesController {
   constructor(private readonly entries: EntriesRepository) {}
 
-  // UC-16 meta-audit: every search is itself written to the trail before the
+  // UC-08 meta-audit: every search is itself written to the trail before the
   // results come back, so nobody can browse the log without leaving a mark
-  @Roles("IT")
+  @Roles("SystemAdministrator")
   @ApiQuery({ name: "search", required: false })
   @ApiQuery({ name: "limit", required: false })
   @Get()
@@ -56,8 +56,8 @@ export class EntriesController {
   }
 
   // The CSV itself is built in the browser from rows this endpoint already
-  // returned; this just records that someone took a copy (UC-16 meta-audit)
-  @Roles("IT")
+  // returned; this just records that someone took a copy (US-43)
+  @Roles("SystemAdministrator")
   @HttpCode(204)
   @Post("exports")
   async logExport(@Body() body: ExportNoticeDto, @CurrentUser() user: AuthUser) {

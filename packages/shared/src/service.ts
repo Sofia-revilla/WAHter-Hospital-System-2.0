@@ -15,8 +15,9 @@ import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { JwtAuthGuard, Public } from "./auth";
 import { Database } from "./database";
 import { EventBus } from "./event-bus";
+import { ServiceClient } from "./service-client";
 
-// Everything the eight services set up the same way: database, event bus,
+// Everything the ten services set up the same way: database, event bus,
 // auth guard, /health, and OpenAPI docs. A service's own module only has to
 // list its controllers and providers (the three layers from the paper:
 // REST controller -> service -> repository).
@@ -44,7 +45,7 @@ class HealthController {
     private readonly bus: EventBus,
   ) {}
 
-  // Kong, Docker's healthcheck, and the IT portal's Architecture tab all read this
+  // Kong, Docker's healthcheck, and the System Administrator's System Health tab all read this
   @Public()
   @Get("health")
   async health() {
@@ -104,6 +105,7 @@ export class WahServiceModule {
             return bus;
           },
         },
+        { provide: ServiceClient, useValue: new ServiceClient(options.name) },
         { provide: APP_GUARD, useClass: JwtAuthGuard },
         {
           provide: ShutdownHooks,
@@ -111,7 +113,7 @@ export class WahServiceModule {
           useFactory: (database: Database, bus: EventBus) => new ShutdownHooks(database, bus),
         },
       ],
-      exports: [SERVICE_NAME, Database, EventBus],
+      exports: [SERVICE_NAME, Database, EventBus, ServiceClient],
     };
   }
 }

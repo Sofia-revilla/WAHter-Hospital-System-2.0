@@ -5,53 +5,37 @@
 # WAHter (WAH2.0) Hospital System
 
 WAHter is an inpatient hospital information system for Philippine DOH Level 2–3 LGU hospitals.
-It re-engineers WAH4H V1 from one monolith into eight microservices, one per functional service
-area in our paper: Identity, Clinical Records, Scheduling, Orders & Diagnostics, Billing,
-Interoperability, Notifications, and Audit Log. The pilot reference site is Concepcion District
-Hospital.
-
-**Live demo:** https://wahter-hospital-system.vercel.app (the web app on mock data, see below)
+It re-engineers WAH4H V1 from one monolith into ten microservices, one per functional service
+area in our paper (TABLE IV): Access & Provider Registry, Patient Registry (MPI), Patient Flow,
+Clinical Care, Diagnostics, Pharmacy, Billing & Revenue Cycle, Interoperability & Reporting,
+Notifications, and Audit Log. The pilot reference site is Concepcion District Hospital.
 
 > All patients, staff, and records in this system are fictional. No real patient data is used.
 
 ## How the repo is organized
 
 Every service has its own folder with its own **backend** (a NestJS service in its own container,
-with its own database schema) and its own **frontend** (the tab screens that show that service's
+with its own database schema) and its own **frontend** (the screens that show that service's
 data). The web app in `apps/web` is only the shell that puts the portals together.
 
 ```
 services/
-├── identity/             login, staff accounts, patient registry (MPI)
-│   ├── backend/          → own container, schema "identity"
-│   └── frontend/         → Login screen, Profile tab, Staff & Access tab
-├── clinical-records/     census, vital signs, MEWS
-│   ├── backend/          → schema "clinical"
-│   └── frontend/         → Dashboard tab, Patients tab
-├── scheduling/           wards, beds, admissions
-│   ├── backend/          → schema "scheduling"
-│   └── frontend/         → Bed Management tab
-├── orders-diagnostics/   prescriptions, formulary, lab/radiology orders
-│   ├── backend/          → schema "orders"
-│   └── frontend/         → E-Prescribing, Pharmacy (dispensing), and Laboratory tabs
-├── notifications/        MEWS alerts, acknowledgment, escalation
-│   ├── backend/          → schema "notifications"
-│   └── frontend/         → notification bell, MEWS Alerts panel
-├── audit-log/            append-only audit trail
-│   ├── backend/          → schema "audit"
-│   └── frontend/         → Audit Log panel (in Staff & Access)
-├── billing/              charge capture from bus events, pricing
-│   ├── backend/          → schema "billing"
-│   └── frontend/         → Billing tab (Billing Staff portal)
-└── interoperability/     FHIR R4 reads, DOH report exports
-    ├── backend/          → schema "interop"
-    └── frontend/         → (Hospital Admin portal, not built yet)
+├── access-provider-registry/   login, roles and permissions, provider registry   schema "access"
+├── patient-registry/           Master Patient Index (MPI)                         schema "patient_registry"
+├── patient-flow/               wards, beds, admission, transfer (discharge later) schema "patient_flow"
+├── clinical-care/              encounters, vital signs, MEWS                      schema "clinical"
+├── diagnostics/                laboratory and radiology orders                    schema "diagnostics"
+├── pharmacy/                   prescriptions, formulary, dispensing only          schema "pharmacy"
+├── billing-revenue-cycle/      charge capture and pricing                         schema "billing"
+├── interoperability-reporting/ FHIR R4 exchange, hospital and DOH reports          schema "interop"
+├── notifications/              MEWS alerts, acknowledgment, escalation            schema "notifications"
+└── audit-log/                  append-only audit trail                            schema "audit"
 
 apps/web/                 the shell: portal routing, sidebar, guided tour, shared UI,
-                          and the Architecture tab (it watches all eight services)
-packages/shared/          event bus, database access, JWT guard, MEWS scoring
-infra/                    nginx, Kong (API gateway), Postgres setup
-docker-compose.yml        runs the whole system
+                          and the Architecture tab (it watches all ten services)
+packages/shared/          event bus, database access, JWT guard, roles, MEWS scoring
+infra/                    nginx, Kong (API gateway), Postgres setup, the service Dockerfile
+docker-compose.yml        runs the whole system on network wah-net
 ```
 
 Each `services/<name>/README.md` lists that service's tables, endpoints, and events.
@@ -67,13 +51,18 @@ browser → nginx (:8080) → Kong (JWT, rate limit, CORS) → /api/<service>/..
 
 - **One Postgres, one schema per service.** Each service logs in as its own database user that can
   only see its own schema, so no service can read another's tables.
-- **Events instead of cross-service calls.** Charting High-risk vitals in Clinical Records
-  publishes `mews.alert.high`. Notifications turns it into an alert and Audit Log records it.
-  Admitting a patient in Scheduling makes Billing post the bed charge on its own.
+- **Registries own identity.** Patient details live only in the Patient Registry and provider
+  details only in the Access & Provider Registry. Every other service keeps reference IDs and
+  asks the registry when it needs a name (comment matrix 3 and 7). No foreign keys cross schemas.
+- **Events instead of cross-service writes.** Event names follow `service.thing.action`.
+  Charting High-risk vitals in Clinical Care publishes `clinical.mews.alert`; Notifications turns
+  it into an alert and Audit Log records it. Admitting a patient in Patient Flow makes Billing
+  post the bed charge and Clinical Care open the encounter.
 - **Fault isolation.** If a service is down, the rest keep working. Vitals still save with
-  Notifications stopped, and the alert is delivered from the queue once it's back.
+  Notifications stopped, and the alert is delivered from the queue once it's back. A message a
+  consumer can't handle goes to the dead-letter queue, never silently dropped.
 
-## Running the full system (Docker)
+## Running the system (Docker)
 
 Needs Docker Desktop.
 
@@ -86,56 +75,15 @@ Then open http://localhost:8080. The first build takes a few minutes. The databa
 and seeded on first start.
 
 - API docs for each service: `http://localhost:8080/api/<service>/docs`, for example
-  http://localhost:8080/api/clinical-records/docs
+  http://localhost:8080/api/clinical-care/docs
 - RabbitMQ dashboard (watch the event queues): http://localhost:15672, user `wahter` with the
   password from `.env`
 
-To start again from a clean database: `docker compose down -v`. Do this once if you ran an
-earlier version, since the Pharmacist and Billing portals changed the starting tables.
+To start again from a clean database: `docker compose down -v`. Do this once if you ran a version
+from before the ten-service split, since the schemas changed.
 
-## Showing the live services on the Vercel site (demo day)
-
-The Vercel site can use the Docker stack on your laptop through a Cloudflare tunnel:
-
-1. Start Docker Desktop, then `docker compose up -d` and wait until everything is healthy.
-2. Run `npm run tunnel` (needs [cloudflared](https://github.com/cloudflare/cloudflared/releases);
-   set `CLOUDFLARED_PATH` in `.env` if it isn't on your PATH). It starts the tunnel in the
-   background, waits until it answers, writes the address to `apps/web/demo-tunnel.json`, and
-   pushes that file. Vercel redeploys on its own within about a minute; no dashboard steps.
-3. Open the Vercel site. Stopping and starting containers shows up there within seconds.
-
-The free tunnel gets a new address each time it starts, including after the laptop sleeps, so
-run `npm run tunnel` again whenever that happens. If Docker or the tunnel is off, the site says
-"The hospital services are offline" and offers demo data as a choice, never automatically.
-Before exposing the stack, set a random `JWT_SECRET` in `.env`; the prototype passwords are
-public, so anyone with the link can sign in (the data is fictional).
-
-## Using Supabase for the database (optional)
-
-By default the services keep their data in the local Postgres container. They can use a Supabase
-project instead. It's the same design: one schema and one login per service, on Supabase's hosted
-PostgreSQL.
-
-1. In Supabase, open the project → **Connect** → **Session pooler** and copy the URI. Replace
-   `[YOUR-PASSWORD]` with the database password.
-2. Paste it into `.env` as `SUPABASE_DB_URL=...` (never commit `.env`).
-3. `npm run supabase:setup` creates the 8 schemas and logins, and saves their passwords to `.env`.
-4. `npm run up:supabase` starts the stack on Supabase. On first start, each service creates its
-   tables and seeds the fictional data.
-
-To go back to the local database: `docker compose up -d`. The two databases are separate, so
-data doesn't carry over between them.
-
-## Running only the web app (no Docker)
-
-```bash
-npm install
-npm run dev:web
-```
-
-Then open http://localhost:3000. Without `NEXT_PUBLIC_API_URL`, the screens run on the mock data in
-`apps/web/src/constants.ts`. This is how the Vercel demo runs. To point the dev server at the Docker
-services instead, start it with `NEXT_PUBLIC_API_URL=http://localhost:8080/api`.
+There's no mock or offline mode any more: the web app always reads the live services. If they
+can't be reached, the login screen says so and keeps checking until they're back.
 
 ## Signing in
 
@@ -143,30 +91,30 @@ Pick a portal and sign in with its prototype password. These are public demo val
 
 | Portal | Password |
 | --- | --- |
-| Doctor's Portal | `doctor2026` |
+| Physician's Portal | `doctor2026` |
 | Nurse's Portal | `nurse2026` |
 | Pharmacy Portal | `pharmacy2026` |
 | Billing Portal | `billing2026` |
-| Administrator Portal | `admin2026` |
+| System Admin Portal | `admin2026` |
 
-**Try Demo** gives a guided tour of each role. With Docker running, logins go through the Identity
-service and get a real JWT. A refresh keeps you signed in; signing out or closing the tab ends it.
+The Admitting Clerk, Ancillary (Laboratory and Radiology), and Hospital Administrator portals are
+being added in the current update (see PLAN.md). A refresh keeps you signed in; signing out or
+closing the tab ends it.
 
 ## What each role sees
 
-- **Doctor**: Dashboard, Patients, E-Prescribing, Pharmacy (view), Laboratory (order tests), Bed
-  Management, Profile
+Role names follow the use case diagram and live in one file, `packages/shared/src/roles.ts`.
+
+- **Physician**: Dashboard, Patients, E-Prescribing, Pharmacy (view), Laboratory (order tests),
+  Bed Management, Profile
 - **Nurse**: Dashboard, Patients (chart vitals with MEWS), Pharmacy (view), Bed Management
   (admit/transfer), Laboratory (view), Profile
 - **Pharmacist**: Pharmacy (dispense physician orders, partial fills, controlled drugs blocked
   until step-up approval exists), Profile
 - **Billing Staff**: Billing (every captured charge per patient, price flagged items with a logged
   reason), Profile
-- **IT Admin**: Architecture (live service health), Staff & Access (accounts and audit log),
-  Profile. No patient data (RA 10173).
-
-Dispensing in the Pharmacy portal makes Billing post the drug charge on its own, through the event
-bus. The two services never call each other.
+- **System Administrator**: Architecture (live health of all ten services), Staff & Access
+  (accounts and audit log), Profile. No patient data (RA 10173).
 
 MEWS is decision support only. It never replaces clinical judgment.
 
@@ -176,6 +124,13 @@ Next.js 15, React 19, TypeScript, Tailwind CSS 4 · NestJS 11 · Kong 3.9 (DB-le
 RabbitMQ 3.13 · PostgreSQL 16 · Docker Compose
 
 `PLAN.md` has the build phases and `DECISIONS.md` logs the choices we made along the way.
+
+## Hosted version
+
+The hosted version (Vercel, with an optional Cloudflare tunnel and Supabase database) is paused
+while this update is built and tested locally. `npm run tunnel` and `npm run up:supabase` still
+exist but shouldn't be run until the team decides to update the hosted version; PLAN.md will
+have the checklist.
 
 ## Team Unica Hija
 

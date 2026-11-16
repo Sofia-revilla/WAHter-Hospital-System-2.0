@@ -1,4 +1,4 @@
-# WAHter on one machine: Postgres, RabbitMQ, the eight services, Kong, nginx,
+# WAHter on one machine: Postgres, RabbitMQ, the ten services, Kong, nginx,
 # and the web app. Copy .env.example to .env, run `docker compose up --build`,
 # then open http://localhost:8080.
 name: wahter
@@ -11,6 +11,14 @@ x-service: &service
     rabbitmq:
       condition: service_healthy
 
+x-build: &build
+  context: .
+  dockerfile: infra/docker/service.Dockerfile
+
+x-bus: &bus
+  RABBITMQ_URL: amqp://wahter:${RABBITMQ_PASSWORD:?copy .env.example to .env}@rabbitmq:5672
+  JWT_SECRET: ${JWT_SECRET:?copy .env.example to .env}
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -19,12 +27,14 @@ services:
       POSTGRES_DB: wahter
       POSTGRES_USER: wahter_admin
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?copy .env.example to .env}
-      IDENTITY_DB_PASSWORD: ${IDENTITY_DB_PASSWORD}
-      CLINICAL_RECORDS_DB_PASSWORD: ${CLINICAL_RECORDS_DB_PASSWORD}
-      SCHEDULING_DB_PASSWORD: ${SCHEDULING_DB_PASSWORD}
-      ORDERS_DIAGNOSTICS_DB_PASSWORD: ${ORDERS_DIAGNOSTICS_DB_PASSWORD}
-      BILLING_DB_PASSWORD: ${BILLING_DB_PASSWORD}
-      INTEROPERABILITY_DB_PASSWORD: ${INTEROPERABILITY_DB_PASSWORD}
+      ACCESS_PROVIDER_REGISTRY_DB_PASSWORD: ${ACCESS_PROVIDER_REGISTRY_DB_PASSWORD}
+      PATIENT_REGISTRY_DB_PASSWORD: ${PATIENT_REGISTRY_DB_PASSWORD}
+      PATIENT_FLOW_DB_PASSWORD: ${PATIENT_FLOW_DB_PASSWORD}
+      CLINICAL_CARE_DB_PASSWORD: ${CLINICAL_CARE_DB_PASSWORD}
+      DIAGNOSTICS_DB_PASSWORD: ${DIAGNOSTICS_DB_PASSWORD}
+      PHARMACY_DB_PASSWORD: ${PHARMACY_DB_PASSWORD}
+      BILLING_REVENUE_CYCLE_DB_PASSWORD: ${BILLING_REVENUE_CYCLE_DB_PASSWORD}
+      INTEROPERABILITY_REPORTING_DB_PASSWORD: ${INTEROPERABILITY_REPORTING_DB_PASSWORD}
       NOTIFICATIONS_DB_PASSWORD: ${NOTIFICATIONS_DB_PASSWORD}
       AUDIT_LOG_DB_PASSWORD: ${AUDIT_LOG_DB_PASSWORD}
     volumes:
@@ -54,85 +64,79 @@ services:
       timeout: 5s
       retries: 12
 
-  identity:
-    <<: *service
-    build:
-      context: .
-      dockerfile: services/identity/backend/Dockerfile
-    environment:
-      DATABASE_URL: postgres://identity_svc:${IDENTITY_DB_PASSWORD}@postgres:5432/wahter
-      RABBITMQ_URL: amqp://wahter:${RABBITMQ_PASSWORD}@rabbitmq:5672
-      JWT_SECRET: ${JWT_SECRET:?copy .env.example to .env}
+  # ─── the ten services (paper TABLE IV) ───
 
-  clinical-records:
+  access-provider-registry:
     <<: *service
-    build:
-      context: .
-      dockerfile: services/clinical-records/backend/Dockerfile
+    build: { <<: *build, args: { SERVICE: access-provider-registry } }
     environment:
-      DATABASE_URL: postgres://clinical_records_svc:${CLINICAL_RECORDS_DB_PASSWORD}@postgres:5432/wahter
-      RABBITMQ_URL: amqp://wahter:${RABBITMQ_PASSWORD}@rabbitmq:5672
-      JWT_SECRET: ${JWT_SECRET:?copy .env.example to .env}
+      <<: *bus
+      DATABASE_URL: postgres://access_provider_registry_svc:${ACCESS_PROVIDER_REGISTRY_DB_PASSWORD}@postgres:5432/wahter
 
-  scheduling:
+  patient-registry:
     <<: *service
-    build:
-      context: .
-      dockerfile: services/scheduling/backend/Dockerfile
+    build: { <<: *build, args: { SERVICE: patient-registry } }
     environment:
-      DATABASE_URL: postgres://scheduling_svc:${SCHEDULING_DB_PASSWORD}@postgres:5432/wahter
-      RABBITMQ_URL: amqp://wahter:${RABBITMQ_PASSWORD}@rabbitmq:5672
-      JWT_SECRET: ${JWT_SECRET:?copy .env.example to .env}
+      <<: *bus
+      DATABASE_URL: postgres://patient_registry_svc:${PATIENT_REGISTRY_DB_PASSWORD}@postgres:5432/wahter
 
-  orders-diagnostics:
+  patient-flow:
     <<: *service
-    build:
-      context: .
-      dockerfile: services/orders-diagnostics/backend/Dockerfile
+    build: { <<: *build, args: { SERVICE: patient-flow } }
     environment:
-      DATABASE_URL: postgres://orders_diagnostics_svc:${ORDERS_DIAGNOSTICS_DB_PASSWORD}@postgres:5432/wahter
-      RABBITMQ_URL: amqp://wahter:${RABBITMQ_PASSWORD}@rabbitmq:5672
-      JWT_SECRET: ${JWT_SECRET:?copy .env.example to .env}
+      <<: *bus
+      DATABASE_URL: postgres://patient_flow_svc:${PATIENT_FLOW_DB_PASSWORD}@postgres:5432/wahter
 
-  billing:
+  clinical-care:
     <<: *service
-    build:
-      context: .
-      dockerfile: services/billing/backend/Dockerfile
+    build: { <<: *build, args: { SERVICE: clinical-care } }
     environment:
-      DATABASE_URL: postgres://billing_svc:${BILLING_DB_PASSWORD}@postgres:5432/wahter
-      RABBITMQ_URL: amqp://wahter:${RABBITMQ_PASSWORD}@rabbitmq:5672
-      JWT_SECRET: ${JWT_SECRET:?copy .env.example to .env}
+      <<: *bus
+      DATABASE_URL: postgres://clinical_care_svc:${CLINICAL_CARE_DB_PASSWORD}@postgres:5432/wahter
 
-  interoperability:
+  diagnostics:
     <<: *service
-    build:
-      context: .
-      dockerfile: services/interoperability/backend/Dockerfile
+    build: { <<: *build, args: { SERVICE: diagnostics } }
     environment:
-      DATABASE_URL: postgres://interoperability_svc:${INTEROPERABILITY_DB_PASSWORD}@postgres:5432/wahter
-      RABBITMQ_URL: amqp://wahter:${RABBITMQ_PASSWORD}@rabbitmq:5672
-      JWT_SECRET: ${JWT_SECRET:?copy .env.example to .env}
+      <<: *bus
+      DATABASE_URL: postgres://diagnostics_svc:${DIAGNOSTICS_DB_PASSWORD}@postgres:5432/wahter
+
+  pharmacy:
+    <<: *service
+    build: { <<: *build, args: { SERVICE: pharmacy } }
+    environment:
+      <<: *bus
+      DATABASE_URL: postgres://pharmacy_svc:${PHARMACY_DB_PASSWORD}@postgres:5432/wahter
+
+  billing-revenue-cycle:
+    <<: *service
+    build: { <<: *build, args: { SERVICE: billing-revenue-cycle } }
+    environment:
+      <<: *bus
+      DATABASE_URL: postgres://billing_revenue_cycle_svc:${BILLING_REVENUE_CYCLE_DB_PASSWORD}@postgres:5432/wahter
+
+  interoperability-reporting:
+    <<: *service
+    build: { <<: *build, args: { SERVICE: interoperability-reporting } }
+    environment:
+      <<: *bus
+      DATABASE_URL: postgres://interoperability_reporting_svc:${INTEROPERABILITY_REPORTING_DB_PASSWORD}@postgres:5432/wahter
 
   notifications:
     <<: *service
-    build:
-      context: .
-      dockerfile: services/notifications/backend/Dockerfile
+    build: { <<: *build, args: { SERVICE: notifications } }
     environment:
+      <<: *bus
       DATABASE_URL: postgres://notifications_svc:${NOTIFICATIONS_DB_PASSWORD}@postgres:5432/wahter
-      RABBITMQ_URL: amqp://wahter:${RABBITMQ_PASSWORD}@rabbitmq:5672
-      JWT_SECRET: ${JWT_SECRET:?copy .env.example to .env}
 
   audit-log:
     <<: *service
-    build:
-      context: .
-      dockerfile: services/audit-log/backend/Dockerfile
+    build: { <<: *build, args: { SERVICE: audit-log } }
     environment:
+      <<: *bus
       DATABASE_URL: postgres://audit_log_svc:${AUDIT_LOG_DB_PASSWORD}@postgres:5432/wahter
-      RABBITMQ_URL: amqp://wahter:${RABBITMQ_PASSWORD}@rabbitmq:5672
-      JWT_SECRET: ${JWT_SECRET:?copy .env.example to .env}
+
+  # ─── edge ───
 
   kong:
     image: kong:3.9
@@ -156,12 +160,14 @@ services:
     volumes:
       - ./infra/kong:/etc/kong/wahter:ro
     depends_on:
-      - identity
-      - clinical-records
-      - scheduling
-      - orders-diagnostics
-      - billing
-      - interoperability
+      - access-provider-registry
+      - patient-registry
+      - patient-flow
+      - clinical-care
+      - diagnostics
+      - pharmacy
+      - billing-revenue-cycle
+      - interoperability-reporting
       - notifications
       - audit-log
 
@@ -173,6 +179,7 @@ services:
       args:
         # same origin through nginx, so the browser never needs Kong's address
         NEXT_PUBLIC_API_URL: /api
+        NEXT_PUBLIC_ENABLE_DEMO: ${ENABLE_DEMO:-false}
 
   nginx:
     image: nginx:1.27-alpine
@@ -187,3 +194,8 @@ services:
 
 volumes:
   pgdata:
+
+# the paper's network name (TABLE IX deployment), instead of compose's "wahter_default"
+networks:
+  default:
+    name: wah-net

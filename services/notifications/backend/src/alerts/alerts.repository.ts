@@ -5,12 +5,11 @@ export interface AlertRow {
   id: string;
   vitals_id: string;
   patient_id: string;
-  patient_name: string;
   mews_score: number;
   risk: "Medium" | "High";
   raised_at: Date;
   acknowledged_at: Date | null;
-  acknowledged_by: string | null;
+  acknowledged_by_id: string | null;
   note: string | null;
   is_false_alarm: boolean | null;
   escalated_at: Date | null;
@@ -31,21 +30,21 @@ export class AlertsRepository {
   // vitals_id is unique, so the same MEWS event can't raise two alerts
   async raise(alert: MewsAlertPayload) {
     await this.database.query(
-      `INSERT INTO alerts (id, vitals_id, patient_id, patient_name, mews_score, risk, raised_at)
-       VALUES ('AL-' || $1, $1, $2, $3, $4, $5, $6)
+      `INSERT INTO alerts (id, vitals_id, patient_id, mews_score, risk, raised_at)
+       VALUES ('AL-' || $1, $1, $2, $3, $4, $5)
        ON CONFLICT (vitals_id) DO NOTHING`,
-      [alert.vitalsId, alert.patientId, alert.patientName, alert.mewsScore, alert.risk, alert.raisedAt],
+      [alert.vitalsId, alert.patientId, alert.mewsScore, alert.risk, alert.raisedAt],
     );
   }
 
   // Only updates an alert nobody has acknowledged yet; returns null otherwise
-  acknowledge(id: string, ack: { by: string; byId: string; note: string | null; isFalseAlarm: boolean }) {
+  acknowledge(id: string, ack: { byId: string; note: string | null; isFalseAlarm: boolean }) {
     return this.database.one<AlertRow>(
       `UPDATE alerts
-          SET acknowledged_at = now(), acknowledged_by = $2, acknowledged_by_id = $3, note = $4, is_false_alarm = $5
+          SET acknowledged_at = now(), acknowledged_by_id = $2, note = $3, is_false_alarm = $4
         WHERE id = $1 AND acknowledged_at IS NULL
         RETURNING *`,
-      [id, ack.by, ack.byId, ack.note, ack.isFalseAlarm],
+      [id, ack.byId, ack.note, ack.isFalseAlarm],
     );
   }
 

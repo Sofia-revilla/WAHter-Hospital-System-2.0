@@ -21,12 +21,17 @@ guess would be expensive to undo.
 ## Repo layout
 
 ```
-apps/web            Next.js 15 + React 19 + Tailwind 4 frontend (src/App.tsx is the main file)
-services/*          NestJS services (not started yet; see PLAN.md)
-packages/shared     shared types, event contracts, role constants (not started yet)
-infra/              docker, kong, nginx (not started yet)
-docs/               master prompt, ERD.md, PHCORE_MAPPING.md
+apps/web            Next.js 15 + React 19 + Tailwind 4 shell (src/App.tsx is the main file)
+services/<name>/    ten NestJS services, each with backend/ (its own container and schema)
+                    and frontend/ (its screens, bundled into apps/web)
+packages/shared     event bus, database, JWT guard, roles, MEWS, service-to-service client
+infra/              docker (service.Dockerfile), kong, nginx, postgres init
+docs/               master prompt
 ```
+
+The November 2026 system update (PLAN.md, bottom) follows the finals defense comment matrix
+first, then the user's update brief, then the paper. Hosted versions stay untouched until the
+user says so; work and test on the local Docker stack only.
 
 ## Commands
 
@@ -35,6 +40,8 @@ npm install                 # from the repo root (npm workspaces)
 npm run dev:web             # http://localhost:3000
 npm run build:web
 npm run lint:web
+npm run lint:frontends
+docker compose up -d --build   # the whole system on http://localhost:8080
 ```
 
 ## Code style (from the team's developer briefing)
@@ -58,4 +65,4 @@ npm run lint:web
 
 - All seed and mock data is fictional. No real patient data, ever.
 - Never commit secrets; `.env.example` only.
-- Local only: no cloud deployment config.
+- Local only: no cloud deployment, no push, no `npm run tunnel` until the user asks.

@@ -4,10 +4,11 @@
 _format_version: "3.0"
 
 consumers:
-  # Identity is the only token issuer; its tokens carry iss = wahter-identity
+  # Access & Provider Registry is the only token issuer; its tokens carry
+  # iss = wahter-access
   - username: wahter-staff
     jwt_secrets:
-      - key: wahter-identity
+      - key: wahter-access
         secret: __JWT_SECRET__
         algorithm: HS256
 
@@ -37,124 +38,162 @@ plugins:
       generator: uuid
       echo_downstream: true
 
+# Short timeouts on purpose: Kong's defaults (60s, 5 retries) left the app
+# waiting a full minute on a stopped container before reporting it down.
+# 2s connect x 2 tries means a stopped service shows as offline within ~4s.
 services:
-  # Short timeouts on purpose: Kong's defaults (60s, 5 retries) left the app
-  # waiting a full minute on a stopped container before reporting it down.
-  # 2s connect x 2 tries means a stopped service shows as offline within ~4s.
-  - name: identity
-    url: http://identity:3000
+  - name: access-provider-registry
+    url: http://access-provider-registry:3000
     connect_timeout: 2000
     read_timeout: 15000
     write_timeout: 15000
     retries: 1
     routes:
-      - name: identity-public
-        # no token needed: login, refresh, health checks, and API docs
-        paths: [/api/identity/auth, /api/identity/health, /api/identity/docs]
+      - name: access-provider-registry-public
+        paths: [/api/access-provider-registry/auth, /api/access-provider-registry/health, /api/access-provider-registry/docs]
         strip_path: false
-      - name: identity
-        paths: [/api/identity]
+      - name: access-provider-registry
+        paths: [/api/access-provider-registry]
         strip_path: false
         plugins:
           - name: jwt
             config:
               claims_to_verify: [exp]
               run_on_preflight: false
-  - name: clinical-records
-    url: http://clinical-records:3000
+
+  - name: patient-registry
+    url: http://patient-registry:3000
     connect_timeout: 2000
     read_timeout: 15000
     write_timeout: 15000
     retries: 1
     routes:
-      - name: clinical-records-public
-        # no token needed: health checks and API docs
-        paths: [/api/clinical-records/health, /api/clinical-records/docs]
+      - name: patient-registry-public
+        paths: [/api/patient-registry/health, /api/patient-registry/docs]
         strip_path: false
-      - name: clinical-records
-        paths: [/api/clinical-records]
+      - name: patient-registry
+        paths: [/api/patient-registry]
         strip_path: false
         plugins:
           - name: jwt
             config:
               claims_to_verify: [exp]
               run_on_preflight: false
-  - name: scheduling
-    url: http://scheduling:3000
+
+  - name: patient-flow
+    url: http://patient-flow:3000
     connect_timeout: 2000
     read_timeout: 15000
     write_timeout: 15000
     retries: 1
     routes:
-      - name: scheduling-public
-        # no token needed: health checks and API docs
-        paths: [/api/scheduling/health, /api/scheduling/docs]
+      - name: patient-flow-public
+        paths: [/api/patient-flow/health, /api/patient-flow/docs]
         strip_path: false
-      - name: scheduling
-        paths: [/api/scheduling]
+      - name: patient-flow
+        paths: [/api/patient-flow]
         strip_path: false
         plugins:
           - name: jwt
             config:
               claims_to_verify: [exp]
               run_on_preflight: false
-  - name: orders-diagnostics
-    url: http://orders-diagnostics:3000
+
+  - name: clinical-care
+    url: http://clinical-care:3000
     connect_timeout: 2000
     read_timeout: 15000
     write_timeout: 15000
     retries: 1
     routes:
-      - name: orders-diagnostics-public
-        # no token needed: health checks and API docs
-        paths: [/api/orders-diagnostics/health, /api/orders-diagnostics/docs]
+      - name: clinical-care-public
+        paths: [/api/clinical-care/health, /api/clinical-care/docs]
         strip_path: false
-      - name: orders-diagnostics
-        paths: [/api/orders-diagnostics]
+      - name: clinical-care
+        paths: [/api/clinical-care]
         strip_path: false
         plugins:
           - name: jwt
             config:
               claims_to_verify: [exp]
               run_on_preflight: false
-  - name: billing
-    url: http://billing:3000
+
+  - name: diagnostics
+    url: http://diagnostics:3000
     connect_timeout: 2000
     read_timeout: 15000
     write_timeout: 15000
     retries: 1
     routes:
-      - name: billing-public
-        # no token needed: health checks and API docs
-        paths: [/api/billing/health, /api/billing/docs]
+      - name: diagnostics-public
+        paths: [/api/diagnostics/health, /api/diagnostics/docs]
         strip_path: false
-      - name: billing
-        paths: [/api/billing]
+      - name: diagnostics
+        paths: [/api/diagnostics]
         strip_path: false
         plugins:
           - name: jwt
             config:
               claims_to_verify: [exp]
               run_on_preflight: false
-  - name: interoperability
-    url: http://interoperability:3000
+
+  - name: pharmacy
+    url: http://pharmacy:3000
     connect_timeout: 2000
     read_timeout: 15000
     write_timeout: 15000
     retries: 1
     routes:
-      - name: interoperability-public
-        # no token needed: health checks and API docs
-        paths: [/api/interoperability/health, /api/interoperability/docs]
+      - name: pharmacy-public
+        paths: [/api/pharmacy/health, /api/pharmacy/docs]
         strip_path: false
-      - name: interoperability
-        paths: [/api/interoperability]
+      - name: pharmacy
+        paths: [/api/pharmacy]
         strip_path: false
         plugins:
           - name: jwt
             config:
               claims_to_verify: [exp]
               run_on_preflight: false
+
+  - name: billing-revenue-cycle
+    url: http://billing-revenue-cycle:3000
+    connect_timeout: 2000
+    read_timeout: 15000
+    write_timeout: 15000
+    retries: 1
+    routes:
+      - name: billing-revenue-cycle-public
+        paths: [/api/billing-revenue-cycle/health, /api/billing-revenue-cycle/docs]
+        strip_path: false
+      - name: billing-revenue-cycle
+        paths: [/api/billing-revenue-cycle]
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify: [exp]
+              run_on_preflight: false
+
+  - name: interoperability-reporting
+    url: http://interoperability-reporting:3000
+    connect_timeout: 2000
+    read_timeout: 15000
+    write_timeout: 15000
+    retries: 1
+    routes:
+      - name: interoperability-reporting-public
+        paths: [/api/interoperability-reporting/health, /api/interoperability-reporting/docs]
+        strip_path: false
+      - name: interoperability-reporting
+        paths: [/api/interoperability-reporting]
+        strip_path: false
+        plugins:
+          - name: jwt
+            config:
+              claims_to_verify: [exp]
+              run_on_preflight: false
+
   - name: notifications
     url: http://notifications:3000
     connect_timeout: 2000
@@ -163,7 +202,6 @@ services:
     retries: 1
     routes:
       - name: notifications-public
-        # no token needed: health checks and API docs
         paths: [/api/notifications/health, /api/notifications/docs]
         strip_path: false
       - name: notifications
@@ -174,6 +212,7 @@ services:
             config:
               claims_to_verify: [exp]
               run_on_preflight: false
+
   - name: audit-log
     url: http://audit-log:3000
     connect_timeout: 2000
@@ -182,7 +221,6 @@ services:
     retries: 1
     routes:
       - name: audit-log-public
-        # no token needed: health checks and API docs
         paths: [/api/audit-log/health, /api/audit-log/docs]
         strip_path: false
       - name: audit-log

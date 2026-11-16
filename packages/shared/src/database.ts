@@ -91,7 +91,7 @@ export class Database {
     await this.pool.end();
   }
 
-  // Plain numbered SQL files instead of an ORM migration tool. Eight
+  // Plain numbered SQL files instead of an ORM migration tool. Ten
   // services with a handful of tables each didn't justify the extra layer.
   private async migrate() {
     await this.pool.query(
