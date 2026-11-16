@@ -94,7 +94,11 @@ version stays paused until every phase passes locally. One commit per finished i
   and server CSV export, Kong per-role ACL on every route from one route table, shared patient
   picker with name/MPI/birth date, demo flag, unit + gateway + e2e tests (D-057 to D-062).
   Ward, room, and bed setup (US-44) comes with Phase 3.
-- [ ] **2**: Patient Registry and Admitting Clerk portal (UC-01, US-1 to US-5)
+- [x] **2**: Patient Registry and Admitting Clerk portal (UC-01, US-1 to US-5): structured
+  demographics with field-level errors, search by MPI/PIN/birth date/name, duplicate matching
+  (sure vs possible), flag for review, Identity Review with merge history, Billing search,
+  WAH Systems exchange with Pending/retry through Interoperability & Reporting and a local
+  WAH Systems stand-in (D-063 to D-066)
 - [ ] **3**: Patient Flow: scheduling, admission, bed board (UC-02, US-6 to US-9)
 - [ ] **4**: Clinical Care and MEWS (UC-03, US-10 to US-17, US-30 to US-32)
 - [ ] **5**: Pharmacy, dispensing only (UC-04, US-13, US-18 to US-20)

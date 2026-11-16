@@ -16,15 +16,21 @@ The image is built from `infra/docker/service.Dockerfile` with `SERVICE=patient-
 
 ## Backend
 
-- Database schema `patient_registry`: `patients`
+- Database schema `patient_registry`: `patients` (MPI), `patient_merges`, `identity_reviews`
 - Endpoints (through Kong, under `/api/patient-registry`):
-  - `GET /patients?ids=A,B` and `?identifier=` (patient-facing roles and other services; never the System Administrator)
-  - `GET /patients/:id`
-  - `POST /patients/match`, `POST /patients` (Admitting Clerk, Nurse)
+  - `GET /patients?ids=A,B` and `?identifier=`, `GET /patients/search?q=`, `GET /patients/:id`
+    (patient-facing roles and other services; never the System Administrator)
+  - `POST /patients/match`, `POST /patients`, `PATCH /patients/:id` (Admitting Clerk, Nurse)
+  - `POST /patients/:id/duplicate-reports` (Admitting Clerk, Nurse, Physician)
+  - `GET /identity-reviews`, `POST /identity-reviews/:id/merge`, `/keep-separate` (System Administrator)
   - `GET /health` and API docs at `/docs`
-- Publishes: `patient.registered`
-- Listens for: nothing
+- Publishes: `patient.registered`, `patient.updated`, `patient.merged`, `patient.review.flagged`, `patient.review.resolved`
+- Listens for: `interop.exchange.updated` (whether WAH Systems has the record)
 
 ## Frontend
 
-- `api.ts`: ID-to-name lookups used by `DataContext`. The registration screens come with Phase 2.
+- `RegistrationView.tsx`: **Registration** (Admitting Clerk, Nurse)
+- `PatientSearchView.tsx`: **Patient Search** (Admitting Clerk, Billing Staff)
+- `IdentityReviewView.tsx`: **Identity Review** (System Administrator)
+- `RegistrationForm.tsx`, `PatientSearch.tsx`, `PatientProfileCard.tsx`, `validation.ts`: the pieces
+- `api.ts`: also the ID-to-name lookups used by `DataContext`

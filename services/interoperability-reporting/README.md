@@ -16,13 +16,13 @@ The image is built from `infra/docker/service.Dockerfile` with `SERVICE=interope
 
 ## Backend
 
-- Database schema `interop`: `report_runs`
+- Database schema `interop`: `report_runs`, `exchange_transactions` (the outbox to WAH Systems)
 - Endpoints (through Kong, under `/api/interoperability-reporting`):
   - `GET /fhir/Patient`, `/fhir/Patient/:id`, `/fhir/Encounter`
   - `GET /reports`, `POST /reports/admissions-summary` (Hospital Administrator)
   - `GET /health` and API docs at `/docs`
-- Publishes: `reporting.report.generated`
-- Listens for: nothing
+- Publishes: `reporting.report.generated`, `interop.exchange.updated`
+- Listens for: `patient.registered`, `patient.updated`, `patient.merged` (shares them with WAH Systems)
 
 ## Frontend
 

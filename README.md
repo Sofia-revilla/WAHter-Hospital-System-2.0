@@ -78,6 +78,10 @@ and seeded on first start.
   http://localhost:8080/api/clinical-care/docs
 - RabbitMQ dashboard (watch the event queues): http://localhost:15672, user `wahter` with the
   password from `.env`
+- Mailpit, the local inbox for access keys: http://localhost:8025
+- The local stand-in for WAH Systems: http://localhost:8090/received shows the FHIR Patients it got.
+  `docker compose stop wah-systems-mock` shows a registration waiting as Pending; starting it again
+  lets the retry send it.
 
 To start again from a clean database: `docker compose down -v`. Do this once if you ran a version
 from before the ten-service split, since the schemas changed.
@@ -109,6 +113,7 @@ System Administrator creates accounts.
 
 | Portal | Username | Password |
 | --- | --- | --- |
+| Admitting Portal | `jpascual` | `clerk2026` |
 | Physician's Portal | `amendoza` | `doctor2026` |
 | Nurse's Portal | `cbautista` | `nurse2026` |
 | Pharmacy Portal | `gvillanueva` | `pharmacy2026` |
@@ -116,9 +121,9 @@ System Administrator creates accounts.
 | System Admin Portal | `areyes` (second admin: `blim`) | `admin2026` |
 
 Five wrong passwords or access keys in a row lock the account until a System Administrator
-unlocks it. The Admitting Clerk (`jpascual` / `clerk2026`), Ancillary (`lramos` / `lab2026`,
-`psantos` / `radiology2026`), and Hospital Administrator (`rcastillo` / `hospadmin2026`) portals
-appear on the login screen once their phases add their screens (see PLAN.md). A refresh keeps you
+unlocks it. The Ancillary (`lramos` / `lab2026`, `psantos` / `radiology2026`) and Hospital
+Administrator (`rcastillo` / `hospadmin2026`) portals appear on the login screen once their phases
+add their screens (see PLAN.md). A refresh keeps you
 signed in; signing out or closing the tab ends it.
 
 Try Demo and the guided tours are off. `ENABLE_DEMO=true` in `.env` turns both the button and
@@ -128,17 +133,21 @@ the server's demo accounts on.
 
 Role names follow the use case diagram and live in one file, `packages/shared/src/roles.ts`.
 
+- **Admitting Clerk**: Registration (search first, then register with field-by-field checks and
+  duplicate matching; flag unclear cases for review), Patient Search, Profile
+
 - **Physician**: Dashboard, Patients, E-Prescribing, Pharmacy (view), Laboratory (order tests),
   Bed Management, Profile
-- **Nurse**: Dashboard, Patients (chart vitals with MEWS), Pharmacy (view), Bed Management
-  (admit/transfer), Laboratory (view), Profile
+- **Nurse**: Dashboard, Patients (chart vitals with MEWS), Registration (UC-01's secondary actor),
+  Pharmacy (view), Bed Management (admit/transfer), Laboratory (view), Profile
 - **Pharmacist**: Pharmacy (dispense physician orders, partial fills, controlled drugs blocked
   until step-up approval exists), Profile
 - **Billing Staff**: Billing (every captured charge per patient, price flagged items with a logged
-  reason), Profile
+  reason), Patient Search (US-5, read-only), Profile
 - **System Administrator**: Users and Roles (create, edit, unlock, restore; role changes and
   disabling need a second administrator; the last active administrator can't be removed),
-  Provider Registry, Audit Log (search by user, date, and action; paged; CSV export), System
+  Provider Registry, Identity Review (merge possible duplicate patients or keep them apart; the only
+  place this portal sees patient identity), Audit Log (search by user, date, and action; paged; CSV export), System
   Health (live health of all ten services), Profile. No patient data (RA 10173).
 
 MEWS is decision support only. It never replaces clinical judgment.

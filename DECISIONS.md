@@ -687,3 +687,42 @@ The pre-change build is tagged `prompt-build-v1` (also still on `main`) so it ca
   Vitest gateway suite that calls every route with no token, a forged token, every wrong role,
   and every allowed role, and Playwright for end-to-end tests per use case. The gateway and e2e
   suites need the stack running and use the local `.env` and Mailpit, so they're localhost only.
+
+### D-063: What the Patient Registry stores
+- Name parts (given, middle, family, suffix), sex, birth date, civil status, contact number, a
+  JSONB address (street, barangay, municipality, province; JSONB because addresses vary and PSGC
+  codes may come later), and the PhilHealth PIN. `name` stays as the display form other screens use.
+- Old records only had a full name; 002 split it on the last space. The seed was given the name
+  parts and a made-up Concepcion, Tarlac address, because the new columns are required.
+- Validation errors now come back per field (`fields: {"address.barangay": "..."}`) from every
+  service (shared ValidationPipe), and the registration form runs the same rules before sending.
+
+### D-064: Duplicates and merges
+- Matching (`matching.ts`): the same PhilHealth PIN is a **sure** match and can't be overridden;
+  the same birth date with a similar name (80%+), or the exact same name with another birth date,
+  is a **possible** match. Hyphens and periods count as spaces, accents are ignored.
+- On a possible match the clerk uses the existing record, confirms a new person, or registers and
+  flags it. Staff can also report two existing records later (US-3, US-4). Either way it goes to
+  Identity Review; only the System Administrator merges (UC-08 4b), with a reason.
+- A merge never deletes: the merged record gets `merged_into` and stays readable, the PIN moves to
+  the survivor, and `patient_merges` keeps the history. Two different PINs can't be merged. Other
+  services keep the IDs they hold; asking the registry for an old ID shows where it went.
+- US-3 says the registrar merges; the paper's UC-01 6a and UC-08 4b send unclear cases to the
+  administrator, so the registrar identifies and the administrator merges.
+
+### D-065: Sharing identities with WAH Systems
+- Interoperability & Reporting is the only service that talks outside the hospital, so it owns
+  the exchange: it queues a transaction for every registered, updated, or merged patient, reads
+  the record from the registry at send time (no copy), checks it, and POSTs a FHIR Patient.
+- WAH Systems down: the transaction stays Pending and retries at 15s, 30s, 60s, ... up to 10
+  minutes; the local record is unaffected (UC-01 9a). A 4xx is kept as Rejected with the reason.
+  The result goes back to the registry as `interop.exchange.updated`, so the profile can say
+  "Shared with WAH Systems" or "Waiting".
+- There's no real WAH Systems endpoint to test against (Limitation c), so `infra/wah-systems-mock`
+  stands in locally: it checks a bearer token and the basics and answers 201.
+
+### D-066: Who sees the registry
+- Admitting Clerk and Nurse register and correct (UC-01 actors); Billing Staff search read-only
+  (US-5); Physicians can report a possible duplicate (US-4). The System Administrator sees patient
+  identity only on Identity Review, and only the two records being compared.
+
