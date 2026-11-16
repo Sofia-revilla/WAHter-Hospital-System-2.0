@@ -1,2 +1,2 @@
-// Audit Log's piece: the audit trail panel on the IT portal's Staff & Access tab.
-export { AuditLogPanel } from "./AuditLogPanel";
+// Audit Log's screen: the System Administrator's Audit Log tab.
+export { AuditLogView } from "./AuditLogView";

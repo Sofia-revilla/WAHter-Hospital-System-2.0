@@ -1,6 +1,6 @@
 import { Body, Controller, Get, HttpCode, Param, Post, Query } from "@nestjs/common";
 import { ApiBearerAuth, ApiQuery, ApiTags } from "@nestjs/swagger";
-import { CurrentUser, Roles, type AuthUser, type CallerRole } from "@wahter/shared";
+import { AuditView, CurrentUser, Roles, type AuthUser, type CallerRole } from "@wahter/shared";
 import { MatchPatientDto, RegisterPatientDto } from "./patients.dto";
 import { PatientsService } from "./patients.service";
 
@@ -39,6 +39,7 @@ export class PatientsController {
   }
 
   @Roles(...READERS)
+  @AuditView({ record: "Patient record", idParam: "id", isPatientId: true })
   @Get(":id")
   get(@Param("id") id: string) {
     return this.patients.get(id);

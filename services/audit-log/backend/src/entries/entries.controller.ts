@@ -1,75 +1,121 @@
-import { Body, Controller, DefaultValuePipe, Get, HttpCode, ParseIntPipe, Post, Query } from "@nestjs/common";
-import { ApiBearerAuth, ApiProperty, ApiQuery, ApiTags } from "@nestjs/swagger";
-import { IsInt, Min } from "class-validator";
+import { BadRequestException, Controller, Get, Header, Query, Res } from "@nestjs/common";
+import { ApiBearerAuth, ApiQuery, ApiTags } from "@nestjs/swagger";
 import { CurrentUser, Roles, type AuthUser } from "@wahter/shared";
-import { EntriesRepository, type EntryRow } from "./entries.repository";
+import { toCsv } from "./csv";
+import { AUDIT_ACTIONS, EntriesRepository, type AuditAction, type EntryFilter, type EntryRow } from "./entries.repository";
 
-class ExportNoticeDto {
-  @ApiProperty({ example: 42 })
-  @IsInt()
-  @Min(0)
-  rowCount: number;
-}
+const DEFAULT_PAGE_SIZE = 25;
+const MAX_PAGE_SIZE = 100;
+// US-43: big enough for a month of a Level 2 hospital's activity
+const MAX_EXPORT_ROWS = 50_000;
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 // Same shape as the web app's AuditEntry
 function toAuditEntry(row: EntryRow) {
   return {
     id: `AU-${row.id}`,
     time: row.occurred_at.toISOString(),
+    actorId: row.actor_id,
     actor: row.actor_name,
     role: row.actor_role,
     action: row.action,
+    outcome: row.outcome,
     resource: row.resource,
   };
 }
 
+function parseFilter(actor?: string, action?: string, from?: string, to?: string): EntryFilter {
+  if (action && !AUDIT_ACTIONS.includes(action as AuditAction)) throw new BadRequestException(`Unknown action ${action}`);
+  if ((from && !DATE.test(from)) || (to && !DATE.test(to))) throw new BadRequestException("Dates are YYYY-MM-DD");
+  if (from && to && from > to) throw new BadRequestException("The start date is after the end date");
+  return {
+    actor: actor?.trim().slice(0, 60) || undefined,
+    action: (action as AuditAction) || undefined,
+    from: from || undefined,
+    to: to || undefined,
+  };
+}
+
+function describe(filter: EntryFilter) {
+  const parts = [
+    filter.actor && `user "${filter.actor}"`,
+    filter.action && `action ${filter.action}`,
+    (filter.from || filter.to) && `${filter.from ?? "start"} to ${filter.to ?? "today"}`,
+  ].filter(Boolean);
+  return parts.length ? parts.join(", ") : "everything";
+}
+
 @ApiTags("audit trail")
 @ApiBearerAuth()
+@Roles("SystemAdministrator")
 @Controller("entries")
 export class EntriesController {
   constructor(private readonly entries: EntriesRepository) {}
 
-  // UC-08 meta-audit: every search is itself written to the trail before the
-  // results come back, so nobody can browse the log without leaving a mark
-  @Roles("SystemAdministrator")
-  @ApiQuery({ name: "search", required: false })
-  @ApiQuery({ name: "limit", required: false })
+  // US-42. Every search is itself written to the trail before the results
+  // come back, so nobody can browse the log without leaving a mark.
+  @ApiQuery({ name: "actor", required: false, description: "Name or staff ID, partial match" })
+  @ApiQuery({ name: "action", required: false, enum: AUDIT_ACTIONS })
+  @ApiQuery({ name: "from", required: false, example: "2026-11-01" })
+  @ApiQuery({ name: "to", required: false, example: "2026-11-30" })
+  @ApiQuery({ name: "page", required: false })
+  @ApiQuery({ name: "pageSize", required: false })
   @Get()
   async search(
     @CurrentUser() user: AuthUser,
-    @Query("search") search?: string,
-    @Query("limit", new DefaultValuePipe(100), ParseIntPipe) limit = 100,
+    @Query("actor") actor?: string,
+    @Query("action") action?: string,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+    @Query("page") page = "1",
+    @Query("pageSize") pageSize = String(DEFAULT_PAGE_SIZE),
   ) {
-    const term = search?.trim() || undefined;
-    await this.entries.append({
-      eventId: null,
-      eventType: "audit.queried",
-      source: "audit-log",
-      actorId: user.id,
-      actorName: user.name,
-      actorRole: "System Administrator",
-      action: "AUDIT_QUERY",
-      resource: term ? `Audit search "${term.slice(0, 60)}"` : "Audit log",
-      occurredAt: new Date().toISOString(),
-    });
-    return (await this.entries.search(term, Math.min(limit, 500))).map(toAuditEntry);
+    const filter = parseFilter(actor, action, from, to);
+    const pageNumber = Math.max(1, Number.parseInt(page, 10) || 1);
+    const size = Math.min(MAX_PAGE_SIZE, Math.max(1, Number.parseInt(pageSize, 10) || DEFAULT_PAGE_SIZE));
+
+    await this.selfLog(user, "AUDIT_QUERY", `Audit search: ${describe(filter)}, page ${pageNumber}`);
+    const { rows, total } = await this.entries.page(filter, pageNumber, size);
+    return { items: rows.map(toAuditEntry), total, page: pageNumber, pageSize: size };
   }
 
-  // The CSV itself is built in the browser from rows this endpoint already
-  // returned; this just records that someone took a copy (US-43)
-  @Roles("SystemAdministrator")
-  @HttpCode(204)
-  @Post("exports")
-  async logExport(@Body() body: ExportNoticeDto, @CurrentUser() user: AuthUser) {
-    await this.entries.append({
+  // US-43: the CSV is built here, from the database, not from whatever page
+  // the screen happened to have, and the export itself is logged
+  @ApiQuery({ name: "actor", required: false })
+  @ApiQuery({ name: "action", required: false, enum: AUDIT_ACTIONS })
+  @ApiQuery({ name: "from", required: false })
+  @ApiQuery({ name: "to", required: false })
+  @Header("Content-Type", "text/csv; charset=utf-8")
+  @Get("export")
+  async export(
+    @CurrentUser() user: AuthUser,
+    // only setHeader is needed, so no dependency on Express's types
+    @Res({ passthrough: true }) response: { setHeader(name: string, value: string): void },
+    @Query("actor") actor?: string,
+    @Query("action") action?: string,
+    @Query("from") from?: string,
+    @Query("to") to?: string,
+  ) {
+    const filter = parseFilter(actor, action, from, to);
+    const rows = await this.entries.all(filter, MAX_EXPORT_ROWS);
+    await this.selfLog(user, "EXPORT", `Audit log CSV: ${describe(filter)} (${rows.length} rows)`);
+    const stamp = new Date().toISOString().slice(0, 10);
+    response.setHeader("Content-Disposition", `attachment; filename="wahter-audit-${stamp}.csv"`);
+    response.setHeader("X-Row-Limit-Hit", rows.length >= MAX_EXPORT_ROWS ? "true" : "false");
+    return toCsv(rows);
+  }
+
+  private selfLog(user: AuthUser, action: AuditAction, resource: string) {
+    return this.entries.append({
       eventId: null,
-      eventType: "audit.exported",
+      eventType: action === "EXPORT" ? "audit.log.exported" : "audit.log.searched",
       source: "audit-log",
       actorId: user.id,
       actorName: user.name,
       actorRole: "System Administrator",
-      action: "EXPORT",
-      resource: `Audit log CSV (${body.rowCount} rows)`,
+      action,
+      outcome: "Success",
+      resource,
       occurredAt: new Date().toISOString(),
     });
   }

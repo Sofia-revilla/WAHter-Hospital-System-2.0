@@ -16,13 +16,14 @@ The image is built from `infra/docker/service.Dockerfile` with `SERVICE=audit-lo
 
 ## Backend
 
-- Database schema `audit`: `entries` (append-only)
+- Database schema `audit`: `entries` (append-only, with an outcome per entry)
 - Endpoints (through Kong, under `/api/audit-log`):
-  - `GET /entries`, `POST /entries/exports` (System Administrator)
+  - `GET /entries?actor=&action=&from=&to=&page=&pageSize=`, `GET /entries/export` (CSV) (System Administrator)
+  - `POST /internal/gateway-log` (Kong only, on wah-net; not routed through Kong)
   - `GET /health` and API docs at `/docs`
 - Publishes: nothing
 - Listens for: `#` (every event)
 
 ## Frontend
 
-- `AuditLogPanel.tsx`: the audit trail on **Staff & Access**
+- `AuditLogView.tsx`: the **Audit Log** tab (System Administrator)

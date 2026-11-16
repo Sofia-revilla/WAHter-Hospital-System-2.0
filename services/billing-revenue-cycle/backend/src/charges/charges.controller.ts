@@ -1,7 +1,7 @@
 import { Body, Controller, Get, HttpCode, Param, Post, Query } from "@nestjs/common";
 import { ApiBearerAuth, ApiProperty, ApiQuery, ApiTags } from "@nestjs/swagger";
 import { IsNumber, IsString, Max, Min, MinLength } from "class-validator";
-import { CurrentUser, Roles, type AuthUser } from "@wahter/shared";
+import { AuditView, CurrentUser, Roles, type AuthUser } from "@wahter/shared";
 import { ChargesService } from "./charges.service";
 
 class PriceChargeDto {
@@ -26,6 +26,7 @@ class PriceChargeDto {
 export class ChargesController {
   constructor(private readonly charges: ChargesService) {}
 
+  @AuditView({ record: "Billing account", idParam: "patientId", isPatientId: true })
   @ApiQuery({ name: "patientId", required: false })
   @Get("charges")
   list(@Query("patientId") patientId?: string) {
