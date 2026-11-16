@@ -17,6 +17,14 @@
     "lint:frontends": "eslint -c apps/web/eslint.config.mjs \"services/*/frontend/**/*.{ts,tsx}\"",
     "tunnel": "node scripts/demo-tunnel.mjs",
     "supabase:setup": "node scripts/supabase-setup.mjs",
-    "up:supabase": "docker compose -f docker-compose.yml -f docker-compose.supabase.yml up -d --build"
+    "up:supabase": "docker compose -f docker-compose.yml -f docker-compose.supabase.yml up -d --build",
+    "kong:generate": "node infra/kong/generate.mjs",
+    "test": "vitest run",
+    "test:gateway": "vitest run --config tests/gateway/vitest.config.ts",
+    "test:e2e": "playwright test --config tests/e2e/playwright.config.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.2",
+    "vitest": "^3.2.4"
   }
 }
