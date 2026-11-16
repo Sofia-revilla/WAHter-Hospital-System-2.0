@@ -41,7 +41,7 @@ import { IdentityReviewView, PatientSearchView, RegistrationView } from "@servic
 import { NotificationBell } from "@services/notifications/frontend";
 import { LaboratoryView } from "@services/diagnostics/frontend";
 import { PharmacyView, PrescriptionView } from "@services/pharmacy/frontend";
-import { BedManagementView } from "@services/patient-flow/frontend";
+import { BedManagementView, SchedulingView, WardSetupView } from "@services/patient-flow/frontend";
 import { BillingView } from "@services/billing-revenue-cycle/frontend";
 import { ROLE_TABS, TABS, type TabId } from "@/navigation";
 import { DEMO_STEPS } from "@/demoTour";
@@ -327,6 +327,10 @@ export function App() {
         return <LaboratoryView role={role} />;
       case "rooms":
         return <BedManagementView role={role} />;
+      case "scheduling":
+        return <SchedulingView />;
+      case "wards":
+        return <WardSetupView />;
       case "billing":
         return <BillingView role={role} />;
       case "architecture":

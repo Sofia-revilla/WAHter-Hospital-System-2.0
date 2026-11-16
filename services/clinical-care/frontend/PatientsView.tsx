@@ -5,7 +5,6 @@ import { Activity, FileSpreadsheet, Plus, Search, Settings, User } from "lucide-
 import { cn } from "@/lib/utils";
 import { useData } from "@/context/DataContext";
 import { riskLevelFor } from "@/lib/mews";
-import { bedLabel } from "@/lib/beds";
 import type { Patient } from "@/types";
 import { MewsChip } from "./MewsChip";
 import { VitalsDialog } from "./VitalsDialog";
@@ -47,14 +46,11 @@ function matchesSearch(patient: Patient, query: string) {
 
 
 export function PatientsView() {
-  const { patients, wards, bedAssignments } = useData();
+  const { patients, bedAssignments } = useData();
   const [chartingPatientId, setChartingPatientId] = useState<string | null>(null);
-  // Beds assigned on the bed board win; everyone else keeps the design's
-  // placeholder room until Scheduling owns this (Phase 4)
-  function bedFor(patientId: string, index: number) {
-    const assignment = bedAssignments.find((item) => item.patientId === patientId);
-    const ward = assignment && wards.find((item) => item.id === assignment.wardId);
-    return ward && assignment ? bedLabel(ward, assignment.bedIndex) : `Room 30${index + 1}-B`;
+  // the real bed from Patient Flow; no placeholder rooms any more
+  function bedFor(patientId: string) {
+    return bedAssignments.find((item) => item.patientId === patientId)?.bedCode ?? "No bed";
   }
 
   // looked up fresh so the dialog sees the updated MEWS right after saving
@@ -183,7 +179,7 @@ export function PatientsView() {
                   </td>
                 </tr>
               ) : (
-                visiblePatients.map((patient, index) => (
+                visiblePatients.map((patient) => (
                   <tr
                     key={patient.id}
                     className="group border-b border-glass-border/50 transition-colors hover:bg-glass-bg"
@@ -209,7 +205,7 @@ export function PatientsView() {
                     </td>
                     <td className="py-4 pr-4 text-sm">
                       <p>{patient.department}</p>
-                      <p className="font-mono text-xs text-wah-neon">{bedFor(patient.id, index)}</p>
+                      <p className="font-mono text-xs text-wah-neon">{bedFor(patient.id)}</p>
                     </td>
                     <td className="py-4 pr-4">
                       <p className="max-w-[200px] truncate text-sm" title={PLACEHOLDER_DIAGNOSIS}>

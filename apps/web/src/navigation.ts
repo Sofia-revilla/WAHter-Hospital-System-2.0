@@ -4,6 +4,8 @@
 import {
   Activity,
   Bed,
+  BedDouble,
+  CalendarClock,
   BadgeCheck,
   ScrollText,
   Search,
@@ -29,6 +31,8 @@ export type TabId =
   | "pharmacy"
   | "lab"
   | "rooms"
+  | "scheduling"
+  | "wards"
   | "billing"
   | "architecture"
   | "registration"
@@ -83,8 +87,20 @@ export const TABS: Record<TabId, TabConfig> = {
   rooms: {
     label: "Bed Management",
     icon: Bed,
-    description: "Ward occupancy, bed assignment, and smart referral.",
+    description: "Live bed board by ward and room: admit, transfer, and see who is where.",
     services: ["patient-flow", "clinical-care", "patient-registry"],
+  },
+  scheduling: {
+    label: "Scheduling and Queue",
+    icon: CalendarClock,
+    description: "Book appointments from free slots, check patients in, and see the queue.",
+    services: ["patient-flow", "patient-registry"],
+  },
+  wards: {
+    label: "Wards, Rooms and Beds",
+    icon: BedDouble,
+    description: "Set up wards, rooms, and beds; take a bed out for cleaning or maintenance.",
+    services: [],
   },
   billing: {
     label: "Billing",
@@ -145,8 +161,8 @@ export const TABS: Record<TabId, TabConfig> = {
 // An empty list means the role's portal isn't built yet; those roles don't
 // show up on the login screen (see PORTAL_ROLES).
 export const ROLE_TABS: Record<StaffRole, TabId[]> = {
-  // UC-01. TODO(Phase 3): Scheduling and Queue, Admission and Bed Board
-  AdmittingClerk: ["registration", "patient-search", "profile"],
+  // UC-01 registration and UC-02 scheduling, admission, and bed assignment
+  AdmittingClerk: ["registration", "patient-search", "scheduling", "rooms", "profile"],
   Physician: ["dashboard", "patients", "prescription", "pharmacy", "lab", "rooms", "profile"],
   // the Nurse is UC-01's secondary actor, so she can register too
   Nurse: ["dashboard", "patients", "registration", "pharmacy", "rooms", "lab", "profile"],
@@ -162,9 +178,9 @@ export const ROLE_TABS: Record<StaffRole, TabId[]> = {
   HospitalAdministrator: [],
   // No clinical modules and no patient data (RA 10173), and no inventory tab
   // (paper Limitation d)
-  // TODO(Phase 3): Wards Rooms and Beds; (Phase 4) Correction Requests;
+  // US-44 Wards, Rooms and Beds. TODO(Phase 4): Correction Requests;
   // (Phase 10) Data Exchange
-  SystemAdministrator: ["users", "providers", "identity-review", "audit", "architecture", "profile"],
+  SystemAdministrator: ["users", "providers", "identity-review", "wards", "audit", "architecture", "profile"],
 };
 
 export const PORTAL_ROLES = (Object.keys(ROLE_TABS) as StaffRole[]).filter((role) => ROLE_TABS[role].length > 0);

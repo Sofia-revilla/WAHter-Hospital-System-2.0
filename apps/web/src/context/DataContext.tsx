@@ -7,7 +7,7 @@ import { fetchCharges, postChargePrice, type ChargeRecord } from "@services/bill
 import { fetchCensus, fetchVitals, postVitals, type CensusEntry, type VitalsResponse } from "@services/clinical-care/frontend/api";
 import { fetchDiagnosticOrders, postDiagnosticOrder, type DiagnosticOrderRecord } from "@services/diagnostics/frontend/api";
 import { fetchAlerts, postAcknowledgement, type MewsAlertRecord } from "@services/notifications/frontend/api";
-import { fetchAdmissions, fetchWards, postAdmission, type AdmissionRecord } from "@services/patient-flow/frontend/api";
+import { fetchAdmissions, fetchBedBoard, type AdmissionRecord, type BoardWard } from "@services/patient-flow/frontend/api";
 import { fetchPatientsByIds, type PatientIdentity } from "@services/patient-registry/frontend/api";
 import {
   fetchFormulary,
@@ -18,7 +18,6 @@ import {
 } from "@services/pharmacy/frontend/api";
 import type { VitalSigns } from "@/lib/mews";
 import type {
-  AdmissionType,
   BedAssignment,
   Charge,
   FormularyItem,
@@ -53,7 +52,7 @@ type LoadKey =
   | "census"
   | "vitals"
   | "alerts"
-  | "wards"
+  | "board"
   | "admissions"
   | "diagnostics"
   | "medications"
@@ -64,7 +63,7 @@ const CLINICAL_LOADS: LoadKey[] = [
   "census",
   "vitals",
   "alerts",
-  "wards",
+  "board",
   "admissions",
   "diagnostics",
   "medications",
@@ -72,7 +71,8 @@ const CLINICAL_LOADS: LoadKey[] = [
 ];
 
 const LOADS_BY_ROLE: Record<StaffRole, LoadKey[]> = {
-  AdmittingClerk: [],
+  // the bed board and open admissions (Admission and Bed Board)
+  AdmittingClerk: ["board", "admissions"],
   Physician: CLINICAL_LOADS,
   Nurse: CLINICAL_LOADS,
   Pharmacist: ["medications", "formulary"],
@@ -98,7 +98,7 @@ const SERVICE_FOR_LOAD: Record<LoadKey, ServiceName> = {
   census: "clinical-care",
   vitals: "clinical-care",
   alerts: "notifications",
-  wards: "patient-flow",
+  board: "patient-flow",
   admissions: "patient-flow",
   diagnostics: "diagnostics",
   medications: "pharmacy",
@@ -128,6 +128,8 @@ interface DataContextValue {
   labTests: LabTest[];
   medicationOrders: MedicationOrder[];
   wards: Ward[];
+  // US-9: every ward, room, and bed, as Patient Flow sends it
+  bedBoard: BoardWard[];
   vitalsRecords: VitalsRecord[];
   mewsAlerts: MewsAlert[];
   bedAssignments: BedAssignment[];
@@ -138,20 +140,10 @@ interface DataContextValue {
   providerName: (providerId: string | null | undefined) => string;
   recordVitals: (patientId: string, vitals: VitalSigns, confirmedImplausible: boolean) => Promise<VitalsRecord>;
   acknowledgeAlert: (alertId: string, acknowledgement: { note?: string; isFalseAlarm?: boolean }) => Promise<void>;
-  occupiedBeds: (wardId: string) => number[];
-  assignBed: (request: BedRequest) => Promise<{ ok: true } | { ok: false; reason: string }>;
   orderDiagnosticTest: (order: DiagnosticOrderRequest) => Promise<LabTest>;
   prescribe: (order: PrescriptionRequest) => Promise<MedicationOrder>;
   dispenseMedication: (orderId: string, quantity: number, note?: string) => Promise<MedicationOrder>;
   priceCharge: (chargeId: string, unitAmount: number, reason: string) => Promise<Charge>;
-}
-
-export interface BedRequest {
-  patientId: string;
-  wardId: string;
-  bedIndex: number;
-  admissionType: AdmissionType;
-  attendingPhysicianId: string;
 }
 
 export interface DiagnosticOrderRequest {
@@ -201,6 +193,10 @@ function patientIdsIn(raw: RawState) {
   ];
 }
 
+function boardPatientIds(board: BoardWard[]) {
+  return board.flatMap((ward) => ward.rooms.flatMap((room) => room.beds.flatMap((bed) => (bed.occupant ? [bed.occupant.patientId] : []))));
+}
+
 interface RawState {
   census: CensusEntry[];
   vitals: VitalsResponse[];
@@ -228,7 +224,7 @@ interface DataProviderProps {
 export function DataProvider({ children }: DataProviderProps) {
   const [raw, setRaw] = useState<RawState>(EMPTY_RAW);
   const [formulary, setFormulary] = useState<FormularyItem[]>([]);
-  const [wards, setWards] = useState<Ward[]>([]);
+  const [bedBoard, setBedBoard] = useState<BoardWard[]>([]);
   const [identities, setIdentities] = useState<Map<string, PatientIdentity>>(() => new Map());
   const [providers, setProviders] = useState<Provider[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -281,11 +277,16 @@ export function DataProvider({ children }: DataProviderProps) {
       if (!role) return;
 
       const fresh: Partial<RawState> = {};
+      let boardIds: string[] = [];
       const loaders: Record<LoadKey, () => Promise<void>> = {
         census: async () => void (fresh.census = await fetchCensus()),
         vitals: async () => void (fresh.vitals = await fetchVitals()),
         alerts: async () => void (fresh.alerts = await fetchAlerts()),
-        wards: () => fetchWards().then(setWards),
+        board: async () => {
+          const board = await fetchBedBoard();
+          boardIds = boardPatientIds(board);
+          setBedBoard(board);
+        },
         admissions: async () => void (fresh.admissions = await fetchAdmissions()),
         diagnostics: async () => void (fresh.diagnostics = await fetchDiagnosticOrders()),
         medications: async () => void (fresh.medications = await fetchMedicationOrders()),
@@ -325,7 +326,7 @@ export function DataProvider({ children }: DataProviderProps) {
 
       const merged = { ...EMPTY_RAW, ...fresh };
       setRaw((current) => ({ ...current, ...fresh }));
-      await resolvePatients(patientIdsIn(merged));
+      await resolvePatients([...patientIdsIn(merged), ...boardIds]);
 
       const now = new Date().toISOString();
       for (const service of services) {
@@ -449,17 +450,27 @@ export function DataProvider({ children }: DataProviderProps) {
   const bedAssignments = useMemo<BedAssignment[]>(
     () =>
       raw.admissions.map((admission) => ({
-        patientId: admission.patientId,
-        wardId: admission.wardId,
-        bedIndex: admission.bedIndex,
-        admissionType: admission.admissionType,
-        attendingPhysicianId: admission.attendingPhysicianId,
+        ...admission,
         attendingPhysician: providerName(admission.attendingPhysicianId),
-        assignedById: admission.assignedById,
-        assignedBy: providerName(admission.assignedById),
-        assignedAt: admission.assignedAt,
+        admittedBy: providerName(admission.admittedById),
       })),
     [raw.admissions, providerName],
+  );
+  // one shared list of wards for the dashboard and the bed board (Phase 11
+  // cleanup item), straight from the real beds
+  const wards = useMemo<Ward[]>(
+    () =>
+      bedBoard.map((ward) => ({
+        id: ward.id,
+        name: ward.name,
+        type: ward.type,
+        department: ward.department,
+        capacity: ward.capacity,
+        occupied: ward.occupied,
+        available: ward.available,
+        color: ward.color,
+      })),
+    [bedBoard],
   );
   const labTests = useMemo(() => raw.diagnostics.map(toLabTest), [raw.diagnostics, toLabTest]);
   const medicationOrders = useMemo(() => raw.medications.map(toMedicationOrder), [raw.medications, toMedicationOrder]);
@@ -473,32 +484,6 @@ export function DataProvider({ children }: DataProviderProps) {
     const record = await postVitals(patientId, vitals, confirmedImplausible);
     await loadFromServices();
     return toVitals(record);
-  }
-
-  // Wards only give a count of beds taken before go-live, so the first
-  // `occupied` beds of each grid count as taken by patients we don't have
-  // records for. Admissions after that are tracked bed by bed.
-  function occupiedBeds(wardId: string) {
-    const ward = wards.find((candidate) => candidate.id === wardId);
-    if (!ward) return [];
-    const baseline = Array.from({ length: ward.occupied }, (_, index) => index);
-    const assigned = bedAssignments
-      .filter((assignment) => assignment.wardId === wardId)
-      .map((assignment) => assignment.bedIndex);
-    return [...baseline, ...assigned];
-  }
-
-  async function assignBed(request: BedRequest): Promise<{ ok: true } | { ok: false; reason: string }> {
-    try {
-      // Patient Flow holds the real bed lock (a unique index), so a bed
-      // another user took a second ago comes back as a 409 here
-      await postAdmission(request);
-      await loadFromServices();
-      return { ok: true };
-    } catch (error) {
-      await loadFromServices();
-      return { ok: false, reason: error instanceof ApiError ? error.message : "Couldn't reach Patient Flow." };
-    }
   }
 
   async function acknowledgeAlert(alertId: string, acknowledgement: { note?: string; isFalseAlarm?: boolean }) {
@@ -556,6 +541,7 @@ export function DataProvider({ children }: DataProviderProps) {
         labTests,
         medicationOrders,
         wards,
+        bedBoard,
         vitalsRecords,
         mewsAlerts,
         bedAssignments,
@@ -565,8 +551,6 @@ export function DataProvider({ children }: DataProviderProps) {
         providerName,
         recordVitals,
         acknowledgeAlert,
-        occupiedBeds,
-        assignBed,
         orderDiagnosticTest,
         prescribe,
         dispenseMedication,

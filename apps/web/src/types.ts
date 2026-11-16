@@ -10,7 +10,8 @@ export { ROLE_LABELS, STAFF_ROLES, type StaffRole } from "@wahter/shared/roles";
 
 export type PatientStatus = "Critical" | "Stable" | "Recovering" | "Observation";
 
-export type Department = "Internal Medicine" | "ICU" | "Surgical Suite" | "ER" | "Pediatrics";
+export { DEPARTMENTS, type Department } from "@wahter/shared/departments";
+import type { Department } from "@wahter/shared/departments";
 
 // A census row: the open encounter from Clinical Care plus the identity from
 // the Patient Registry
@@ -93,12 +94,15 @@ export interface LabTest {
   isCritical?: boolean;
 }
 
+// A ward's head counts, worked out from the bed board's real beds
 export interface Ward {
   id: string;
   name: string;
   type: "Male" | "Female" | "Specialized" | "Children";
+  department: string;
   capacity: number;
   occupied: number;
+  available: number;
   // hex accent for the ward card and bed grid
   color: string;
 }
@@ -186,21 +190,24 @@ export interface AuditEntry {
   resource: string;
 }
 
-export type AdmissionType = "Direct admit" | "ER-to-ward transfer";
+export type AdmissionType = "Direct admit" | "ER-to-ward transfer" | "Scheduled";
 
-// A patient placed in a specific bed (UC-02). One active assignment per
-// patient; assigning again moves them (a transfer, US-8).
+// An open admission and the bed it's in now (UC-02). A transfer moves the
+// same admission to another bed (US-8).
 export interface BedAssignment {
+  admissionId: string;
   patientId: string;
-  wardId: string;
-  // 0-based index into the ward's bed grid
-  bedIndex: number;
+  wardId: string | null;
+  bedId: string | null;
+  bedCode: string | null;
   admissionType: AdmissionType;
+  admittingDiagnosis: string;
   attendingPhysicianId: string;
   attendingPhysician: string;
-  assignedById: string;
-  assignedBy: string;
-  assignedAt: string;
+  admittedById: string;
+  admittedBy: string;
+  admittedAt: string;
+  status: "Admitted" | "ReadyForDischarge" | "Discharged";
 }
 
 // One entry in the provider registry (Access & Provider Registry)

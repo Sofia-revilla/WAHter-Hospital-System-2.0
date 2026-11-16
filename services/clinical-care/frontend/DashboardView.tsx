@@ -21,13 +21,13 @@ interface DashboardViewProps {
 // Clinical dashboard for doctors and nurses. Revenue lives with Billing Staff
 // and the Hospital Administrator (paper user classes), so it isn't here.
 export function DashboardView({ isLight }: DashboardViewProps) {
-  const { patients, wards, occupiedBeds, mewsAlerts, labTests, offlineServices, isSystemOffline } = useData();
+  const { patients, wards, mewsAlerts, labTests, offlineServices, isSystemOffline } = useData();
   const offlineCount = offlineServices.length;
 
   const activeAlerts = mewsAlerts.filter((alert) => !alert.acknowledgedAt);
   const highAlerts = activeAlerts.filter((alert) => alert.risk === "High").length;
   const totalBeds = wards.reduce((sum, ward) => sum + ward.capacity, 0);
-  const takenBeds = wards.reduce((sum, ward) => sum + occupiedBeds(ward.id).length, 0);
+  const takenBeds = wards.reduce((sum, ward) => sum + ward.occupied, 0);
   const occupancy = totalBeds === 0 ? 0 : Math.round((takenBeds / totalBeds) * 100);
   const pendingResults = labTests.filter((test) => test.status !== "Completed");
   const urgentResults = pendingResults.filter((test) => test.priority === "Urgent").length;
@@ -124,7 +124,7 @@ export function DashboardView({ isLight }: DashboardViewProps) {
             </div>
             <ul className="space-y-4">
               {wards.map((ward) => {
-                const taken = occupiedBeds(ward.id).length;
+                const taken = ward.occupied;
                 const percent = ward.capacity === 0 ? 0 : Math.round((taken / ward.capacity) * 100);
                 return (
                   <li key={ward.id}>
