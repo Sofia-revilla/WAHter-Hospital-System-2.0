@@ -435,6 +435,9 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [challenge, setChallenge] = useState<AccessKeyChallenge | null>(null);
   const [otp, setOtp] = useState("");
+  // six when emailed; the hosted preview's fixed code can be shorter
+  const codeLength = challenge?.codeLength ?? 6;
+  const isGivenCode = challenge?.delivery === "given";
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   // When the whole stack is unreachable we say so plainly. A single service
@@ -503,8 +506,8 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   // Step 3: the access key from the email
   async function handleVerify(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (otp.length !== 6) {
-      setError("Enter the full 6-digit access key.");
+    if (otp.length !== codeLength) {
+      setError(`Enter the full ${codeLength}-digit access key.`);
       return;
     }
     if (!challenge) {
@@ -847,37 +850,47 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
                     </span>
                     <h2 className="mt-4 text-3xl font-black">Access Key Verification</h2>
                     <p className="mt-1 text-text-muted">
-                      We emailed a six-digit access key. It works once and expires in{" "}
-                      {Math.round((challenge?.expiresInSeconds ?? 300) / 60)} minutes.
+                      {isGivenCode ? (
+                        <>Enter the {codeLength}-digit access code that came with your link.</>
+                      ) : (
+                        <>
+                          We emailed a six-digit access key. It works once and expires in{" "}
+                          {Math.round((challenge?.expiresInSeconds ?? 300) / 60)} minutes.
+                        </>
+                      )}
                     </p>
 
-                    <div className="mt-6 flex items-center gap-3 rounded-xl bg-wah-purple/10 p-4">
-                      <span className="relative flex h-2.5 w-2.5">
-                        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-wah-neon opacity-75" />
-                        <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-wah-neon" />
-                      </span>
-                      <Mail size={18} className="text-wah-neon" />
-                      <span className="truncate font-mono text-sm">{challenge?.sentTo ?? "your email"}</span>
-                    </div>
+                    {!isGivenCode && (
+                      <div className="mt-6 flex items-center gap-3 rounded-xl bg-wah-purple/10 p-4">
+                        <span className="relative flex h-2.5 w-2.5">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-wah-neon opacity-75" />
+                          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-wah-neon" />
+                        </span>
+                        <Mail size={18} className="text-wah-neon" />
+                        <span className="truncate font-mono text-sm">{challenge?.sentTo ?? "your email"}</span>
+                      </div>
+                    )}
 
                     <input
                       value={otp}
                       // strip anything that isn't a digit instead of relying on type="number",
                       // which lets "e" and "-" through and drops leading zeros
-                      onChange={(event) => setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                      onChange={(event) => setOtp(event.target.value.replace(/\D/g, "").slice(0, codeLength))}
                       inputMode="numeric"
-                      maxLength={6}
-                      placeholder="000000"
-                      aria-label="6-digit access key"
+                      maxLength={codeLength}
+                      placeholder={"0".repeat(codeLength)}
+                      aria-label={`${codeLength}-digit access key`}
                       className={cn(inputClass, "mt-6 text-center font-mono text-2xl tracking-[0.5em]")}
                     />
 
-                    <p className="mt-3 text-center text-xs text-text-muted">
-                      Local setup: the inbox is Mailpit at{" "}
-                      <a href="http://localhost:8025" target="_blank" rel="noreferrer" className="font-semibold text-wah-purple hover:underline">
-                        localhost:8025
-                      </a>
-                    </p>
+                    {!isGivenCode && (
+                      <p className="mt-3 text-center text-xs text-text-muted">
+                        Local setup: the inbox is Mailpit at{" "}
+                        <a href="http://localhost:8025" target="_blank" rel="noreferrer" className="font-semibold text-wah-purple hover:underline">
+                          localhost:8025
+                        </a>
+                      </p>
+                    )}
 
                     {error && <p className="mt-4 text-center text-sm font-bold text-rose-500">{error}</p>}
                     {offlineNotice}

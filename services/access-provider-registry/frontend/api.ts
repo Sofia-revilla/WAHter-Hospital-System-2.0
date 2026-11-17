@@ -7,8 +7,11 @@ import type { Provider, StaffRole } from "@/types";
 
 export interface AccessKeyChallenge {
   challengeId: string;
-  // masked, e.g. "a*******@wahter.local"
-  sentTo: string;
+  // masked, e.g. "a*******@wahter.local"; null when the code was handed out
+  // with the link instead of emailed (the hosted preview)
+  sentTo: string | null;
+  delivery?: "email" | "given";
+  codeLength?: number;
   expiresInSeconds: number;
 }
 

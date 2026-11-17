@@ -27,19 +27,27 @@ import { Mailer } from "./mailer";
 // can't be used to find out which usernames exist
 const BAD_CREDENTIALS = "Incorrect username or password.";
 
-// Whether this sign-in skips the emailed access key (step 3). The key is on
-// unless ACCESS_KEY_REQUIRED=false, or the request comes from a site matching
-// ACCESS_KEY_SKIP_ORIGINS (a regex), e.g. the hosted preview, so viewers there
-// can sign in while the laptop's own copy keeps the paper's flow.
-export function skipsAccessKey(origin: string | undefined, env: NodeJS.ProcessEnv = process.env) {
-  if (env.ACCESS_KEY_REQUIRED === "false") return true;
-  const pattern = env.ACCESS_KEY_SKIP_ORIGINS;
-  if (!pattern || !origin) return false;
+// How step 3 (the access key) works for this sign-in:
+//   "email": a random key emailed to the account (the paper's flow, the default)
+//   "given": a fixed code handed out with the link, for sign-ins from a site
+//            matching ACCESS_KEY_HOSTED_ORIGINS when ACCESS_KEY_HOSTED_CODE is set
+//   "skip":  no key; ACCESS_KEY_REQUIRED=false, or a hosted site with no code set
+// The hosted preview and the laptop share one backend, so this is decided per
+// request: viewers of the hosted link can't reach the laptop's Mailpit inbox.
+export type AccessKeyMode = "email" | "given" | "skip";
+
+export function accessKeyMode(origin: string | undefined, env: NodeJS.ProcessEnv = process.env): AccessKeyMode {
+  if (env.ACCESS_KEY_REQUIRED === "false") return "skip";
+  const pattern = env.ACCESS_KEY_HOSTED_ORIGINS;
+  if (!pattern || !origin) return "email";
+  let isHosted = false;
   try {
-    return new RegExp(pattern).test(origin);
+    isHosted = new RegExp(pattern).test(origin);
   } catch {
-    return false;
+    return "email";
   }
+  if (!isHosted) return "email";
+  return /^\d{4,8}$/.test(env.ACCESS_KEY_HOSTED_CODE ?? "") ? "given" : "skip";
 }
 
 // argon2id of a random string nobody knows; only used to even out timing
@@ -92,10 +100,10 @@ export class AuthService {
       throw new ForbiddenException("This account doesn't belong to that portal. Go back and pick yours.");
     }
 
-    // only for showing the prototype to people who can't reach the laptop's inbox
-    if (skipsAccessKey(origin)) return this.startSession(account);
+    const mode = accessKeyMode(origin);
+    if (mode === "skip") return this.startSession(account);
 
-    const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
+    const code = mode === "given" ? process.env.ACCESS_KEY_HOSTED_CODE! : String(randomInt(0, 1_000_000)).padStart(6, "0");
     const challengeId = randomUUID();
     await this.accounts.createChallenge({
       id: challengeId,
@@ -104,12 +112,15 @@ export class AuthService {
       codeHash: hashCode(code),
       expiresAt: new Date(Date.now() + ACCESS_KEY_TTL_MS),
     });
+    const expiresInSeconds = ACCESS_KEY_TTL_MS / 1000;
+    // the hosted code was handed out with the link: nothing to email
+    if (mode === "given") return { challengeId, sentTo: null, delivery: "given", codeLength: code.length, expiresInSeconds };
     try {
       await this.mailer.sendAccessKey(account.email, account.name, code, ACCESS_KEY_TTL_MS / 60_000);
     } catch {
       throw new ServiceUnavailableException("Couldn't send your access key. Try again in a moment.");
     }
-    return { challengeId, sentTo: maskEmail(account.email), expiresInSeconds: ACCESS_KEY_TTL_MS / 1000 };
+    return { challengeId, sentTo: maskEmail(account.email), delivery: "email", codeLength: 6, expiresInSeconds };
   }
 
   // Step 3: the access key. A wrong key counts toward the same lockout as a

@@ -99,10 +99,11 @@ services:
       SMTP_PORT: "1025"
       # Try Demo's no-password accounts; off unless ENABLE_DEMO=true in .env
       DEMO_ACCOUNTS_ENABLED: ${ENABLE_DEMO:-false}
-      # the emailed access key after the password; on unless ACCESS_KEY_REQUIRED=false,
-      # or skipped only for sites matching ACCESS_KEY_SKIP_ORIGINS (a regex), in .env
+      # the access key after the password: emailed, unless ACCESS_KEY_REQUIRED=false (none),
+      # or a fixed ACCESS_KEY_HOSTED_CODE for sites matching ACCESS_KEY_HOSTED_ORIGINS (regex)
       ACCESS_KEY_REQUIRED: ${ACCESS_KEY_REQUIRED:-true}
-      ACCESS_KEY_SKIP_ORIGINS: ${ACCESS_KEY_SKIP_ORIGINS:-}
+      ACCESS_KEY_HOSTED_ORIGINS: ${ACCESS_KEY_HOSTED_ORIGINS:-}
+      ACCESS_KEY_HOSTED_CODE: ${ACCESS_KEY_HOSTED_CODE:-}
 
   patient-registry:
     <<: *service

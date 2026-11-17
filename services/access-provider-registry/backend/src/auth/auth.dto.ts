@@ -24,7 +24,8 @@ export class VerifyAccessKeyDto {
   challengeId: string;
 
   @ApiProperty({ example: "482913" })
-  @Matches(/^\d{6}$/, { message: "The access key is six digits." })
+  // six digits when emailed; a hosted code (ACCESS_KEY_HOSTED_CODE) may be 4 to 8
+  @Matches(/^\d{4,8}$/, { message: "Enter the access key's digits." })
   code: string;
 }
 
