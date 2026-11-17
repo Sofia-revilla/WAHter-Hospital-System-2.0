@@ -99,6 +99,8 @@ services:
       SMTP_PORT: "1025"
       # Try Demo's no-password accounts; off unless ENABLE_DEMO=true in .env
       DEMO_ACCOUNTS_ENABLED: ${ENABLE_DEMO:-false}
+      # the emailed access key after the password; on unless ACCESS_KEY_REQUIRED=false in .env
+      ACCESS_KEY_REQUIRED: ${ACCESS_KEY_REQUIRED:-true}
 
   patient-registry:
     <<: *service

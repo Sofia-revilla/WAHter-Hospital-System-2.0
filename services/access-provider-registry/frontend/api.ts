@@ -12,8 +12,22 @@ export interface AccessKeyChallenge {
   expiresInSeconds: number;
 }
 
-export const startLogin = (role: StaffRole, username: string, password: string) =>
-  apiPost<AccessKeyChallenge>("access-provider-registry", "/auth/login", { role, username, password });
+// The server answers with a challenge (check your email), or, when the access
+// key is turned off on the server, with the session itself
+export type LoginAnswer = { signedIn: Session["user"] } | { challenge: AccessKeyChallenge };
+
+export async function startLogin(role: StaffRole, username: string, password: string): Promise<LoginAnswer> {
+  const answer = await apiPost<AccessKeyChallenge | Session>("access-provider-registry", "/auth/login", {
+    role,
+    username,
+    password,
+  });
+  if ("accessToken" in answer) {
+    setSession(answer);
+    return { signedIn: answer.user };
+  }
+  return { challenge: answer };
+}
 
 export async function verifyAccessKey(challengeId: string, code: string) {
   const session = await apiPost<Session>("access-provider-registry", "/auth/verify", { challengeId, code });

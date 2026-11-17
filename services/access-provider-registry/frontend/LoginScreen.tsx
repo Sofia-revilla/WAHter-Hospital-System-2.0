@@ -482,7 +482,13 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
     setIsBackOnline(false);
     setIsLoading(true);
     try {
-      setChallenge(await startLogin(role, username.trim(), password));
+      const answer = await startLogin(role, username.trim(), password);
+      // access key turned off on the server: already signed in
+      if ("signedIn" in answer) {
+        onLogin(role, answer.signedIn.name);
+        return;
+      }
+      setChallenge(answer.challenge);
       setOtp("");
       setMode("verify");
     } catch (caught) {

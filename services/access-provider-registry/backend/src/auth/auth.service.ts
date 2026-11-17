@@ -55,7 +55,8 @@ export class AuthService {
     private readonly bus: EventBus,
   ) {}
 
-  // Step 2: check the password, then email the access key
+  // Step 2: check the password, then email the access key (or, with the key
+  // turned off, return the session straight away)
   async login({ role, username, password }: LoginDto) {
     const account = await this.accounts.findByUsername(username);
     if (!account || account.is_demo) {
@@ -75,6 +76,11 @@ export class AuthService {
       this.publishFailure(username, account.id, `Tried the ${role} portal`);
       throw new ForbiddenException("This account doesn't belong to that portal. Go back and pick yours.");
     }
+
+    // ACCESS_KEY_REQUIRED=false skips step 3 and signs in on the password
+    // alone. Only for showing the prototype to people who can't reach the
+    // laptop's inbox; the paper's flow needs the key, so it's on by default.
+    if (process.env.ACCESS_KEY_REQUIRED === "false") return this.startSession(account);
 
     const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
     const challengeId = randomUUID();
