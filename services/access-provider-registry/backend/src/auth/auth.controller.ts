@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, Post } from "@nestjs/common";
+import { Body, Controller, Headers, HttpCode, Post } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { CurrentUser, Public, STAFF_ROLES, Roles, type AuthUser } from "@wahter/shared";
 import { DemoLoginDto, LoginDto, RefreshDto, VerifyAccessKeyDto } from "./auth.dto";
@@ -14,8 +14,8 @@ export class AuthController {
   @Public()
   @HttpCode(200)
   @Post("login")
-  login(@Body() body: LoginDto) {
-    return this.auth.login(body);
+  login(@Body() body: LoginDto, @Headers("origin") origin?: string) {
+    return this.auth.login(body, origin);
   }
 
   @Public()

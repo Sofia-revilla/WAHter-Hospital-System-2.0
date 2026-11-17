@@ -27,6 +27,21 @@ import { Mailer } from "./mailer";
 // can't be used to find out which usernames exist
 const BAD_CREDENTIALS = "Incorrect username or password.";
 
+// Whether this sign-in skips the emailed access key (step 3). The key is on
+// unless ACCESS_KEY_REQUIRED=false, or the request comes from a site matching
+// ACCESS_KEY_SKIP_ORIGINS (a regex), e.g. the hosted preview, so viewers there
+// can sign in while the laptop's own copy keeps the paper's flow.
+export function skipsAccessKey(origin: string | undefined, env: NodeJS.ProcessEnv = process.env) {
+  if (env.ACCESS_KEY_REQUIRED === "false") return true;
+  const pattern = env.ACCESS_KEY_SKIP_ORIGINS;
+  if (!pattern || !origin) return false;
+  try {
+    return new RegExp(pattern).test(origin);
+  } catch {
+    return false;
+  }
+}
+
 // argon2id of a random string nobody knows; only used to even out timing
 const TIMING_DUMMY_HASH =
   "$argon2id$v=19$m=65536,t=3,p=4$lrTdOybi0jrqX0ank2nDMw$bEJBwF1R2vUSSAYCsnaqiLZvQQKgsScZseZvfF9MV/M";
@@ -57,7 +72,7 @@ export class AuthService {
 
   // Step 2: check the password, then email the access key (or, with the key
   // turned off, return the session straight away)
-  async login({ role, username, password }: LoginDto) {
+  async login({ role, username, password }: LoginDto, origin?: string) {
     const account = await this.accounts.findByUsername(username);
     if (!account || account.is_demo) {
       // still pay for one hash check, so a missing username doesn't answer faster
@@ -77,10 +92,8 @@ export class AuthService {
       throw new ForbiddenException("This account doesn't belong to that portal. Go back and pick yours.");
     }
 
-    // ACCESS_KEY_REQUIRED=false skips step 3 and signs in on the password
-    // alone. Only for showing the prototype to people who can't reach the
-    // laptop's inbox; the paper's flow needs the key, so it's on by default.
-    if (process.env.ACCESS_KEY_REQUIRED === "false") return this.startSession(account);
+    // only for showing the prototype to people who can't reach the laptop's inbox
+    if (skipsAccessKey(origin)) return this.startSession(account);
 
     const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
     const challengeId = randomUUID();
