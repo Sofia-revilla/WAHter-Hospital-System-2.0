@@ -45,12 +45,20 @@ if (!(await localStackIsUp())) {
 
 // 127.0.0.1, not localhost: cloudflared tried IPv6 (::1) first and got refused
 if (existsSync(LOG_FILE)) rmSync(LOG_FILE);
-const tunnel = spawn(
-  cloudflaredPath(),
-  ["tunnel", "--no-autoupdate", "--url", "http://127.0.0.1:8080", "--logfile", LOG_FILE],
-  { detached: true, stdio: "ignore", windowsHide: true },
-);
-tunnel.unref();
+const tunnelArgs = ["tunnel", "--no-autoupdate", "--url", "http://127.0.0.1:8080", "--logfile", LOG_FILE];
+if (process.platform === "win32") {
+  // On Windows a detached child still dies when the terminal (or tool) that ran
+  // this script closes, since it stays in that session's job. Starting it
+  // through WMI makes it a process of its own, so the tunnel keeps running.
+  const commandLine = [cloudflaredPath(), ...tunnelArgs].map((part) => `"${part}"`).join(" ");
+  execFileSync("powershell", [
+    "-NoProfile",
+    "-Command",
+    `Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = '${commandLine}' } | Out-Null`,
+  ]);
+} else {
+  spawn(cloudflaredPath(), tunnelArgs, { detached: true, stdio: "ignore" }).unref();
+}
 console.log("Starting the tunnel...");
 
 let url = null;
