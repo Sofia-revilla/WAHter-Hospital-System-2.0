@@ -36,6 +36,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ApiError, gatewayReachable } from "@/lib/api";
 import { PORTAL_ROLES } from "@/navigation";
+import { BRAND } from "@/lib/brand";
 import { demoLogin, startLogin, verifyAccessKey, type AccessKeyChallenge } from "./api";
 import { type StaffRole } from "@/types";
 
@@ -632,8 +633,8 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
             )}
           >
             <Image
-              src="/wahter-login-logo.png"
-              alt="WAH logo"
+              src={BRAND.loginLogo}
+              alt={BRAND.logoAlt}
               width={96}
               height={96}
               priority

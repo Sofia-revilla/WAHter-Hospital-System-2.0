@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { BRAND } from "@/lib/brand";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -15,6 +16,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "WAHter — Hospital Management System",
   description: "Inpatient hospital information system for Philippine LGU hospitals, by UNICA-HIJA.",
+  icons: { icon: BRAND.favicon, apple: BRAND.appleIcon },
 };
 
 export default function RootLayout({

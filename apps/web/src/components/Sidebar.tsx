@@ -5,14 +5,15 @@ import Image from "next/image";
 import { motion } from "motion/react";
 import { ChevronRight, PanelLeftClose, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BRAND } from "@/lib/brand";
 import { ROLE_TABS, TABS, type TabId } from "@/navigation";
 import type { StaffRole } from "@/types";
 
 export function Logo() {
   return (
     <Image
-      src="/wahter-logo.png"
-      alt="WAH logo"
+      src={BRAND.logo}
+      alt={BRAND.logoAlt}
       width={56}
       height={56}
       priority

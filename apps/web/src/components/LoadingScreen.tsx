@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { BRAND } from "@/lib/brand";
 
 interface LoadingScreenProps {
   title: string;
@@ -24,7 +25,7 @@ export function LoadingScreen({ title, subtitle, progress }: LoadingScreenProps)
           <span className="absolute inset-0 animate-ping rounded-full bg-wah-purple/20" />
           <span className="absolute inset-1 rounded-full bg-card-bg shadow-lg ring-1 ring-wah-purple/20" />
           <Image
-            src="/wahter-logo.png"
+            src={BRAND.logo}
             alt=""
             width={64}
             height={64}

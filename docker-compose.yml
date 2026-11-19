@@ -217,6 +217,8 @@ services:
         # same origin through nginx, so the browser never needs Kong's address
         NEXT_PUBLIC_API_URL: /api
         NEXT_PUBLIC_ENABLE_DEMO: ${ENABLE_DEMO:-false}
+        # the local copy shows the Unica Hija logo; the hosted site keeps the WAH logo
+        NEXT_PUBLIC_BRAND: ${BRAND:-unica-hija}
 
   nginx:
     image: nginx:1.27-alpine
